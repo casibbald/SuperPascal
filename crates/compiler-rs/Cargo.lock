@@ -34,6 +34,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "symbols"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "tokens",
+ "types",
+]
+
+[[package]]
 name = "tokens"
 version = "0.1.0"
 

@@ -521,4 +521,402 @@ mod tests {
             assert_eq!(size, Some(4)); // Total: 2 (byte + padding) + 2 (integer) = 4
         }
     }
+
+    // ===== Additional Assignment Compatibility Tests =====
+
+    #[test]
+    fn test_assignment_compatibility_array() {
+        let arr1 = Type::array(Type::integer(), Type::char());
+        let arr2 = Type::array(Type::integer(), Type::char());
+        let arr3 = Type::array(Type::byte(), Type::char());
+
+        // Arrays must match exactly
+        assert!(arr1.equals(&arr2));
+        assert!(!arr1.equals(&arr3));
+        // Arrays are assignable if they're equal
+        assert!(arr1.is_assignable_to(&arr2));
+    }
+
+    #[test]
+    fn test_assignment_compatibility_record() {
+        let rec1 = Type::record(vec![
+            Field {
+                name: "x".to_string(),
+                field_type: Box::new(Type::integer()),
+                offset: None,
+            },
+        ]);
+        let rec2 = Type::record(vec![
+            Field {
+                name: "x".to_string(),
+                field_type: Box::new(Type::integer()),
+                offset: None,
+            },
+        ]);
+
+        // Records must match exactly
+        assert!(rec1.equals(&rec2));
+        assert!(rec1.is_assignable_to(&rec2));
+    }
+
+    #[test]
+    fn test_assignment_compatibility_pointer() {
+        let ptr1 = Type::pointer(Type::integer());
+        let ptr2 = Type::pointer(Type::integer());
+        let ptr3 = Type::pointer(Type::byte());
+
+        assert!(ptr1.equals(&ptr2));
+        assert!(ptr1.is_assignable_to(&ptr2));
+        assert!(!ptr1.equals(&ptr3));
+        assert!(!ptr1.is_assignable_to(&ptr3));
+    }
+
+    #[test]
+    fn test_assignment_compatibility_named_types() {
+        let named1 = Type::named("MyInt".to_string());
+        let named2 = Type::named("MyInt".to_string());
+        let named3 = Type::named("OtherInt".to_string());
+
+        // Named types compare by name
+        assert!(named1.equals(&named2));
+        assert!(!named1.equals(&named3));
+        // Assignment compatibility for named types requires resolution
+        assert!(named1.is_assignable_to(&named2));
+    }
+
+    #[test]
+    fn test_assignment_compatibility_incompatible_types() {
+        // Test various incompatible combinations
+        assert!(!Type::integer().is_assignable_to(&Type::boolean()));
+        assert!(!Type::boolean().is_assignable_to(&Type::integer()));
+        assert!(!Type::char().is_assignable_to(&Type::integer()));
+        assert!(!Type::integer().is_assignable_to(&Type::char()));
+    }
+
+    // ===== Complex Type Tests =====
+
+    #[test]
+    fn test_nested_array_types() {
+        // Array of arrays
+        let inner = Type::array(Type::integer(), Type::char());
+        let outer = Type::array(Type::integer(), inner.clone());
+
+        assert_eq!(outer.alignment(), 1); // Element alignment
+        // Size would be calculated during semantic analysis
+    }
+
+    #[test]
+    fn test_record_with_array_field() {
+        let mut rec = Type::record(vec![
+            Field {
+                name: "arr".to_string(),
+                field_type: Box::new(Type::array(Type::integer(), Type::char())),
+                offset: None,
+            },
+            Field {
+                name: "count".to_string(),
+                field_type: Box::new(Type::integer()),
+                offset: None,
+            },
+        ]);
+
+        rec.calculate_record_offsets();
+        if let Type::Record { fields, size } = rec {
+            assert_eq!(fields[0].offset, Some(0)); // arr at offset 0
+            // count offset depends on array size (would be calculated)
+            assert!(size.is_some());
+        }
+    }
+
+    #[test]
+    fn test_record_with_pointer_field() {
+        let mut rec = Type::record(vec![
+            Field {
+                name: "ptr".to_string(),
+                field_type: Box::new(Type::pointer(Type::integer())),
+                offset: None,
+            },
+            Field {
+                name: "value".to_string(),
+                field_type: Box::new(Type::integer()),
+                offset: None,
+            },
+        ]);
+
+        rec.calculate_record_offsets();
+        if let Type::Record { fields, size } = rec {
+            assert_eq!(fields[0].offset, Some(0)); // ptr at offset 0 (2 bytes)
+            assert_eq!(fields[1].offset, Some(2)); // value at offset 2 (aligned)
+            assert_eq!(size, Some(4)); // Total: 2 (ptr) + 2 (integer) = 4
+        }
+    }
+
+    #[test]
+    fn test_complex_record_structure() {
+        let mut rec = Type::record(vec![
+            Field {
+                name: "a".to_string(),
+                field_type: Box::new(Type::byte()),
+                offset: None,
+            },
+            Field {
+                name: "b".to_string(),
+                field_type: Box::new(Type::integer()),
+                offset: None,
+            },
+            Field {
+                name: "c".to_string(),
+                field_type: Box::new(Type::byte()),
+                offset: None,
+            },
+            Field {
+                name: "d".to_string(),
+                field_type: Box::new(Type::word()),
+                offset: None,
+            },
+        ]);
+
+        rec.calculate_record_offsets();
+        if let Type::Record { fields, size } = rec {
+            assert_eq!(fields[0].offset, Some(0)); // a at 0
+            assert_eq!(fields[1].offset, Some(2)); // b at 2 (aligned)
+            assert_eq!(fields[2].offset, Some(4)); // c at 4
+            assert_eq!(fields[3].offset, Some(6)); // d at 6 (aligned to 2)
+            assert_eq!(size, Some(8)); // Total aligned to 2
+        }
+    }
+
+    #[test]
+    fn test_empty_record() {
+        let mut rec = Type::record(vec![]);
+        rec.calculate_record_offsets();
+        if let Type::Record { size, .. } = rec {
+            assert_eq!(size, Some(0));
+        }
+    }
+
+    #[test]
+    fn test_record_single_field() {
+        let mut rec = Type::record(vec![Field {
+            name: "x".to_string(),
+            field_type: Box::new(Type::integer()),
+            offset: None,
+        }]);
+
+        rec.calculate_record_offsets();
+        if let Type::Record { fields, size } = rec {
+            assert_eq!(fields[0].offset, Some(0));
+            assert_eq!(size, Some(2)); // Aligned to integer alignment (2)
+        }
+    }
+
+    // ===== Type Size Edge Cases =====
+
+    #[test]
+    fn test_type_size_array_unknown() {
+        let mut arr = Type::array(Type::integer(), Type::char());
+        // Array size is None until calculated during semantic analysis
+        assert_eq!(arr.size(), None);
+        arr.calculate_array_size();
+        // Still None without bounds information
+        assert_eq!(arr.size(), None);
+    }
+
+    #[test]
+    fn test_type_size_record_unknown() {
+        let rec = Type::record(vec![Field {
+            name: "x".to_string(),
+            field_type: Box::new(Type::integer()),
+            offset: None,
+        }]);
+        // Size is None until calculate_record_offsets is called
+        assert_eq!(rec.size(), None);
+    }
+
+    #[test]
+    fn test_type_size_error_type() {
+        assert_eq!(Type::Error.size(), None);
+    }
+
+    // ===== Type Alignment Edge Cases =====
+
+    #[test]
+    fn test_type_alignment_record_empty() {
+        let rec = Type::record(vec![]);
+        assert_eq!(rec.alignment(), 1); // Minimum alignment
+    }
+
+    #[test]
+    fn test_type_alignment_record_single_field() {
+        let rec = Type::record(vec![Field {
+            name: "x".to_string(),
+            field_type: Box::new(Type::integer()),
+            offset: None,
+        }]);
+        assert_eq!(rec.alignment(), 2); // Integer alignment
+    }
+
+    #[test]
+    fn test_type_alignment_record_mixed() {
+        let rec = Type::record(vec![
+            Field {
+                name: "a".to_string(),
+                field_type: Box::new(Type::byte()),
+                offset: None,
+            },
+            Field {
+                name: "b".to_string(),
+                field_type: Box::new(Type::integer()),
+                offset: None,
+            },
+        ]);
+        assert_eq!(rec.alignment(), 2); // Max of field alignments
+    }
+
+    #[test]
+    fn test_type_alignment_named() {
+        let named = Type::named("MyType".to_string());
+        assert_eq!(named.alignment(), 1); // Unknown, use minimum
+    }
+
+    #[test]
+    fn test_type_alignment_error() {
+        assert_eq!(Type::Error.alignment(), 1);
+    }
+
+    // ===== Type Equality Edge Cases =====
+
+    #[test]
+    fn test_type_equality_named_types() {
+        let named1 = Type::named("MyInt".to_string());
+        let named2 = Type::named("MyInt".to_string());
+        let named3 = Type::named("Other".to_string());
+
+        assert!(named1.equals(&named2));
+        assert!(!named1.equals(&named3));
+    }
+
+    #[test]
+    fn test_type_equality_error_type() {
+        assert!(Type::Error.equals(&Type::Error));
+        assert!(!Type::Error.equals(&Type::integer()));
+        assert!(!Type::integer().equals(&Type::Error));
+    }
+
+    #[test]
+    fn test_type_equality_record_field_order() {
+        let rec1 = Type::record(vec![
+            Field {
+                name: "x".to_string(),
+                field_type: Box::new(Type::integer()),
+                offset: None,
+            },
+            Field {
+                name: "y".to_string(),
+                field_type: Box::new(Type::byte()),
+                offset: None,
+            },
+        ]);
+
+        let rec2 = Type::record(vec![
+            Field {
+                name: "y".to_string(),
+                field_type: Box::new(Type::byte()),
+                offset: None,
+            },
+            Field {
+                name: "x".to_string(),
+                field_type: Box::new(Type::integer()),
+                offset: None,
+            },
+        ]);
+
+        // Records compare field-by-field in order
+        assert!(!rec1.equals(&rec2)); // Different order
+    }
+
+    #[test]
+    fn test_type_equality_record_field_names() {
+        let rec1 = Type::record(vec![Field {
+            name: "x".to_string(),
+            field_type: Box::new(Type::integer()),
+            offset: None,
+        }]);
+
+        let rec2 = Type::record(vec![Field {
+            name: "y".to_string(),
+            field_type: Box::new(Type::integer()),
+            offset: None,
+        }]);
+
+        assert!(!rec1.equals(&rec2)); // Different field names
+    }
+
+    // ===== Type Helper Method Tests =====
+
+    #[test]
+    fn test_type_primitive_helper() {
+        assert_eq!(
+            Type::primitive(PrimitiveType::Integer),
+            Type::Primitive(PrimitiveType::Integer)
+        );
+        assert_eq!(
+            Type::primitive(PrimitiveType::Byte),
+            Type::Primitive(PrimitiveType::Byte)
+        );
+    }
+
+    #[test]
+    fn test_type_array_helper() {
+        let arr = Type::array(Type::integer(), Type::char());
+        match arr {
+            Type::Array {
+                index_type,
+                element_type,
+                ..
+            } => {
+                assert!(index_type.equals(&Type::integer()));
+                assert!(element_type.equals(&Type::char()));
+            }
+            _ => panic!("Expected Array type"),
+        }
+    }
+
+    #[test]
+    fn test_type_record_helper() {
+        let rec = Type::record(vec![Field {
+            name: "x".to_string(),
+            field_type: Box::new(Type::integer()),
+            offset: None,
+        }]);
+        match rec {
+            Type::Record { fields, .. } => {
+                assert_eq!(fields.len(), 1);
+                assert_eq!(fields[0].name, "x");
+            }
+            _ => panic!("Expected Record type"),
+        }
+    }
+
+    #[test]
+    fn test_type_pointer_helper() {
+        let ptr = Type::pointer(Type::integer());
+        match ptr {
+            Type::Pointer { base_type } => {
+                assert!(base_type.equals(&Type::integer()));
+            }
+            _ => panic!("Expected Pointer type"),
+        }
+    }
+
+    #[test]
+    fn test_type_named_helper() {
+        let named = Type::named("MyInt".to_string());
+        match named {
+            Type::Named { name } => {
+                assert_eq!(name, "MyInt");
+            }
+            _ => panic!("Expected Named type"),
+        }
+    }
 }

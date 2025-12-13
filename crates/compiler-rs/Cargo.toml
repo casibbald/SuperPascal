@@ -6,8 +6,8 @@ members = [
     "errors",
     "parser",
     "types",
+    "symbols",
     # "semantics",  # Will be added in Phase 3
-    # "symbols",  # Will be added in Phase 3
     # "ir",  # Will be added in Phase 4
     # "diagnostics",  # Will be added in Phase 5
     # "backend-zealz80",  # Will be added in Phase 4
