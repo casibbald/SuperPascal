@@ -1,0 +1,19 @@
+=== Preprocessor Output ===
+Free Pascal Compiler version 3.2.2 [2025/09/11] for aarch64
+Copyright (c) 1993-2021 by Florian Klaempfl and others
+Target OS: Darwin for AArch64
+Compiling test_cases/simple_program.pas
+Assembling helloworld
+Closing script ppas.sh
+6 lines compiled, 0.2 sec
+
+=== Verbose Compilation ===
+
+=== Full Compilation Output ===
+Free Pascal Compiler version 3.2.2 [2025/09/11] for aarch64
+Copyright (c) 1993-2021 by Florian Klaempfl and others
+Target OS: Darwin for AArch64
+Compiling test_cases/simple_program.pas
+Assembling helloworld
+Linking test_cases/simple_program
+6 lines compiled, 0.4 sec

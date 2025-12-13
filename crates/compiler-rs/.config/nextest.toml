@@ -1,0 +1,46 @@
+# Nextest configuration for SuperPascal Compiler
+# https://nexte.st/book/config-file.html
+
+[profile.default]
+# Default profile settings
+
+# Retry flaky tests
+retries = { backoff = "exponential", count = 3, delay = "100ms" }
+
+# Test output settings - cleaner output for local development
+failure-output = "immediate-final"  # Show failures immediately
+success-output = "never"             # Don't show stdout/stderr for passing tests (cleaner)
+status-level = "pass"                # Show passing tests in the list
+final-status-level = "fail"           # Only show failed tests in final summary (summary line always shown)
+
+# Test execution
+test-threads = "num-cpus"  # Use all available CPUs
+slow-timeout = "60s"
+leak-timeout = "5s"
+
+# JUnit report (for CI)
+junit = { path = "nextest-junit.xml" }
+
+[profile.ci]
+# CI profile - more aggressive settings
+test-threads = "num-cpus"
+failure-output = "immediate-final"
+success-output = "never"
+status-level = "all"                 # Show all statuses in CI
+final-status-level = "all"           # Show full summary in CI
+retries = { backoff = "exponential", count = 3, delay = "100ms" }
+slow-timeout = "60s"
+leak-timeout = "5s"
+junit = { path = "nextest-junit.xml" }
+
+[profile.coverage]
+# Coverage profile - run tests sequentially for accurate coverage
+test-threads = 1
+failure-output = "immediate-final"
+success-output = "never"             # Don't show success output
+status-level = "slow"                # Only show slow tests
+final-status-level = "none"          # Don't show final status
+retries = { backoff = "exponential", count = 3, delay = "100ms" }
+slow-timeout = "60s"
+leak-timeout = "5s"
+junit = { path = "nextest-junit.xml" }

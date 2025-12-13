@@ -204,6 +204,63 @@ To add a new module (e.g., `ECS_Collision`):
 
 ---
 
+## Physics Systems
+
+### Basic Physics Systems
+
+- **MovementSystem:** Updates position based on velocity
+- **GravitySystem:** Applies gravity to entities with `TPhysicsBody` component
+- **VelocitySystem:** Updates position based on velocity (alias for MovementSystem)
+- **FrictionSystem:** Applies friction to entities with `TPhysicsBody` component
+- **ParticleSystem:** Updates particle positions and lifetimes
+
+### Advanced Physics Systems
+
+- **BounceSystem:** Handles bounce physics for entities with `TMaterialProperties` and `TShape` components
+  - Bounces objects off screen boundaries (walls, floor, ceiling)
+  - Uses material properties (bouncability, solidness) to calculate bounce response
+  - Supports both circle and polygon shapes
+  
+- **ExplosionSystem:** Handles explosions for entities with `TSprite.Explodable = True`
+  - Applies explosion force to nearby entities within `ExplosionRadius`
+  - Uses inverse square law for force calculation
+  - Can trigger particle effects (TODO: particle creation)
+  
+- **CollisionSystem:** Detects collisions between entities using `TShape` components
+  - Circle-Circle collision detection
+  - Polygon collision detection (simplified, uses circle approximation)
+  - Triggers bounce physics when collisions are detected
+  - Supports fragmentation for brittle objects (TODO: fragment entity creation)
+
+### Usage Example
+
+```pascal
+uses ECS;
+
+var
+  world: TWorld;
+begin
+  WorldInit(world);
+  
+  // Register physics systems
+  SystemRegister(world, GravitySystem);
+  SystemRegister(world, FrictionSystem);
+  SystemRegister(world, MovementSystem);
+  SystemRegister(world, BounceSystem);      // NEW: Bounce physics
+  SystemRegister(world, ExplosionSystem);   // NEW: Explosion handling
+  SystemRegister(world, CollisionSystem);  // NEW: Collision detection
+  
+  // Game loop
+  while True do
+  begin
+    WorldUpdate(world);  // Runs all registered systems
+    // Render sprites...
+  end;
+  
+  WorldCleanup(world);
+end.
+```
+
 ## Sprite Physics Integration
 
 Sprites can now be **bouncy** and **explodable** through component composition:

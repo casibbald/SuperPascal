@@ -221,6 +221,12 @@ We welcome contributions from:
 * Stdlib implementation
 * Test suite automation
 
+**📖 See [CONTRIBUTING.md](CONTRIBUTING.md) for:**
+- Development setup instructions
+- The FreePascal "jerryrig" (why we maintain a patched FPC fork)
+- Building and using the patched compiler
+- Testing and submission guidelines
+
 Open a PR or start a discussion thread to get involved.
 
 ---

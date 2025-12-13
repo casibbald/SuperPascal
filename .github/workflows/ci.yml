@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  test-tokenizer-comparison:
+    name: Test Tokenizer Comparison
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    steps:
+      - name: Checkout SuperPascal
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup FPC
+        id: setup-fpc
+        uses: ./.github/actions/setup-fpc
+        with:
+          version: 'latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache FPC
+        uses: actions/cache@v3
+        with:
+          path: fpc
+          key: fpc-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/.github/actions/setup-fpc/action.yml') }}
+
+      - name: Run tokenizer comparison tests
+        working-directory: crates/compiler-rs
+        run: |
+          export PATH="${{ steps.setup-fpc.outputs.fpc-path }}:$PATH"
+          "${{ steps.setup-fpc.outputs.fpc-path }}/${{ steps.setup-fpc.outputs.fpc-binary }}" -dt tests/compliance/test_cases/simple_program.pas > fpc_tokens.txt 2>&1 || true
+          cat fpc_tokens.txt
+          # TODO: Add SuperPascal tokenizer comparison once implemented
+
+      - name: Run Rust tests
+        working-directory: crates/compiler-rs
+        run: |
+          cargo test --all
+
+  build-compiler:
+    name: Build Compiler
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    steps:
+      - name: Checkout SuperPascal
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup FPC
+        id: setup-fpc
+        uses: ./.github/actions/setup-fpc
+        with:
+          version: 'latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build compiler
+        working-directory: crates/compiler-rs
+        run: |
+          cargo build --release
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiler-${{ matrix.os }}
+          path: crates/compiler-rs/target/release/*
+

@@ -1,0 +1,17 @@
+# Expected Token Sequence for simple_program.pas
+# Based on FreePascal tokenization behavior
+# Format: TOKEN_KIND [value] (line:column)
+
+PROGRAM [1:1]
+IDENTIFIER [HelloWorld] (1:9)
+SEMICOLON [1:19]
+BEGIN [3:1]
+IDENTIFIER [writeln] (4:3)
+LPAREN [4:10]
+STRING ['Hello, World!'] (4:11)
+RPAREN [4:26]
+SEMICOLON [4:27)
+END [5:1]
+POINT [5:4]
+EOF [5:5]
+

@@ -174,6 +174,338 @@ begin
 end;
 ```
 
+### Camera Transformations
+
+**Source:** `docs/mikro_docs_archive/Coding/1/OTMMATX.TXT`
+
+Camera transformations convert object space to eye space (camera space). Each camera has its own transformation matrix.
+
+**Building the Camera Matrix:**
+
+```pascal
+// Camera transformation formula:
+// [C] = [C] * [CT] * [CX] * [CY] * [CZ]
+// where CT = translation, CX/CY/CZ = rotation matrices
+
+procedure BuildCameraMatrix(
+  var cmatrix: TMatrix4x4;
+  dx, dy, dz: Fixed16;  // Camera translation
+  xangle, yangle, zangle: Fixed16  // Camera rotation angles
+);
+var
+  tmatrix, xmatrix, ymatrix, zmatrix: TMatrix4x4;
+begin
+  // Build translation matrix (may need to negate components)
+  tmatrix := MatrixTranslate(dx, dy, dz);
+  
+  // Build rotation matrices
+  xmatrix := MatrixRotateX(xangle);
+  ymatrix := MatrixRotateY(yangle);
+  zmatrix := MatrixRotateZ(zangle);
+  
+  // Concatenate: [C] = [C] * [T] * [X] * [Y] * [Z]
+  MatrixMultiply(cmatrix, tmatrix);
+  MatrixMultiply(cmatrix, zmatrix);
+  MatrixMultiply(cmatrix, xmatrix);
+  MatrixMultiply(cmatrix, ymatrix);
+end;
+```
+
+**Transforming Objects to Eye Space:**
+
+```pascal
+// Transform object to eye space:
+// [E] = [O] * [C]
+// where [E] = eyespace matrix, [O] = object space matrix, [C] = camera matrix
+
+procedure TransformToEyeSpace(
+  const omatrix: TMatrix4x4;
+  const origin: TVector3;  // Object's world space origin
+  const cmatrix: TMatrix4x4;
+  var ematrix: TMatrix4x4
+);
+begin
+  // Initialize eyespace matrix to identity
+  ematrix := IdentityMatrix;
+  
+  // Copy object space matrix to eyespace
+  MatrixMultiply(ematrix, omatrix);
+  
+  // Add object's world space origin
+  ematrix[3, 0] := Fixed16Add(ematrix[3, 0], origin.X);
+  ematrix[3, 1] := Fixed16Add(ematrix[3, 1], origin.Y);
+  ematrix[3, 2] := Fixed16Add(ematrix[3, 2], origin.Z);
+  
+  // Transform to camera space
+  MatrixMultiply(ematrix, cmatrix);
+end;
+```
+
+**Note:** Camera translation/rotation components may need to be negated depending on your coordinate system. If the camera moves backward instead of forward, negate the appropriate components.
+
+### Inverse Transformations
+
+**Source:** `docs/mikro_docs_archive/Coding/1/OTMMATX.TXT`
+
+Inverse transformations are used for hidden surface removal and shading in object space without transforming normal vectors. This provides significant speed improvements.
+
+**Why Use Inverse Transformations:**
+- Avoid transforming normal vectors (saves time)
+- Hide points as well as polygons (can skip ~50% of points)
+- Determine visibility/shading by inverse transforming view/light vectors
+
+**Algorithm:** For transformation matrices (determinant = 1), the inverse can be computed by swapping rows and columns. This is much faster than computing the full inverse matrix.
+
+**Inverse Transform Vector:**
+
+```pascal
+// Inverse transform a vector (swap row/column indices)
+// Used for transforming view/light vectors to object space
+
+function InverseTransformVector(
+  const v: TVector3;
+  const m: TMatrix4x4
+): TVector3;
+begin
+  // Note: row and column indices are swapped from normal transformation
+  // Also note: translation (w term) is omitted - vectors start at origin
+  Result.X := Fixed16Mul(v.X, m[0, 0]) +
+              Fixed16Mul(v.Y, m[0, 1]) +
+              Fixed16Mul(v.Z, m[0, 2]);
+  
+  Result.Y := Fixed16Mul(v.X, m[1, 0]) +
+              Fixed16Mul(v.Y, m[1, 1]) +
+              Fixed16Mul(v.Z, m[1, 2]);
+  
+  Result.Z := Fixed16Mul(v.X, m[2, 0]) +
+              Fixed16Mul(v.Y, m[2, 1]) +
+              Fixed16Mul(v.Z, m[2, 2]);
+end;
+```
+
+**Usage Example:**
+
+```pascal
+// Inverse transform view vector for backface culling
+var
+  viewVector: TVector3;
+  inverseView: TVector3;
+  normal: TVector3;
+  dotProduct: Fixed16;
+begin
+  // View vector in world space (from object to camera)
+  viewVector.X := cameraX - objectX;
+  viewVector.Y := cameraY - objectY;
+  viewVector.Z := cameraZ - objectZ;
+  
+  // Inverse transform to object space
+  inverseView := InverseTransformVector(viewVector, omatrix);
+  
+  // Dot product with untransformed normal (in object space)
+  dotProduct := Vector3Dot(inverseView, normal);
+  
+  // If dot product > 0, polygon is back-facing
+  if dotProduct > 0 then
+    // Skip this polygon (backface culling)
+end;
+```
+
+### Hierarchical Transformations
+
+**Source:** `docs/mikro_docs_archive/Coding/1/OTMMATX.TXT`
+
+Hierarchical transformations allow objects to have parent-child relationships, where child objects move relative to their parents (e.g., arm → forearm → hand → fingers).
+
+**Data Structure:**
+
+```pascal
+type
+  PObject = ^TObject;
+  TObject = record
+    // Object data
+    OMatrix: TMatrix4x4;  // Object space matrix
+    EMatrix: TMatrix4x4;  // Eye space matrix
+    Origin: TVector3;     // World space origin
+    
+    // Hierarchy
+    Parent: PObject;
+    Children: array of PObject;
+    NumChildren: Integer;
+  end;
+```
+
+**Transformation Formula:**
+
+For a child object in a hierarchy:
+```
+[E] = [O] * [T] * [X] * [Y] * [Z] * parent.[E]
+```
+
+Where:
+- `[O]` = child's object space matrix
+- `[T]`, `[X]`, `[Y]`, `[Z]` = child's translation and rotation matrices
+- `parent.[E]` = parent's eye space matrix (contains parent's object space + camera)
+
+**Key Insight:** The parent's eye space matrix already contains the camera transformation, so we can use it directly instead of computing the full hierarchy chain.
+
+**Recursive Transformation:**
+
+```pascal
+procedure TransformObject(
+  obj: PObject;
+  const cmatrix: TMatrix4x4  // Camera matrix (only for root objects)
+);
+var
+  tmatrix, xmatrix, ymatrix, zmatrix: TMatrix4x4;
+  i: Integer;
+begin
+  // Build transformation matrices for this object
+  tmatrix := MatrixTranslate(obj.Translation.X, obj.Translation.Y, obj.Translation.Z);
+  xmatrix := MatrixRotateX(obj.Rotation.X);
+  ymatrix := MatrixRotateY(obj.Rotation.Y);
+  zmatrix := MatrixRotateZ(obj.Rotation.Z);
+  
+  // Apply transformations to object space matrix
+  MatrixMultiply(obj.OMatrix, tmatrix);
+  MatrixMultiply(obj.OMatrix, zmatrix);
+  MatrixMultiply(obj.OMatrix, xmatrix);
+  MatrixMultiply(obj.OMatrix, ymatrix);
+  
+  // Initialize eye space matrix
+  obj.EMatrix := IdentityMatrix;
+  MatrixMultiply(obj.EMatrix, obj.OMatrix);
+  
+  // Add object origin
+  obj.EMatrix[3, 0] := Fixed16Add(obj.EMatrix[3, 0], obj.Origin.X);
+  obj.EMatrix[3, 1] := Fixed16Add(obj.EMatrix[3, 1], obj.Origin.Y);
+  obj.EMatrix[3, 2] := Fixed16Add(obj.EMatrix[3, 2], obj.Origin.Z);
+  
+  // Apply camera or parent's eye space matrix
+  if obj.Parent = nil then
+    MatrixMultiply(obj.EMatrix, cmatrix)  // Root object: use camera
+  else
+    MatrixMultiply(obj.EMatrix, obj.Parent.EMatrix);  // Child: use parent's eye space
+  
+  // Recursively transform children
+  for i := 0 to obj.NumChildren - 1 do
+    TransformObject(obj.Children[i], cmatrix);  // Pass cmatrix (not used for children)
+end;
+```
+
+**Rendering Hierarchy:**
+
+```pascal
+procedure RenderObject(obj: PObject);
+var
+  i: Integer;
+begin
+  // Render this object using obj.EMatrix
+  // ... rendering code ...
+  
+  // Recursively render children
+  for i := 0 to obj.NumChildren - 1 do
+    RenderObject(obj.Children[i]);
+end;
+```
+
+**Note:** Only root objects (objects with no parent) should be in the main object list. Children are rendered automatically when their parents are rendered.
+
+### Matrix Precision and Normalization
+
+**Source:** `docs/mikro_docs_archive/Coding/1/OTMMATX.TXT`
+
+Matrix transformations can lose precision over time, causing axis vectors to:
+1. Change magnitude (no longer unit vectors)
+2. Lose perpendicularity (no longer orthogonal)
+
+**Precision Considerations:**
+
+- **16.16 Fixed-Point:** Loses precision after ~10² transformations
+- **32-bit Float:** Shows no noticeable loss after ~10⁵ transformations
+- **64-bit Double:** Very high precision, minimal loss
+
+**Matrix Normalization (Dot Product Method):**
+
+```pascal
+// Correct perpendicularity using dot products
+// Based on: dot product of perpendicular vectors = 0
+
+procedure NormalizeMatrixDotProduct(var m: TMatrix4x4);
+var
+  x, y, z: TVector3;
+  dotXY, dotXZ, dotYZ: Fixed16;
+begin
+  // Extract axis vectors
+  x.X := m[0, 0]; x.Y := m[1, 0]; x.Z := m[2, 0];
+  y.X := m[0, 1]; y.Y := m[1, 1]; y.Z := m[2, 1];
+  z.X := m[0, 2]; z.Y := m[1, 2]; z.Z := m[2, 2];
+  
+  // Correct Y axis (make perpendicular to X)
+  dotXY := Vector3Dot(x, y);
+  y.X := Fixed16Sub(y.X, Fixed16Mul(dotXY, x.X));
+  y.Y := Fixed16Sub(y.Y, Fixed16Mul(dotXY, x.Y));
+  y.Z := Fixed16Sub(y.Z, Fixed16Mul(dotXY, x.Z));
+  
+  // Correct Z axis (make perpendicular to X and Y)
+  dotXZ := Vector3Dot(x, z);
+  dotYZ := Vector3Dot(y, z);
+  z.X := Fixed16Sub(z.X, Fixed16Mul(dotXZ, x.X));
+  z.Y := Fixed16Sub(z.Y, Fixed16Mul(dotXZ, x.Y));
+  z.Z := Fixed16Sub(z.Z, Fixed16Mul(dotXZ, x.Z));
+  z.X := Fixed16Sub(z.X, Fixed16Mul(dotYZ, y.X));
+  z.Y := Fixed16Sub(z.Y, Fixed16Mul(dotYZ, y.Y));
+  z.Z := Fixed16Sub(z.Z, Fixed16Mul(dotYZ, y.Z));
+  
+  // Normalize all vectors to unit length
+  x := Vector3Normalize(x);
+  y := Vector3Normalize(y);
+  z := Vector3Normalize(z);
+  
+  // Store back in matrix
+  m[0, 0] := x.X; m[1, 0] := x.Y; m[2, 0] := x.Z;
+  m[0, 1] := y.X; m[1, 1] := y.Y; m[2, 1] := y.Z;
+  m[0, 2] := z.X; m[1, 2] := z.Y; m[2, 2] := z.Z;
+end;
+```
+
+**Matrix Normalization (Cross Product Method):**
+
+```pascal
+// Correct perpendicularity using cross products
+// Based on: cross product yields perpendicular vector
+
+procedure NormalizeMatrixCrossProduct(var m: TMatrix4x4);
+var
+  x, y, z: TVector3;
+begin
+  // Extract X and Y axes
+  x.X := m[0, 0]; x.Y := m[1, 0]; x.Z := m[2, 0];
+  y.X := m[0, 1]; y.Y := m[1, 1]; y.Z := m[2, 1];
+  
+  // Normalize X and Y
+  x := Vector3Normalize(x);
+  y := Vector3Normalize(y);
+  
+  // Generate Z from cross product: Z = X × Y
+  z := Vector3Cross(x, y);
+  z := Vector3Normalize(z);
+  
+  // Regenerate Y from cross product: Y = Z × X
+  y := Vector3Cross(z, x);
+  y := Vector3Normalize(y);
+  
+  // Store back in matrix
+  m[0, 0] := x.X; m[1, 0] := x.Y; m[2, 0] := x.Z;
+  m[0, 1] := y.X; m[1, 1] := y.Y; m[2, 1] := y.Z;
+  m[0, 2] := z.X; m[1, 2] := z.Y; m[2, 2] := z.Z;
+end;
+```
+
+**When to Normalize:**
+- After many transformations (every 100-1000 transformations)
+- Before critical operations (rendering, collision detection)
+- In hierarchical systems (after each level of hierarchy)
+
 ---
 
 ## Trigonometry

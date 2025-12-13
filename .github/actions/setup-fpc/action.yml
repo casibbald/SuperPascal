@@ -1,0 +1,129 @@
+name: 'Setup FreePascal Compiler'
+description: 'Download and setup the SuperPascal patched FPC compiler'
+inputs:
+  version:
+    description: 'FPC version to use (tag or "latest")'
+    required: false
+    default: 'latest'
+  repository:
+    description: 'Repository containing FPC releases'
+    required: false
+    default: 'casibbald/freePascal'
+outputs:
+  fpc-path:
+    description: 'Path to FPC binary directory'
+    value: ${{ steps.setup.outputs.fpc-path }}
+  fpc-binary:
+    description: 'Name of FPC binary'
+    value: ${{ steps.setup.outputs.fpc-binary }}
+  platform:
+    description: 'Platform identifier'
+    value: ${{ steps.platform.outputs.platform }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Determine platform
+      id: platform
+      shell: bash
+      run: |
+        if [[ "$RUNNER_OS" == "Linux" ]]; then
+          PLATFORM="linux-x86_64"
+          BINARY="ppcx64"
+        elif [[ "$RUNNER_OS" == "macOS" ]]; then
+          # macOS builds are built locally, not on GitHub Actions
+          # Try to use system FPC (from Homebrew) instead
+          if [[ "$RUNNER_ARCH" == "ARM64" ]]; then
+            SYSTEM_FPC=$(which ppca64 || which fpc || echo "")
+            BINARY="ppca64"
+          else
+            SYSTEM_FPC=$(which ppcx64 || which fpc || echo "")
+            BINARY="ppcx64"
+          fi
+          if [ -n "$SYSTEM_FPC" ]; then
+            echo "Using system FPC on macOS: $SYSTEM_FPC"
+            echo "Note: macOS FPC binaries are not built on GitHub Actions"
+            echo "fpc-path=$(dirname $SYSTEM_FPC)" >> $GITHUB_OUTPUT
+            echo "fpc-binary=$(basename $SYSTEM_FPC)" >> $GITHUB_OUTPUT
+            echo "use-system-fpc=true" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo "Error: No FPC found on macOS runner"
+            echo "Please install FPC via Homebrew: brew install fpc"
+            echo "Or build the patched FPC locally (see CONTRIBUTING.md)"
+            exit 1
+          fi
+        fi
+        echo "platform=$PLATFORM" >> $GITHUB_OUTPUT
+        echo "binary=$BINARY" >> $GITHUB_OUTPUT
+        echo "use-system-fpc=false" >> $GITHUB_OUTPUT
+        echo "Platform: $PLATFORM, Binary: $BINARY"
+
+    - name: Determine FPC version
+      id: version
+      shell: bash
+      run: |
+        if [ "${{ inputs.version }}" = "latest" ]; then
+          VERSION=$(gh release list --repo ${{ inputs.repository }} --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "latest")
+        else
+          VERSION="${{ inputs.version }}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Using FPC version: $VERSION"
+
+    - name: Download FPC release
+      shell: bash
+      run: |
+        # Skip download if we're on macOS and using system FPC
+        if [[ "${{ steps.platform.outputs.use-system-fpc }}" == "true" ]]; then
+          echo "Using system FPC on macOS, skipping download"
+          exit 0
+        fi
+        gh release download \
+          --repo ${{ inputs.repository }} \
+          --pattern "fpc-${{ steps.platform.outputs.platform }}.tar.gz" \
+          --dir . \
+          ${{ steps.version.outputs.version }}
+
+    - name: Extract FPC
+      shell: bash
+      run: |
+        # Skip extraction if we're on macOS and using system FPC
+        if [[ "${{ steps.platform.outputs.use-system-fpc }}" == "true" ]]; then
+          echo "Using system FPC on macOS, skipping extraction"
+          exit 0
+        fi
+        tar -xzf fpc-${{ steps.platform.outputs.platform }}.tar.gz
+        mv fpc-* fpc
+        FPC_BIN_DIR=$(find ${{ github.workspace }}/fpc -type d -name bin | head -1)
+        echo "$FPC_BIN_DIR" >> $GITHUB_PATH
+        echo "FPC_BIN_DIR=$FPC_BIN_DIR" >> $GITHUB_ENV
+
+    - name: Verify FPC installation
+      id: setup
+      shell: bash
+      run: |
+        # On macOS, use system FPC if available
+        if [[ "${{ steps.platform.outputs.use-system-fpc }}" == "true" ]]; then
+          FPC_BIN_DIR="${{ steps.platform.outputs.fpc-path }}"
+          FPC_BIN="$FPC_BIN_DIR/${{ steps.platform.outputs.fpc-binary }}"
+        else
+          FPC_BIN_DIR=$(find ${{ github.workspace }}/fpc -type d -name bin | head -1)
+          FPC_BIN="$FPC_BIN_DIR/${{ steps.platform.outputs.binary }}"
+        fi
+        if [ ! -f "$FPC_BIN" ]; then
+          echo "Error: FPC binary not found at $FPC_BIN"
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            echo "Note: macOS FPC builds are not available on GitHub Actions"
+            echo "Please build locally or install FPC via Homebrew: brew install fpc"
+          fi
+          exit 1
+        fi
+        echo "fpc-path=$FPC_BIN_DIR" >> $GITHUB_OUTPUT
+        if [[ "${{ steps.platform.outputs.use-system-fpc }}" == "true" ]]; then
+          echo "fpc-binary=${{ steps.platform.outputs.fpc-binary }}" >> $GITHUB_OUTPUT
+        else
+          echo "fpc-binary=${{ steps.platform.outputs.binary }}" >> $GITHUB_OUTPUT
+        fi
+        "$FPC_BIN" -iV || echo "Version check failed"
+        echo "FPC installed at: $FPC_BIN"
+
