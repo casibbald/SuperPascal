@@ -20,6 +20,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "driver"
+version = "0.1.0"
+dependencies = [
+ "backend-zealz80",
+ "errors",
+ "ir",
+ "lexer",
+ "object-zealz80",
+ "parser",
+ "semantics",
+ "symbols",
+ "tokens",
+ "types",
+]
+
+[[package]]
 name = "errors"
 version = "0.1.0"
 dependencies = [

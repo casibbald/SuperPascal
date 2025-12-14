@@ -12,8 +12,8 @@ members = [
     "runtime-spec",
     "backends/backend-zealz80",
     "objects/object-zealz80",
+    "driver",
     # "diagnostics",  # Will be added in Phase 5
-    # "driver",  # Will be added in Phase 5
 ]
 resolver = "3"
 

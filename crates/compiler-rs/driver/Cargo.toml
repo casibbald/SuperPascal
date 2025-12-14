@@ -1,0 +1,20 @@
+[package]
+name = "driver"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "spc"
+path = "src/main.rs"
+
+[dependencies]
+lexer = { path = "../lexer" }
+parser = { path = "../parser" }
+semantics = { path = "../semantics" }
+ir = { path = "../ir" }
+backend-zealz80 = { path = "../backends/backend-zealz80" }
+object-zealz80 = { path = "../objects/object-zealz80" }
+errors = { path = "../errors" }
+tokens = { path = "../tokens" }
+types = { path = "../types" }
+symbols = { path = "../symbols" }

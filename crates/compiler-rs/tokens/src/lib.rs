@@ -387,75 +387,121 @@ impl TokenKind {
 /// Keyword lookup table
 ///
 /// Maps keyword strings (case-insensitive) to TokenKind
-pub fn lookup_keyword(s: &str) -> Option<TokenKind> {
-    // Convert to lowercase for case-insensitive lookup
-    let lower = s.to_lowercase();
-    match lower.as_str() {
-        // Tier 1: Core keywords
-        "and" => Some(TokenKind::KwAnd),
-        "array" => Some(TokenKind::KwArray),
-        "begin" => Some(TokenKind::KwBegin),
-        "boolean" => Some(TokenKind::KwBoolean),
-        "byte" => Some(TokenKind::KwByte),
-        "case" => Some(TokenKind::KwCase),
-        "char" => Some(TokenKind::KwChar),
-        "const" => Some(TokenKind::KwConst),
-        "div" => Some(TokenKind::KwDiv),
-        "do" => Some(TokenKind::KwDo),
-        "downto" => Some(TokenKind::KwDownto),
-        "else" => Some(TokenKind::KwElse),
-        "end" => Some(TokenKind::KwEnd),
-        "false" => Some(TokenKind::KwFalse),
-        "for" => Some(TokenKind::KwFor),
-        "function" => Some(TokenKind::KwFunction),
-        "goto" => Some(TokenKind::KwGoto),
-        "if" => Some(TokenKind::KwIf),
-        "integer" => Some(TokenKind::KwInteger),
-        "mod" => Some(TokenKind::KwMod),
-        "not" => Some(TokenKind::KwNot),
-        "of" => Some(TokenKind::KwOf),
-        "or" => Some(TokenKind::KwOr),
-        "procedure" => Some(TokenKind::KwProcedure),
-        "program" => Some(TokenKind::KwProgram),
-        "record" => Some(TokenKind::KwRecord),
-        "repeat" => Some(TokenKind::KwRepeat),
-        "set" => Some(TokenKind::KwSet),
-        "struct" => Some(TokenKind::KwStruct),
-        "then" => Some(TokenKind::KwThen),
-        "to" => Some(TokenKind::KwTo),
-        "true" => Some(TokenKind::KwTrue),
-        "type" => Some(TokenKind::KwType),
-        "until" => Some(TokenKind::KwUntil),
-        "var" => Some(TokenKind::KwVar),
-        "while" => Some(TokenKind::KwWhile),
-        "word" => Some(TokenKind::KwWord),
-        // Tier 2: Unit keywords
-        "implementation" => Some(TokenKind::KwImplementation),
-        "interface" => Some(TokenKind::KwInterface),
-        "unit" => Some(TokenKind::KwUnit),
-        "uses" => Some(TokenKind::KwUses),
-        "namespace" => Some(TokenKind::KwNamespace),
-        "using" => Some(TokenKind::KwUsing),
-        // Tier 3: Object Pascal
-        "class" => Some(TokenKind::KwClass),
-        "constructor" => Some(TokenKind::KwConstructor),
-        "destructor" => Some(TokenKind::KwDestructor),
-        "override" => Some(TokenKind::KwOverride),
-        "private" => Some(TokenKind::KwPrivate),
-        "protected" => Some(TokenKind::KwProtected),
-        "public" => Some(TokenKind::KwPublic),
-        "virtual" => Some(TokenKind::KwVirtual),
-        // Exceptions
-        "except" => Some(TokenKind::KwExcept),
-        "finally" => Some(TokenKind::KwFinally),
-        "raise" => Some(TokenKind::KwRaise),
-        "try" => Some(TokenKind::KwTry),
-        // Special
-        "nil" => Some(TokenKind::KwNil),
-        "self" => Some(TokenKind::KwSelf),
-        "inherited" => Some(TokenKind::KwInherited),
-        _ => None,
+/// Fast case-insensitive ASCII character comparison
+/// 
+/// Turbo Pascal-style optimization: compare without allocating.
+/// Uses bit manipulation to convert uppercase to lowercase (ASCII only).
+#[inline]
+fn ascii_to_lower(ch: u8) -> u8 {
+    // ASCII: 'A' (65) to 'Z' (90) -> 'a' (97) to 'z' (122)
+    // Bit 5 (0x20) is the case bit: set it to convert uppercase to lowercase
+    if ch >= b'A' && ch <= b'Z' {
+        ch | 0x20
+    } else {
+        ch
     }
+}
+
+/// Fast case-insensitive string comparison (ASCII only)
+/// 
+/// Turbo Pascal-style: early exit on mismatch, no allocation.
+/// Returns true if strings are equal ignoring case.
+#[inline]
+pub fn eq_ignore_ascii_case(a: &str, b: &str) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.bytes()
+        .zip(b.bytes())
+        .all(|(a_ch, b_ch)| ascii_to_lower(a_ch) == ascii_to_lower(b_ch))
+}
+
+/// Fast case-insensitive string comparison with early exit
+/// 
+/// Returns the position of first mismatch, or None if equal.
+#[inline]
+pub fn compare_ignore_ascii_case(a: &str, b: &str) -> Option<usize> {
+    let a_bytes = a.bytes();
+    let b_bytes = b.bytes();
+    for (i, (a_ch, b_ch)) in a_bytes.zip(b_bytes).enumerate() {
+        if ascii_to_lower(a_ch) != ascii_to_lower(b_ch) {
+            return Some(i);
+        }
+    }
+    if a.len() != b.len() {
+        Some(a.len().min(b.len()))
+    } else {
+        None
+    }
+}
+
+pub fn lookup_keyword(s: &str) -> Option<TokenKind> {
+    // Fast case-insensitive lookup without allocation
+    // Use eq_ignore_ascii_case for comparison
+    // Tier 1: Core keywords
+    if eq_ignore_ascii_case(s, "and") { return Some(TokenKind::KwAnd); }
+    if eq_ignore_ascii_case(s, "array") { return Some(TokenKind::KwArray); }
+    if eq_ignore_ascii_case(s, "begin") { return Some(TokenKind::KwBegin); }
+    if eq_ignore_ascii_case(s, "boolean") { return Some(TokenKind::KwBoolean); }
+    if eq_ignore_ascii_case(s, "byte") { return Some(TokenKind::KwByte); }
+    if eq_ignore_ascii_case(s, "case") { return Some(TokenKind::KwCase); }
+    if eq_ignore_ascii_case(s, "char") { return Some(TokenKind::KwChar); }
+    if eq_ignore_ascii_case(s, "const") { return Some(TokenKind::KwConst); }
+    if eq_ignore_ascii_case(s, "div") { return Some(TokenKind::KwDiv); }
+    if eq_ignore_ascii_case(s, "do") { return Some(TokenKind::KwDo); }
+    if eq_ignore_ascii_case(s, "downto") { return Some(TokenKind::KwDownto); }
+    if eq_ignore_ascii_case(s, "else") { return Some(TokenKind::KwElse); }
+    if eq_ignore_ascii_case(s, "end") { return Some(TokenKind::KwEnd); }
+    if eq_ignore_ascii_case(s, "false") { return Some(TokenKind::KwFalse); }
+    if eq_ignore_ascii_case(s, "for") { return Some(TokenKind::KwFor); }
+    if eq_ignore_ascii_case(s, "function") { return Some(TokenKind::KwFunction); }
+    if eq_ignore_ascii_case(s, "goto") { return Some(TokenKind::KwGoto); }
+    if eq_ignore_ascii_case(s, "if") { return Some(TokenKind::KwIf); }
+    if eq_ignore_ascii_case(s, "integer") { return Some(TokenKind::KwInteger); }
+    if eq_ignore_ascii_case(s, "mod") { return Some(TokenKind::KwMod); }
+    if eq_ignore_ascii_case(s, "not") { return Some(TokenKind::KwNot); }
+    if eq_ignore_ascii_case(s, "of") { return Some(TokenKind::KwOf); }
+    if eq_ignore_ascii_case(s, "or") { return Some(TokenKind::KwOr); }
+    if eq_ignore_ascii_case(s, "procedure") { return Some(TokenKind::KwProcedure); }
+    if eq_ignore_ascii_case(s, "program") { return Some(TokenKind::KwProgram); }
+    if eq_ignore_ascii_case(s, "record") { return Some(TokenKind::KwRecord); }
+    if eq_ignore_ascii_case(s, "repeat") { return Some(TokenKind::KwRepeat); }
+    if eq_ignore_ascii_case(s, "set") { return Some(TokenKind::KwSet); }
+    if eq_ignore_ascii_case(s, "struct") { return Some(TokenKind::KwStruct); }
+    if eq_ignore_ascii_case(s, "then") { return Some(TokenKind::KwThen); }
+    if eq_ignore_ascii_case(s, "to") { return Some(TokenKind::KwTo); }
+    if eq_ignore_ascii_case(s, "true") { return Some(TokenKind::KwTrue); }
+    if eq_ignore_ascii_case(s, "type") { return Some(TokenKind::KwType); }
+    if eq_ignore_ascii_case(s, "until") { return Some(TokenKind::KwUntil); }
+    if eq_ignore_ascii_case(s, "var") { return Some(TokenKind::KwVar); }
+    if eq_ignore_ascii_case(s, "while") { return Some(TokenKind::KwWhile); }
+    if eq_ignore_ascii_case(s, "word") { return Some(TokenKind::KwWord); }
+    // Tier 2: Unit keywords
+    if eq_ignore_ascii_case(s, "implementation") { return Some(TokenKind::KwImplementation); }
+    if eq_ignore_ascii_case(s, "interface") { return Some(TokenKind::KwInterface); }
+    if eq_ignore_ascii_case(s, "unit") { return Some(TokenKind::KwUnit); }
+    if eq_ignore_ascii_case(s, "uses") { return Some(TokenKind::KwUses); }
+    if eq_ignore_ascii_case(s, "namespace") { return Some(TokenKind::KwNamespace); }
+    if eq_ignore_ascii_case(s, "using") { return Some(TokenKind::KwUsing); }
+    // Tier 3: Object Pascal
+    if eq_ignore_ascii_case(s, "class") { return Some(TokenKind::KwClass); }
+    if eq_ignore_ascii_case(s, "constructor") { return Some(TokenKind::KwConstructor); }
+    if eq_ignore_ascii_case(s, "destructor") { return Some(TokenKind::KwDestructor); }
+    if eq_ignore_ascii_case(s, "override") { return Some(TokenKind::KwOverride); }
+    if eq_ignore_ascii_case(s, "private") { return Some(TokenKind::KwPrivate); }
+    if eq_ignore_ascii_case(s, "protected") { return Some(TokenKind::KwProtected); }
+    if eq_ignore_ascii_case(s, "public") { return Some(TokenKind::KwPublic); }
+    if eq_ignore_ascii_case(s, "virtual") { return Some(TokenKind::KwVirtual); }
+    // Exceptions
+    if eq_ignore_ascii_case(s, "except") { return Some(TokenKind::KwExcept); }
+    if eq_ignore_ascii_case(s, "finally") { return Some(TokenKind::KwFinally); }
+    if eq_ignore_ascii_case(s, "raise") { return Some(TokenKind::KwRaise); }
+    if eq_ignore_ascii_case(s, "try") { return Some(TokenKind::KwTry); }
+    // Special
+    if eq_ignore_ascii_case(s, "nil") { return Some(TokenKind::KwNil); }
+    if eq_ignore_ascii_case(s, "self") { return Some(TokenKind::KwSelf); }
+    if eq_ignore_ascii_case(s, "inherited") { return Some(TokenKind::KwInherited); }
+    None
 }
 
 #[cfg(test)]
@@ -472,6 +518,45 @@ mod tests {
         // Non-keywords return None
         assert_eq!(lookup_keyword("myvar"), None);
         assert_eq!(lookup_keyword("x"), None);
+    }
+
+    #[test]
+    fn test_eq_ignore_ascii_case() {
+        // Basic equality
+        assert!(eq_ignore_ascii_case("hello", "hello"));
+        assert!(eq_ignore_ascii_case("HELLO", "hello"));
+        assert!(eq_ignore_ascii_case("Hello", "HELLO"));
+        assert!(eq_ignore_ascii_case("HeLlO", "hElLo"));
+        
+        // Inequality
+        assert!(!eq_ignore_ascii_case("hello", "world"));
+        assert!(!eq_ignore_ascii_case("hello", "hell"));
+        assert!(!eq_ignore_ascii_case("hello", "helloo"));
+        
+        // Empty strings
+        assert!(eq_ignore_ascii_case("", ""));
+        assert!(!eq_ignore_ascii_case("", "a"));
+        
+        // Single character
+        assert!(eq_ignore_ascii_case("A", "a"));
+        assert!(eq_ignore_ascii_case("z", "Z"));
+    }
+
+    #[test]
+    fn test_compare_ignore_ascii_case() {
+        // Equal strings
+        assert_eq!(compare_ignore_ascii_case("hello", "hello"), None);
+        assert_eq!(compare_ignore_ascii_case("HELLO", "hello"), None);
+        assert_eq!(compare_ignore_ascii_case("Hello", "HELLO"), None);
+        
+        // Different strings
+        assert_eq!(compare_ignore_ascii_case("hello", "world"), Some(0));
+        assert_eq!(compare_ignore_ascii_case("hello", "hell"), Some(4));
+        assert_eq!(compare_ignore_ascii_case("hello", "helloo"), Some(5));
+        
+        // Different lengths
+        assert_eq!(compare_ignore_ascii_case("", "a"), Some(0));
+        assert_eq!(compare_ignore_ascii_case("a", ""), Some(0));
     }
 
     #[test]

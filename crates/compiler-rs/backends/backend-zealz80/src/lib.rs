@@ -134,6 +134,7 @@ pub struct CodeGenerator {
     /// Local variable offset from frame pointer
     local_offset: i16,
     /// Temporary counter for SSA temporaries
+    #[allow(dead_code)] // Reserved for future SSA temporary generation
     temp_counter: usize,
 }
 
