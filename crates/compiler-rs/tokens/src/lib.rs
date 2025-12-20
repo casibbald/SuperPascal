@@ -127,6 +127,8 @@ pub enum TokenKind {
     KwPublished,
     KwStrict,
     KwVirtual,
+    KwForward,
+    KwExternal,
     KwProperty,
     KwRead,
     KwWrite,
@@ -540,6 +542,8 @@ pub fn lookup_keyword(s: &str) -> Option<TokenKind> {
     if eq_ignore_ascii_case(s, "published") { return Some(TokenKind::KwPublished); }
     if eq_ignore_ascii_case(s, "strict") { return Some(TokenKind::KwStrict); }
     if eq_ignore_ascii_case(s, "virtual") { return Some(TokenKind::KwVirtual); }
+    if eq_ignore_ascii_case(s, "forward") { return Some(TokenKind::KwForward); }
+    if eq_ignore_ascii_case(s, "external") { return Some(TokenKind::KwExternal); }
     if eq_ignore_ascii_case(s, "property") { return Some(TokenKind::KwProperty); }
     if eq_ignore_ascii_case(s, "read") { return Some(TokenKind::KwRead); }
     if eq_ignore_ascii_case(s, "write") { return Some(TokenKind::KwWrite); }

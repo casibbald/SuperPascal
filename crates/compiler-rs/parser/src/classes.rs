@@ -264,6 +264,9 @@ impl super::Parser {
             class_name: None,
             params,
             block: Box::new(empty_block),
+            is_forward: false,
+            is_external: false,
+            external_name: None,
             span,
         }))
     }
@@ -311,6 +314,9 @@ impl super::Parser {
             class_name: None,
             params,
             block: Box::new(empty_block),
+            is_forward: false,
+            is_external: false,
+            external_name: None,
             span,
         }))
     }

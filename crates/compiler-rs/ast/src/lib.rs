@@ -167,6 +167,9 @@ pub struct ProcDecl {
     pub class_name: Option<String>, // Optional class name for methods (ClassName.MethodName)
     pub params: Vec<Param>,        // Parameters
     pub block: Box<Node>,          // Block node
+    pub is_forward: bool,          // true if FORWARD keyword is present
+    pub is_external: bool,         // true if EXTERNAL keyword is present
+    pub external_name: Option<String>, // Optional external name for EXTERNAL declarations
     pub span: Span,
 }
 
@@ -178,6 +181,9 @@ pub struct FuncDecl {
     pub params: Vec<Param>,        // Parameters
     pub return_type: Box<Node>,    // Type node
     pub block: Box<Node>,           // Block node
+    pub is_forward: bool,          // true if FORWARD keyword is present
+    pub is_external: bool,         // true if EXTERNAL keyword is present
+    pub external_name: Option<String>, // Optional external name for EXTERNAL declarations
     pub span: Span,
 }
 
@@ -787,6 +793,9 @@ mod tests {
             class_name: None,
             params: vec![],
             block: Box::new(block),
+            is_forward: false,
+            is_external: false,
+            external_name: None,
             span,
         });
         assert_eq!(proc_decl.span(), span);
@@ -818,6 +827,9 @@ mod tests {
             class_name: None,
             params: vec![param],
             block: Box::new(block),
+            is_forward: false,
+            is_external: false,
+            external_name: None,
             span,
         });
         assert_eq!(proc_decl.span(), span);
@@ -844,6 +856,9 @@ mod tests {
                 span,
             })),
             block: Box::new(block),
+            is_forward: false,
+            is_external: false,
+            external_name: None,
             span,
         });
         assert_eq!(func_decl.span(), span);
@@ -1576,6 +1591,9 @@ mod tests {
                 span,
             })),
             block: Box::new(block),
+            is_forward: false,
+            is_external: false,
+            external_name: None,
             span,
         });
 

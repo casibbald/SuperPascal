@@ -76,6 +76,22 @@ impl super::Parser {
             })
         }
     }
+
+    /// Advance to the next token and return the *previous* current token.
+    /// This is useful when you need to inspect the token that was just consumed.
+    pub(super) fn advance_and_get_token(&mut self) -> ParserResult<Token> {
+        let current_token = self.current().ok_or_else(|| {
+            let span = self.peek_token()
+                .map(|t| t.span)
+                .unwrap_or_else(|| Span::at(0, 1, 1));
+            ParserError::UnexpectedEof {
+                expected: "token".to_string(),
+                span,
+            }
+        })?.clone();
+        self.advance()?;
+        Ok(current_token)
+    }
 }
 
 #[cfg(test)]

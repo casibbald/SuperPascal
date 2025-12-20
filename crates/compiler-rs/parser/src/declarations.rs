@@ -326,6 +326,9 @@ impl super::Parser {
             class_name,
             params,
             block: Box::new(empty_block),
+            is_forward: false,
+            is_external: false,
+            external_name: None,
             span,
         }))
     }
@@ -370,11 +373,14 @@ impl super::Parser {
             params,
             return_type: Box::new(return_type),
             block: Box::new(empty_block),
+            is_forward: false,
+            is_external: false,
+            external_name: None,
             span,
         }))
     }
 
-    /// Parse procedure declaration: PROCEDURE [ClassName.]identifier [ ( params ) ] ; block ;
+    /// Parse procedure declaration: PROCEDURE [ClassName.]identifier [ ( params ) ] ; [block | FORWARD | EXTERNAL [name]] ;
     pub(crate) fn parse_procedure_decl(&mut self) -> ParserResult<Node> {
         let start_span = self
             .current()
@@ -393,15 +399,75 @@ impl super::Parser {
         };
 
         self.consume(TokenKind::Semicolon, ";")?;
-        let block = self.parse_block()?;
-        self.consume(TokenKind::Semicolon, ";")?;
+        
+        // Check for FORWARD or EXTERNAL keyword
+        let (is_forward, is_external, external_name) = if self.check(&TokenKind::KwForward) {
+            self.advance()?; // consume FORWARD
+            self.consume(TokenKind::Semicolon, ";")?;
+            (true, false, None)
+        } else if self.check(&TokenKind::KwExternal) {
+            self.advance()?; // consume EXTERNAL
+            // Optional external name: EXTERNAL 'name' or EXTERNAL name
+            let ext_name = if let Some(token) = self.current() {
+                match &token.kind {
+                    TokenKind::StringLiteral(s) => {
+                        let name_token = self.advance_and_get_token()?;
+                        match name_token.kind {
+                            TokenKind::StringLiteral(s) => Some(s),
+                            _ => None,
+                        }
+                    }
+                    TokenKind::Identifier(s) => {
+                        let name_token = self.advance_and_get_token()?;
+                        match name_token.kind {
+                            TokenKind::Identifier(s) => Some(s),
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                }
+            } else {
+                None
+            };
+            self.consume(TokenKind::Semicolon, ";")?;
+            (false, true, ext_name)
+        } else {
+            // Regular procedure with block
+            let block = self.parse_block()?;
+            self.consume(TokenKind::Semicolon, ";")?;
+            let span = start_span.merge(block.span());
+            return Ok(Node::ProcDecl(ast::ProcDecl {
+                name,
+                class_name,
+                params,
+                block: Box::new(block),
+                is_forward: false,
+                is_external: false,
+                external_name: None,
+                span,
+            }));
+        };
 
-        let span = start_span.merge(block.span());
+        // Create empty block for forward/external declarations
+        let empty_block = Node::Block(ast::Block {
+            const_decls: vec![],
+            type_decls: vec![],
+            var_decls: vec![],
+            proc_decls: vec![],
+            func_decls: vec![],
+            statements: vec![],
+            span: start_span,
+        });
+
+        let span = start_span;
         Ok(Node::ProcDecl(ast::ProcDecl {
             name,
             class_name,
             params,
-            block: Box::new(block),
+            block: Box::new(empty_block),
+            is_forward,
+            is_external,
+            external_name,
             span,
         }))
     }
@@ -427,16 +493,77 @@ impl super::Parser {
         self.consume(TokenKind::Colon, ":")?;
         let return_type = self.parse_type()?;
         self.consume(TokenKind::Semicolon, ";")?;
-        let block = self.parse_block()?;
-        self.consume(TokenKind::Semicolon, ";")?;
+        
+        // Check for FORWARD or EXTERNAL keyword
+        let (is_forward, is_external, external_name) = if self.check(&TokenKind::KwForward) {
+            self.advance()?; // consume FORWARD
+            self.consume(TokenKind::Semicolon, ";")?;
+            (true, false, None)
+        } else if self.check(&TokenKind::KwExternal) {
+            self.advance()?; // consume EXTERNAL
+            // Optional external name: EXTERNAL 'name' or EXTERNAL name
+            let ext_name = if let Some(token) = self.current() {
+                match &token.kind {
+                    TokenKind::StringLiteral(s) => {
+                        let name_token = self.advance_and_get_token()?;
+                        match name_token.kind {
+                            TokenKind::StringLiteral(s) => Some(s),
+                            _ => None,
+                        }
+                    }
+                    TokenKind::Identifier(s) => {
+                        let name_token = self.advance_and_get_token()?;
+                        match name_token.kind {
+                            TokenKind::Identifier(s) => Some(s),
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                }
+            } else {
+                None
+            };
+            self.consume(TokenKind::Semicolon, ";")?;
+            (false, true, ext_name)
+        } else {
+            // Regular function with block
+            let block = self.parse_block()?;
+            self.consume(TokenKind::Semicolon, ";")?;
+            let span = start_span.merge(block.span());
+            return Ok(Node::FuncDecl(ast::FuncDecl {
+                name,
+                class_name,
+                params,
+                return_type: Box::new(return_type),
+                block: Box::new(block),
+                is_forward: false,
+                is_external: false,
+                external_name: None,
+                span,
+            }));
+        };
 
-        let span = start_span.merge(block.span());
+        // Create empty block for forward/external declarations
+        let empty_block = Node::Block(ast::Block {
+            const_decls: vec![],
+            type_decls: vec![],
+            var_decls: vec![],
+            proc_decls: vec![],
+            func_decls: vec![],
+            statements: vec![],
+            span: start_span,
+        });
+
+        let span = start_span.merge(return_type.span());
         Ok(Node::FuncDecl(ast::FuncDecl {
             name,
             class_name,
             params,
             return_type: Box::new(return_type),
-            block: Box::new(block),
+            block: Box::new(empty_block),
+            is_forward,
+            is_external,
+            external_name,
             span,
         }))
     }
@@ -958,6 +1085,441 @@ mod tests {
                         assert_eq!(proc_block.var_decls.len(), 1);
                         assert_eq!(proc_block.proc_decls.len(), 1);
                     }
+                }
+            }
+        }
+    }
+
+    // ========== FORWARD Declaration Tests ==========
+
+    #[test]
+    fn test_parse_forward_procedure() {
+        let source = r#"
+            program Test;
+            procedure MyProc; forward;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::ProcDecl(proc) = &block.proc_decls[0] {
+                    assert_eq!(proc.name, "MyProc");
+                    assert!(proc.is_forward, "Procedure should be marked as forward");
+                    assert!(!proc.is_external, "Procedure should not be external");
+                    assert_eq!(proc.external_name, None);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_forward_function() {
+        let source = r#"
+            program Test;
+            function MyFunc: integer; forward;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::FuncDecl(func) = &block.func_decls[0] {
+                    assert_eq!(func.name, "MyFunc");
+                    assert!(func.is_forward, "Function should be marked as forward");
+                    assert!(!func.is_external, "Function should not be external");
+                    assert_eq!(func.external_name, None);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_forward_procedure_with_params() {
+        let source = r#"
+            program Test;
+            procedure MyProc(x: integer; y: string); forward;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::ProcDecl(proc) = &block.proc_decls[0] {
+                    assert_eq!(proc.name, "MyProc");
+                    assert_eq!(proc.params.len(), 2);
+                    assert!(proc.is_forward);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_forward_function_with_params() {
+        let source = r#"
+            program Test;
+            function MyFunc(a: integer; b: boolean): string; forward;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::FuncDecl(func) = &block.func_decls[0] {
+                    assert_eq!(func.name, "MyFunc");
+                    assert_eq!(func.params.len(), 2);
+                    assert!(func.is_forward);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_forward_method() {
+        let source = r#"
+            program Test;
+            procedure MyClass.MyMethod; forward;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::ProcDecl(proc) = &block.proc_decls[0] {
+                    assert_eq!(proc.name, "MyMethod");
+                    assert_eq!(proc.class_name, Some("MyClass".to_string()));
+                    assert!(proc.is_forward);
+                }
+            }
+        }
+    }
+
+    // ========== EXTERNAL Declaration Tests ==========
+
+    #[test]
+    fn test_parse_external_procedure() {
+        let source = r#"
+            program Test;
+            procedure MyProc; external;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::ProcDecl(proc) = &block.proc_decls[0] {
+                    assert_eq!(proc.name, "MyProc");
+                    assert!(!proc.is_forward, "Procedure should not be forward");
+                    assert!(proc.is_external, "Procedure should be marked as external");
+                    assert_eq!(proc.external_name, None);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_external_function() {
+        let source = r#"
+            program Test;
+            function MyFunc: integer; external;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::FuncDecl(func) = &block.func_decls[0] {
+                    assert_eq!(func.name, "MyFunc");
+                    assert!(!func.is_forward, "Function should not be forward");
+                    assert!(func.is_external, "Function should be marked as external");
+                    assert_eq!(func.external_name, None);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_external_procedure_with_string_name() {
+        let source = r#"
+            program Test;
+            procedure MyProc; external 'external_proc';
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::ProcDecl(proc) = &block.proc_decls[0] {
+                    assert_eq!(proc.name, "MyProc");
+                    assert!(proc.is_external);
+                    assert_eq!(proc.external_name, Some("external_proc".to_string()));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_external_function_with_string_name() {
+        let source = r#"
+            program Test;
+            function MyFunc: integer; external 'external_func';
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::FuncDecl(func) = &block.func_decls[0] {
+                    assert_eq!(func.name, "MyFunc");
+                    assert!(func.is_external);
+                    assert_eq!(func.external_name, Some("external_func".to_string()));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_external_procedure_with_identifier_name() {
+        let source = r#"
+            program Test;
+            procedure MyProc; external ExternalName;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::ProcDecl(proc) = &block.proc_decls[0] {
+                    assert_eq!(proc.name, "MyProc");
+                    assert!(proc.is_external);
+                    assert_eq!(proc.external_name, Some("ExternalName".to_string()));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_external_function_with_identifier_name() {
+        let source = r#"
+            program Test;
+            function MyFunc: integer; external ExternalFuncName;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::FuncDecl(func) = &block.func_decls[0] {
+                    assert_eq!(func.name, "MyFunc");
+                    assert!(func.is_external);
+                    assert_eq!(func.external_name, Some("ExternalFuncName".to_string()));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_external_procedure_with_params() {
+        let source = r#"
+            program Test;
+            procedure MyProc(x: integer; y: string); external;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::ProcDecl(proc) = &block.proc_decls[0] {
+                    assert_eq!(proc.name, "MyProc");
+                    assert_eq!(proc.params.len(), 2);
+                    assert!(proc.is_external);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_external_function_with_params() {
+        let source = r#"
+            program Test;
+            function MyFunc(a: integer; b: boolean): string; external 'lib_func';
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::FuncDecl(func) = &block.func_decls[0] {
+                    assert_eq!(func.name, "MyFunc");
+                    assert_eq!(func.params.len(), 2);
+                    assert!(func.is_external);
+                    assert_eq!(func.external_name, Some("lib_func".to_string()));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_external_method() {
+        let source = r#"
+            program Test;
+            procedure MyClass.MyMethod; external 'C_method';
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::ProcDecl(proc) = &block.proc_decls[0] {
+                    assert_eq!(proc.name, "MyMethod");
+                    assert_eq!(proc.class_name, Some("MyClass".to_string()));
+                    assert!(proc.is_external);
+                    assert_eq!(proc.external_name, Some("C_method".to_string()));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_regular_procedure_not_forward_or_external() {
+        let source = r#"
+            program Test;
+            procedure MyProc;
+            begin
+                writeln('Hello');
+            end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::ProcDecl(proc) = &block.proc_decls[0] {
+                    assert_eq!(proc.name, "MyProc");
+                    assert!(!proc.is_forward, "Regular procedure should not be forward");
+                    assert!(!proc.is_external, "Regular procedure should not be external");
+                    assert_eq!(proc.external_name, None);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_regular_function_not_forward_or_external() {
+        let source = r#"
+            program Test;
+            function MyFunc: integer;
+            begin
+                MyFunc := 42;
+            end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::FuncDecl(func) = &block.func_decls[0] {
+                    assert_eq!(func.name, "MyFunc");
+                    assert!(!func.is_forward, "Regular function should not be forward");
+                    assert!(!func.is_external, "Regular function should not be external");
+                    assert_eq!(func.external_name, None);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_multiple_forward_and_external() {
+        let source = r#"
+            program Test;
+            procedure ForwardProc; forward;
+            function ForwardFunc: integer; forward;
+            procedure ExternalProc; external 'ext_proc';
+            function ExternalFunc: string; external 'ext_func';
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                assert_eq!(block.proc_decls.len(), 2);
+                assert_eq!(block.func_decls.len(), 2);
+                
+                if let Node::ProcDecl(forward_proc) = &block.proc_decls[0] {
+                    assert_eq!(forward_proc.name, "ForwardProc");
+                    assert!(forward_proc.is_forward);
+                    assert!(!forward_proc.is_external);
+                }
+                
+                if let Node::FuncDecl(forward_func) = &block.func_decls[0] {
+                    assert_eq!(forward_func.name, "ForwardFunc");
+                    assert!(forward_func.is_forward);
+                    assert!(!forward_func.is_external);
+                }
+                
+                if let Node::ProcDecl(ext_proc) = &block.proc_decls[1] {
+                    assert_eq!(ext_proc.name, "ExternalProc");
+                    assert!(!ext_proc.is_forward);
+                    assert!(ext_proc.is_external);
+                    assert_eq!(ext_proc.external_name, Some("ext_proc".to_string()));
+                }
+                
+                if let Node::FuncDecl(ext_func) = &block.func_decls[1] {
+                    assert_eq!(ext_func.name, "ExternalFunc");
+                    assert!(!ext_func.is_forward);
+                    assert!(ext_func.is_external);
+                    assert_eq!(ext_func.external_name, Some("ext_func".to_string()));
                 }
             }
         }
