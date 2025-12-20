@@ -52,6 +52,10 @@ pub enum Node {
     NamedType(NamedType),
     PointerType(PointerType),
     ClassType(ClassType),
+    SetType(SetType),
+    
+    // ===== Set Literals =====
+    SetLiteral(SetLiteral),
 }
 
 /// Program node - root of the AST
@@ -337,6 +341,9 @@ pub enum BinaryOp {
     // Logical
     And,      // and
     Or,       // or
+    
+    // Set membership
+    In,       // in (set membership)
 }
 
 /// Unary expression
@@ -446,6 +453,30 @@ pub struct PointerType {
     pub span: Span,
 }
 
+/// Set type (SET OF type)
+#[derive(Debug, Clone, PartialEq)]
+pub struct SetType {
+    pub element_type: Box<Node>,  // The element type (e.g., integer, char, enum)
+    pub span: Span,
+}
+
+/// Set literal ([element1, element2, ...] or [element1..element2])
+#[derive(Debug, Clone, PartialEq)]
+pub struct SetLiteral {
+    pub elements: Vec<SetElement>,  // Set elements (can be single values or ranges)
+    pub span: Span,
+}
+
+/// Set element (single value or range)
+#[derive(Debug, Clone, PartialEq)]
+pub enum SetElement {
+    Value(Box<Node>),           // Single value expression
+    Range {                      // Range: value1..value2
+        start: Box<Node>,
+        end: Box<Node>,
+    },
+}
+
 /// Visibility modifier for class members
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Visibility {
@@ -522,6 +553,8 @@ impl Node {
             Node::NamedType(n) => n.span,
             Node::PointerType(p) => p.span,
             Node::ClassType(c) => c.span,
+            Node::SetType(s) => s.span,
+            Node::SetLiteral(s) => s.span,
         }
     }
 }

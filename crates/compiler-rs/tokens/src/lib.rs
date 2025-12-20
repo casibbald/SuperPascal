@@ -78,6 +78,7 @@ pub enum TokenKind {
     KwFunction,
     KwGoto,
     KwIf,
+    KwIn,      // in (set membership operator)
     KwInteger,
     KwMod,
     KwNot,
@@ -235,6 +236,7 @@ impl Token {
                 | TokenKind::KwFunction
                 | TokenKind::KwGoto
                 | TokenKind::KwIf
+                | TokenKind::KwIn
                 | TokenKind::KwInteger
                 | TokenKind::KwMod
                 | TokenKind::KwNot
@@ -479,6 +481,7 @@ pub fn lookup_keyword(s: &str) -> Option<TokenKind> {
     if eq_ignore_ascii_case(s, "function") { return Some(TokenKind::KwFunction); }
     if eq_ignore_ascii_case(s, "goto") { return Some(TokenKind::KwGoto); }
     if eq_ignore_ascii_case(s, "if") { return Some(TokenKind::KwIf); }
+    if eq_ignore_ascii_case(s, "in") { return Some(TokenKind::KwIn); }
     if eq_ignore_ascii_case(s, "integer") { return Some(TokenKind::KwInteger); }
     if eq_ignore_ascii_case(s, "mod") { return Some(TokenKind::KwMod); }
     if eq_ignore_ascii_case(s, "not") { return Some(TokenKind::KwNot); }

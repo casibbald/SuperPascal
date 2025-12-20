@@ -38,6 +38,16 @@ impl super::Parser {
                 element_type: Box::new(element_type),
                 span,
             }))
+        } else if self.check(&TokenKind::KwSet) {
+            // SET OF type
+            self.advance()?; // consume SET
+            self.consume(TokenKind::KwOf, "OF")?;
+            let element_type = self.parse_type()?;
+            let span = start_span.merge(element_type.span());
+            Ok(Node::SetType(ast::SetType {
+                element_type: Box::new(element_type),
+                span,
+            }))
         } else if self.check(&TokenKind::KwRecord) {
             self.advance()?;
             let mut fields = vec![];
@@ -345,6 +355,96 @@ mod tests {
                         }
                     } else {
                         panic!("Expected FieldExpr");
+                    }
+                }
+            }
+        }
+    }
+
+    // ===== Set Type Tests =====
+
+    #[test]
+    fn test_parse_set_of_integer() {
+        let source = r#"
+            program Test;
+            type IntSet = set of integer;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    if let Node::SetType(set_type) = type_decl.type_expr.as_ref() {
+                        if let Node::NamedType(named) = set_type.element_type.as_ref() {
+                            assert_eq!(named.name, "integer");
+                        } else {
+                            panic!("Expected NamedType in set element type");
+                        }
+                    } else {
+                        panic!("Expected SetType");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_set_of_char() {
+        let source = r#"
+            program Test;
+            type CharSet = set of char;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    if let Node::SetType(set_type) = type_decl.type_expr.as_ref() {
+                        if let Node::NamedType(named) = set_type.element_type.as_ref() {
+                            assert_eq!(named.name, "char");
+                        } else {
+                            panic!("Expected NamedType in set element type");
+                        }
+                    } else {
+                        panic!("Expected SetType");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_set_of_named_type() {
+        let source = r#"
+            program Test;
+            type MyType = integer;
+            type MyTypeSet = set of MyType;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[1] {
+                    if let Node::SetType(set_type) = type_decl.type_expr.as_ref() {
+                        if let Node::NamedType(named) = set_type.element_type.as_ref() {
+                            assert_eq!(named.name, "MyType");
+                        } else {
+                            panic!("Expected NamedType in set element type");
+                        }
+                    } else {
+                        panic!("Expected SetType");
                     }
                 }
             }

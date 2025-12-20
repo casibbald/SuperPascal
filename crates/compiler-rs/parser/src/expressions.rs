@@ -120,6 +120,42 @@ impl super::Parser {
                 self.consume(TokenKind::RightParen, ")")?;
                 Ok(expr)
             }
+            Some(TokenKind::LeftBracket) => {
+                // Set literal: [element1, element2, ...] or [element1..element2]
+                self.advance()?; // consume [
+                let mut elements = vec![];
+                
+                if !self.check(&TokenKind::RightBracket) {
+                    loop {
+                        let start_expr = self.parse_expression()?;
+                        
+                        // Check for range: element1..element2
+                        if self.check(&TokenKind::DotDot) {
+                            self.advance()?; // consume ..
+                            let end_expr = self.parse_expression()?;
+                            elements.push(ast::SetElement::Range {
+                                start: Box::new(start_expr),
+                                end: Box::new(end_expr),
+                            });
+                        } else {
+                            // Single value
+                            elements.push(ast::SetElement::Value(Box::new(start_expr)));
+                        }
+                        
+                        if !self.check(&TokenKind::Comma) {
+                            break;
+                        }
+                        self.advance()?; // consume ,
+                    }
+                }
+                
+                let end_token = self.consume(TokenKind::RightBracket, "]")?;
+                let span = start_span.merge(end_token.span);
+                Ok(Node::SetLiteral(ast::SetLiteral {
+                    elements,
+                    span,
+                }))
+            }
             Some(TokenKind::Identifier(_)) => {
                 // Could be identifier, function call, or array/record access
                 let name_token = self.current().unwrap().clone();
@@ -230,6 +266,7 @@ impl super::Parser {
             Some(TokenKind::GreaterEqual) => Some(ast::BinaryOp::GreaterEqual),
             Some(TokenKind::KwAnd) => Some(ast::BinaryOp::And),
             Some(TokenKind::KwOr) => Some(ast::BinaryOp::Or),
+            Some(TokenKind::KwIn) => Some(ast::BinaryOp::In),
             _ => None,
         }
     }
@@ -240,9 +277,10 @@ impl super::Parser {
             // Logical operators (lowest precedence)
             ast::BinaryOp::Or => 1,
             ast::BinaryOp::And => 2,
-            // Relational operators
+            // Relational operators (including set membership)
             ast::BinaryOp::Equal | ast::BinaryOp::NotEqual | ast::BinaryOp::Less
-            | ast::BinaryOp::LessEqual | ast::BinaryOp::Greater | ast::BinaryOp::GreaterEqual => 3,
+            | ast::BinaryOp::LessEqual | ast::BinaryOp::Greater | ast::BinaryOp::GreaterEqual
+            | ast::BinaryOp::In => 3,
             // Additive operators
             ast::BinaryOp::Add | ast::BinaryOp::Subtract => 4,
             // Multiplicative operators (highest precedence)
@@ -267,5 +305,200 @@ impl super::Parser {
 
         self.consume(TokenKind::RightParen, ")")?;
         Ok(args)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::Parser;
+    use ast::{self, Node};
+
+    // ===== Set Literal Tests =====
+
+    #[test]
+    fn test_parse_set_literal_simple() {
+        let source = r#"
+            program Test;
+            begin
+                x := [1, 2, 3];
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::AssignStmt(assign) = &block.statements[0] {
+                    if let Node::SetLiteral(set_lit) = assign.value.as_ref() {
+                        assert_eq!(set_lit.elements.len(), 3);
+                        // Check first element
+                        if let ast::SetElement::Value(value) = &set_lit.elements[0] {
+                            if let Node::LiteralExpr(lit) = value.as_ref() {
+                                if let ast::LiteralValue::Integer(v) = lit.value {
+                                    assert_eq!(v, 1);
+                                } else {
+                                    panic!("Expected Integer literal");
+                                }
+                            }
+                        } else {
+                            panic!("Expected Value element");
+                        }
+                    } else {
+                        panic!("Expected SetLiteral");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_set_literal_with_range() {
+        let source = r#"
+            program Test;
+            begin
+                x := [1..5, 10];
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::AssignStmt(assign) = &block.statements[0] {
+                    if let Node::SetLiteral(set_lit) = assign.value.as_ref() {
+                        assert_eq!(set_lit.elements.len(), 2);
+                        // Check first element is a range
+                        if let ast::SetElement::Range { start, end } = &set_lit.elements[0] {
+                            if let Node::LiteralExpr(lit) = start.as_ref() {
+                                if let ast::LiteralValue::Integer(v) = lit.value {
+                                    assert_eq!(v, 1);
+                                }
+                            }
+                            if let Node::LiteralExpr(lit) = end.as_ref() {
+                                if let ast::LiteralValue::Integer(v) = lit.value {
+                                    assert_eq!(v, 5);
+                                }
+                            }
+                        } else {
+                            panic!("Expected Range element");
+                        }
+                        // Check second element is a value
+                        if let ast::SetElement::Value(value) = &set_lit.elements[1] {
+                            if let Node::LiteralExpr(lit) = value.as_ref() {
+                                if let ast::LiteralValue::Integer(v) = lit.value {
+                                    assert_eq!(v, 10);
+                                }
+                            }
+                        } else {
+                            panic!("Expected Value element");
+                        }
+                    } else {
+                        panic!("Expected SetLiteral");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_set_literal_empty() {
+        let source = r#"
+            program Test;
+            begin
+                x := [];
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::AssignStmt(assign) = &block.statements[0] {
+                    if let Node::SetLiteral(set_lit) = assign.value.as_ref() {
+                        assert_eq!(set_lit.elements.len(), 0);
+                    } else {
+                        panic!("Expected SetLiteral");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_in_operator() {
+        let source = r#"
+            program Test;
+            begin
+                if x in [1, 2, 3] then
+                    writeln('Found');
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::IfStmt(if_stmt) = &block.statements[0] {
+                    if let Node::BinaryExpr(bin_expr) = if_stmt.condition.as_ref() {
+                        assert_eq!(bin_expr.op, ast::BinaryOp::In);
+                        if let Node::IdentExpr(ident) = bin_expr.left.as_ref() {
+                            assert_eq!(ident.name, "x");
+                        } else {
+                            panic!("Expected IdentExpr on left side of IN");
+                        }
+                        if let Node::SetLiteral(_) = bin_expr.right.as_ref() {
+                            // OK - right side is a set literal
+                        } else {
+                            panic!("Expected SetLiteral on right side of IN");
+                        }
+                    } else {
+                        panic!("Expected BinaryExpr with IN operator");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_in_operator_with_set_variable() {
+        let source = r#"
+            program Test;
+            var s: set of integer;
+            begin
+                if 5 in s then
+                    writeln('Found');
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::IfStmt(if_stmt) = &block.statements[0] {
+                    if let Node::BinaryExpr(bin_expr) = if_stmt.condition.as_ref() {
+                        assert_eq!(bin_expr.op, ast::BinaryOp::In);
+                        if let Node::LiteralExpr(lit) = bin_expr.left.as_ref() {
+                            if let ast::LiteralValue::Integer(v) = lit.value {
+                                assert_eq!(v, 5);
+                            }
+                        } else {
+                            panic!("Expected LiteralExpr on left side of IN");
+                        }
+                        if let Node::IdentExpr(ident) = bin_expr.right.as_ref() {
+                            assert_eq!(ident.name, "s");
+                        } else {
+                            panic!("Expected IdentExpr on right side of IN");
+                        }
+                    } else {
+                        panic!("Expected BinaryExpr with IN operator");
+                    }
+                }
+            }
+        }
     }
 }
