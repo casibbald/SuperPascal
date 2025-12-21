@@ -7,12 +7,20 @@ use ast::Node;
 use errors::{ParserError, ParserResult};
 use tokens::{Span, TokenKind};
 
-/// Parse property declaration: PROPERTY identifier [ [ index_params ] ] : type [ READ identifier ] [ WRITE identifier ] [ INDEX expr ] [ DEFAULT expr ] [ STORED expr ] [ ; default ]
+/// Parse property declaration: [CLASS] PROPERTY identifier [ [ index_params ] ] : type [ READ identifier ] [ WRITE identifier ] [ INDEX expr ] [ DEFAULT expr ] [ STORED expr ] [ ; default ]
 pub(crate) fn parse_property_decl(parser: &mut super::Parser) -> ParserResult<Node> {
         let start_span = parser
             .current()
             .map(|t| t.span)
             .unwrap_or_else(|| Span::at(0, 1, 1));
+
+        // Check for CLASS keyword (class property)
+        let is_class_property = if parser.check(&TokenKind::KwClass) {
+            parser.advance()?; // consume CLASS
+            true
+        } else {
+            false
+        };
 
         parser.consume(TokenKind::KwProperty, "PROPERTY")?;
 
@@ -130,6 +138,7 @@ pub(crate) fn parse_property_decl(parser: &mut super::Parser) -> ParserResult<No
             default_expr,
             stored_expr,
             is_default,
+            is_class_property,
             span,
         }))
 }
@@ -207,6 +216,41 @@ mod tests {
                 if let Node::PropertyDecl(prop) = &interface.property_decls[0] {
                     assert_eq!(prop.name, "Items");
                     assert_eq!(prop.index_params.len(), 1);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_class_property() {
+        let source = r#"
+            program Test;
+            type
+                TMyClass = class
+                    class property Count: integer read FCount;
+                end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(prog)) = result {
+            if let Node::Block(block) = &*prog.block {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    if let Node::ClassType(class_type) = &*type_decl.type_expr {
+                        // Find the property member
+                        let prop_member = class_type.members.iter()
+                            .find(|(_, m)| matches!(m, ast::ClassMember::Property(_)));
+                        assert!(prop_member.is_some(), "Class property not found");
+                        if let Some((_, ast::ClassMember::Property(prop))) = prop_member {
+                            if let Node::PropertyDecl(prop_decl) = prop {
+                                assert_eq!(prop_decl.name, "Count");
+                                assert!(prop_decl.is_class_property, "Should be class property");
+                            }
+                        }
+                    }
                 }
             }
         }

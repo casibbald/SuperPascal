@@ -251,6 +251,7 @@ mod tests {
                 name: "integer".to_string(),
                 span,
             })),
+            is_class_var: false,
             absolute_address: None,
             span,
         });

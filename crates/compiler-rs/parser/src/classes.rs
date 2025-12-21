@@ -151,9 +151,16 @@ impl super::Parser {
                 for decl in type_decls {
                     members.push((current_visibility, ast::ClassMember::Type(decl)));
                 }
+            } else if self.check(&TokenKind::KwClass) && self.check_peek(&TokenKind::KwVar) {
+                // Class variable declarations: CLASS VAR
+                self.advance()?; // consume CLASS
+                let var_decls = self.parse_var_decls_with_class_flag(true)?;
+                for var_decl in var_decls {
+                    members.push((current_visibility, ast::ClassMember::Field(var_decl)));
+                }
             } else if self.check(&TokenKind::KwVar) {
-                // Field declarations (can be class var)
-                let var_decls = self.parse_var_decls()?;
+                // Field declarations (regular instance variables)
+                let var_decls = self.parse_var_decls_with_class_flag(false)?;
                 for decl in var_decls {
                     members.push((current_visibility, ast::ClassMember::Field(decl)));
                 }
@@ -171,6 +178,7 @@ impl super::Parser {
                             names: field_decl.names,
                             type_expr: field_decl.type_expr,
                             absolute_address: None,
+                            is_class_var: false, // Field declarations are instance variables
                             span: field_decl.span,
                         });
                         members.push((current_visibility, ast::ClassMember::Field(var_decl)));
@@ -200,8 +208,13 @@ impl super::Parser {
                 // Method (can be class function) - in class context, these are forward declarations
                 let func = self.parse_function_decl_in_class()?;
                 members.push((current_visibility, ast::ClassMember::Method(func)));
+            } else if self.check(&TokenKind::KwClass) && self.check_peek(&TokenKind::KwProperty) {
+                // Class property: CLASS PROPERTY
+                // parse_property_decl already handles CLASS keyword
+                let prop = super::properties::parse_property_decl(self)?;
+                members.push((current_visibility, ast::ClassMember::Property(prop)));
             } else if self.check(&TokenKind::KwProperty) {
-                // Property
+                // Property (regular instance property)
                 let prop = super::properties::parse_property_decl(self)?;
                 members.push((current_visibility, ast::ClassMember::Property(prop)));
             } else {

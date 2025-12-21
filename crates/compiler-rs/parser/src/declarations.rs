@@ -310,10 +310,15 @@ impl super::Parser {
 
     /// Parse variable declarations: VAR var_decl { ; var_decl }
     pub(crate) fn parse_var_decls(&mut self) -> ParserResult<Vec<Node>> {
+        self.parse_var_decls_with_class_flag(false)
+    }
+
+    /// Parse variable declarations with optional class var flag
+    pub(crate) fn parse_var_decls_with_class_flag(&mut self, is_class_var: bool) -> ParserResult<Vec<Node>> {
         self.consume(TokenKind::KwVar, "VAR")?;
         let mut decls = vec![];
         loop {
-            decls.push(self.parse_var_decl()?);
+            decls.push(self.parse_var_decl_with_class_flag(is_class_var)?);
             if !self.check(&TokenKind::Semicolon) {
                 break;
             }
@@ -327,6 +332,11 @@ impl super::Parser {
 
     /// Parse single variable declaration: identifier_list : type [ABSOLUTE expression]
     fn parse_var_decl(&mut self) -> ParserResult<Node> {
+        self.parse_var_decl_with_class_flag(false)
+    }
+
+    /// Parse single variable declaration with optional class var flag
+    fn parse_var_decl_with_class_flag(&mut self, is_class_var: bool) -> ParserResult<Node> {
         let start_span = self
             .current()
             .map(|t| t.span)
@@ -369,6 +379,7 @@ impl super::Parser {
             names,
             type_expr: Box::new(type_expr),
             absolute_address,
+            is_class_var,
             span,
         }))
     }
@@ -2362,6 +2373,53 @@ mod tests {
                     assert_eq!(proc.params[2].param_type, ast::ParamType::Const);
                     assert_eq!(proc.params[3].param_type, ast::ParamType::ConstRef);
                     assert_eq!(proc.params[4].param_type, ast::ParamType::Out);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_class_var() {
+        let source = r#"
+            program Test;
+            type
+                TMyClass = class
+                    class var SharedCounter: integer;
+                    class var SharedName: string;
+                end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(prog)) = result {
+            if let Node::Block(block) = &*prog.block {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    if let Node::ClassType(class_type) = &*type_decl.type_expr {
+                        // Find class variable members
+                        let class_var_members: Vec<_> = class_type.members.iter()
+                            .filter_map(|(_, m)| {
+                                if let ast::ClassMember::Field(field) = m {
+                                    if let Node::VarDecl(var_decl) = field {
+                                        if var_decl.is_class_var {
+                                            Some(var_decl)
+                                        } else {
+                                            None
+                                        }
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        assert_eq!(class_var_members.len(), 2, "Should have 2 class variables");
+                        assert_eq!(class_var_members[0].names, vec!["SharedCounter"]);
+                        assert_eq!(class_var_members[1].names, vec!["SharedName"]);
+                    }
                 }
             }
         }

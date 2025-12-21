@@ -156,6 +156,7 @@ pub struct VarDecl {
     pub names: Vec<String>,      // Variable names
     pub type_expr: Box<Node>,     // Type node
     pub absolute_address: Option<Box<Node>>, // Optional absolute address (ABSOLUTE expression)
+    pub is_class_var: bool,      // true if declared with CLASS VAR
     pub span: Span,
 }
 
@@ -217,6 +218,7 @@ pub struct PropertyDecl {
     pub default_expr: Option<Box<Node>>, // Optional DEFAULT expression
     pub stored_expr: Option<Box<Node>>,  // Optional STORED expression
     pub is_default: bool,           // Whether this is a default property
+    pub is_class_property: bool,   // true if declared with CLASS PROPERTY
     pub span: Span,
 }
 
@@ -817,6 +819,7 @@ mod tests {
                 span,
             })),
             absolute_address: None,
+            is_class_var: false,
             span,
         });
         let block = Node::Block(Block {
@@ -846,6 +849,7 @@ mod tests {
                 span,
             })),
             absolute_address: None,
+            is_class_var: false,
             span,
         });
         assert_eq!(var_decl.span(), span);
@@ -861,6 +865,7 @@ mod tests {
                 span,
             })),
             absolute_address: None,
+            is_class_var: false,
             span,
         });
         assert_eq!(var_decl.span(), span);
@@ -1608,6 +1613,7 @@ mod tests {
                 span,
             })),
             absolute_address: None,
+            is_class_var: false,
             span,
         });
 
