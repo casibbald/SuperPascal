@@ -11,6 +11,7 @@ mod declarations;
 mod classes;
 mod units;
 mod properties;
+mod directives;
 pub mod query;
 pub mod incremental;
 
@@ -19,12 +20,15 @@ use errors::{CodeSnippet, Diagnostic, ParserError, ParserResult};
 use lexer::Lexer;
 use tokens::{Span, Token, TokenKind};
 
+use crate::directives::DirectiveEvaluator;
+
 /// Parser for SuperPascal programs
 pub struct Parser {
     lexer: Lexer,
     current: Option<Token>,
     peek: Option<Token>,
     filename: Option<String>,
+    directive_evaluator: DirectiveEvaluator,
 }
 
 impl Parser {
@@ -35,17 +39,37 @@ impl Parser {
 
     /// Create a new parser from source code with filename
     pub fn new_with_file(source: &str, filename: Option<String>) -> ParserResult<Self> {
+        Self::new_with_file_and_symbols(source, filename, vec![])
+    }
+
+    /// Create a new parser from source code with filename and predefined symbols
+    pub fn new_with_file_and_symbols(
+        source: &str,
+        filename: Option<String>,
+        predefined_symbols: Vec<String>,
+    ) -> ParserResult<Self> {
         let lexer = Lexer::new(source);
         let mut parser = Self {
             lexer,
             current: None,
             peek: None,
             filename,
+            directive_evaluator: DirectiveEvaluator::with_symbols(predefined_symbols),
         };
         // Prime the parser with first two tokens
         parser.advance()?;
         parser.advance()?;
         Ok(parser)
+    }
+
+    /// Get mutable reference to directive evaluator
+    pub(crate) fn directive_evaluator_mut(&mut self) -> &mut DirectiveEvaluator {
+        &mut self.directive_evaluator
+    }
+
+    /// Get reference to directive evaluator
+    pub(crate) fn directive_evaluator(&self) -> &DirectiveEvaluator {
+        &self.directive_evaluator
     }
 
     /// Convert a ParserError to an enhanced Diagnostic
