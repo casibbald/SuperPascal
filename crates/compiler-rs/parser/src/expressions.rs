@@ -199,6 +199,55 @@ impl super::Parser {
                     span,
                 }))
             }
+            Some(TokenKind::KwFunction) => {
+                // Anonymous function: function(params): return_type begin ... end
+                let start_token = self.current().unwrap().clone();
+                self.advance()?; // consume 'function'
+                
+                // Parse parameters (optional)
+                let params = if self.check(&TokenKind::LeftParen) {
+                    self.parse_params()?
+                } else {
+                    vec![]
+                };
+                
+                // Parse return type (required for functions)
+                self.consume(TokenKind::Colon, ":")?;
+                let return_type = Box::new(self.parse_type()?);
+                
+                // Parse body (block)
+                let block = Box::new(self.parse_block()?);
+                
+                let span = start_token.span.merge(block.span());
+                Ok(Node::AnonymousFunction(ast::AnonymousFunction {
+                    params,
+                    return_type,
+                    block,
+                    span,
+                }))
+            }
+            Some(TokenKind::KwProcedure) => {
+                // Anonymous procedure: procedure(params) begin ... end
+                let start_token = self.current().unwrap().clone();
+                self.advance()?; // consume 'procedure'
+                
+                // Parse parameters (optional)
+                let params = if self.check(&TokenKind::LeftParen) {
+                    self.parse_params()?
+                } else {
+                    vec![]
+                };
+                
+                // Parse body (block)
+                let block = Box::new(self.parse_block()?);
+                
+                let span = start_token.span.merge(block.span());
+                Ok(Node::AnonymousProcedure(ast::AnonymousProcedure {
+                    params,
+                    block,
+                    span,
+                }))
+            }
             Some(TokenKind::Identifier(_)) => {
                 // Could be identifier, function call, or array/record access
                 let name_token = self.current().unwrap().clone();
@@ -716,6 +765,124 @@ mod tests {
                     }
                 } else {
                     panic!("Expected AssignStmt");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_anonymous_procedure() {
+        let source = r#"
+            program Test;
+            var a: procedure;
+            begin
+                a := procedure
+                begin
+                end;
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::AssignStmt(assign) = &block.statements[0] {
+                    if let Node::AnonymousProcedure(anon_proc) = assign.value.as_ref() {
+                        assert_eq!(anon_proc.params.len(), 0);
+                    } else {
+                        panic!("Expected AnonymousProcedure, got: {:?}", assign.value);
+                    }
+                } else {
+                    panic!("Expected AssignStmt");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_anonymous_function() {
+        let source = r#"
+            program Test;
+            var b: function(a: integer; b: integer): integer;
+            begin
+                b := function(a: integer; b: integer): integer
+                begin
+                    Result := 42;
+                end;
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::AssignStmt(assign) = &block.statements[0] {
+                    if let Node::AnonymousFunction(anon_func) = assign.value.as_ref() {
+                        assert_eq!(anon_func.params.len(), 2, "Expected 2 parameters, got {}", anon_func.params.len());
+                        // Check return type
+                        if let Node::NamedType(named_type) = anon_func.return_type.as_ref() {
+                            assert_eq!(named_type.name, "integer");
+                        } else {
+                            panic!("Expected NamedType for return type");
+                        }
+                    } else {
+                        panic!("Expected AnonymousFunction, got: {:?}", assign.value);
+                    }
+                } else {
+                    panic!("Expected AssignStmt");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_anonymous_function_immediate_call() {
+        // Note: Immediate calls like (function...)(args) require special handling
+        // For now, we'll test a simpler case where the function is assigned first
+        let source = r#"
+            program Test;
+            var c: integer;
+            var fn: function(a: integer): integer;
+            begin
+                fn := function(a: integer): integer
+                begin
+                    Result := a;
+                end;
+                c := fn(42);
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+    }
+
+    #[test]
+    fn test_parse_anonymous_procedure_with_params() {
+        let source = r#"
+            program Test;
+            var proc: procedure(x: integer);
+            begin
+                proc := procedure(x: integer)
+                begin
+                    writeln(x);
+                end;
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::AssignStmt(assign) = &block.statements[0] {
+                    if let Node::AnonymousProcedure(anon_proc) = assign.value.as_ref() {
+                        assert_eq!(anon_proc.params.len(), 1);
+                        assert_eq!(anon_proc.params[0].names[0], "x");
+                    } else {
+                        panic!("Expected AnonymousProcedure, got: {:?}", assign.value);
+                    }
                 }
             }
         }

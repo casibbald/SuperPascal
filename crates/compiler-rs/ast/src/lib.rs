@@ -55,6 +55,8 @@ pub enum Node {
     InheritedExpr(InheritedExpr),
     AddressOfExpr(AddressOfExpr),
     EnumLiteralExpr(EnumLiteralExpr),  // Enum value reference (e.g., Color.Red)
+    AnonymousFunction(AnonymousFunction),  // Anonymous function: function(params): return_type begin ... end
+    AnonymousProcedure(AnonymousProcedure),  // Anonymous procedure: procedure(params) begin ... end
 
     // ===== Types =====
     RecordType(RecordType),
@@ -550,6 +552,23 @@ pub struct AddressOfExpr {
     pub span: Span,
 }
 
+/// Anonymous function: function(params): return_type begin ... end
+#[derive(Debug, Clone, PartialEq)]
+pub struct AnonymousFunction {
+    pub params: Vec<Param>,        // Parameters
+    pub return_type: Box<Node>,    // Return type
+    pub block: Box<Node>,           // Block node (body)
+    pub span: Span,
+}
+
+/// Anonymous procedure: procedure(params) begin ... end
+#[derive(Debug, Clone, PartialEq)]
+pub struct AnonymousProcedure {
+    pub params: Vec<Param>,        // Parameters
+    pub block: Box<Node>,           // Block node (body)
+    pub span: Span,
+}
+
 /// Record type
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordType {
@@ -777,6 +796,8 @@ impl Node {
             Node::DerefExpr(d) => d.span,
             Node::InheritedExpr(i) => i.span,
             Node::AddressOfExpr(a) => a.span,
+            Node::AnonymousFunction(a) => a.span,
+            Node::AnonymousProcedure(a) => a.span,
             Node::RecordType(r) => r.span,
             Node::ArrayType(a) => a.span,
             Node::DynamicArrayType(d) => d.span,
