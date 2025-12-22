@@ -60,6 +60,18 @@ impl SemanticAnalyzer {
                     .map(|p| p.name.clone())
                     .collect();
 
+                // Analyze constraints for each parameter
+                let mut param_constraints = Vec::new();
+                for param in &t.generic_params {
+                    if let Some(constraint_node) = &param.constraint {
+                        // Analyze the constraint type
+                        let constraint_type = self.analyze_type(constraint_node);
+                        param_constraints.push(Some(constraint_type));
+                    } else {
+                        param_constraints.push(None);
+                    }
+                }
+
                 // Analyze the type expression (may contain generic parameters as NamedType nodes)
                 // Generic parameters should be represented as Type::Named nodes in the template
                 // We need to allow generic parameter names during analysis
@@ -70,6 +82,7 @@ impl SemanticAnalyzer {
                     kind: SymbolKind::GenericType {
                         name: t.name.clone(),
                         param_names: param_names.clone(),
+                        param_constraints,
                         template_type,
                         span: t.span,
                     },

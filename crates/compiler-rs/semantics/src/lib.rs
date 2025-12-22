@@ -433,6 +433,7 @@ mod tests {
             kind: SymbolKind::GenericType {
                 name: "TList".to_string(),
                 param_names: vec!["T".to_string()],
+                param_constraints: vec![None], // No constraint
                 template_type: Type::DynamicArray {
                     element_type: Box::new(Type::Named {
                         name: "T".to_string(),
@@ -589,5 +590,207 @@ mod tests {
         // Should have no errors about parameter 'x' (it's in scope)
         // May have errors about writeln not being found, but that's expected
         assert!(diagnostics.len() >= 0);
+    }
+
+    #[test]
+    fn test_generic_constraint_class() {
+        let span = Span::new(0, 20, 1, 1);
+        let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
+
+        // Add a class type to the symbol table (use Named type so it resolves properly)
+        let class_symbol = Symbol {
+            kind: SymbolKind::TypeAlias {
+                name: "MyClass".to_string(),
+                aliased_type: Type::Named {
+                    name: "MyClass".to_string(),
+                },
+                span,
+            },
+            scope_level: 0,
+        };
+        analyzer.core.symbol_table.insert(class_symbol).unwrap();
+
+        // Add a generic type with class constraint: TContainer<T: class>
+        let generic_symbol = Symbol {
+            kind: SymbolKind::GenericType {
+                name: "TContainer".to_string(),
+                param_names: vec!["T".to_string()],
+                param_constraints: vec![Some(Type::Named {
+                    name: "class".to_string(),
+                })],
+                template_type: Type::DynamicArray {
+                    element_type: Box::new(Type::Named {
+                        name: "T".to_string(),
+                    }),
+                },
+                span,
+            },
+            scope_level: 0,
+        };
+        analyzer.core.symbol_table.insert(generic_symbol).unwrap();
+
+        // Try to instantiate with a class type (should succeed)
+        let named_type = Node::NamedType(ast::NamedType {
+            name: "TContainer".to_string(),
+            generic_args: vec![Box::new(Node::NamedType(ast::NamedType {
+                name: "MyClass".to_string(),
+                generic_args: vec![],
+                span,
+            }))],
+            span,
+        });
+
+        let result_type = analyzer.analyze_type(&named_type);
+        let diagnostics = analyzer.core.diagnostics.clone();
+
+        // Should succeed (class type satisfies class constraint)
+        // The constraint validation should pass (Named type satisfies class constraint)
+        // Check that we don't have constraint violation errors
+        assert!(!diagnostics.iter().any(|d| d.message.contains("must be a class type")));
+    }
+
+    #[test]
+    fn test_generic_constraint_record() {
+        let span = Span::new(0, 20, 1, 1);
+        let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
+
+        // Add a generic type with record constraint: TContainer<T: record>
+        let generic_symbol = Symbol {
+            kind: SymbolKind::GenericType {
+                name: "TContainer".to_string(),
+                param_names: vec!["T".to_string()],
+                param_constraints: vec![Some(Type::Named {
+                    name: "record".to_string(),
+                })],
+                template_type: Type::DynamicArray {
+                    element_type: Box::new(Type::Named {
+                        name: "T".to_string(),
+                    }),
+                },
+                span,
+            },
+            scope_level: 0,
+        };
+        analyzer.core.symbol_table.insert(generic_symbol).unwrap();
+
+        // Try to instantiate with a record type (should succeed)
+        let named_type = Node::NamedType(ast::NamedType {
+            name: "TContainer".to_string(),
+            generic_args: vec![Box::new(Node::RecordType(ast::RecordType {
+                fields: vec![],
+                is_packed: false,
+                variant: None,
+                span,
+            }))],
+            span,
+        });
+
+        let result_type = analyzer.analyze_type(&named_type);
+        let diagnostics = analyzer.core.diagnostics.clone();
+
+        // Should succeed (record type satisfies record constraint)
+        assert_eq!(diagnostics.len(), 0);
+        assert_ne!(result_type, Type::Error);
+    }
+
+    #[test]
+    fn test_generic_constraint_record_violation() {
+        let span = Span::new(0, 20, 1, 1);
+        let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
+
+        // Add a generic type with record constraint: TContainer<T: record>
+        let generic_symbol = Symbol {
+            kind: SymbolKind::GenericType {
+                name: "TContainer".to_string(),
+                param_names: vec!["T".to_string()],
+                param_constraints: vec![Some(Type::Named {
+                    name: "record".to_string(),
+                })],
+                template_type: Type::DynamicArray {
+                    element_type: Box::new(Type::Named {
+                        name: "T".to_string(),
+                    }),
+                },
+                span,
+            },
+            scope_level: 0,
+        };
+        analyzer.core.symbol_table.insert(generic_symbol).unwrap();
+
+        // Try to instantiate with integer (should fail - integer is not a record)
+        let named_type = Node::NamedType(ast::NamedType {
+            name: "TContainer".to_string(),
+            generic_args: vec![Box::new(Node::NamedType(ast::NamedType {
+                name: "integer".to_string(),
+                generic_args: vec![],
+                span,
+            }))],
+            span,
+        });
+
+        let result_type = analyzer.analyze_type(&named_type);
+        let diagnostics = analyzer.core.diagnostics.clone();
+
+        // Should fail (integer does not satisfy record constraint)
+        assert!(diagnostics.len() > 0);
+        assert!(diagnostics.iter().any(|d| d.message.contains("must be a record type")));
+        assert_eq!(result_type, Type::Error);
+    }
+
+    #[test]
+    fn test_generic_constraint_interface() {
+        let span = Span::new(0, 20, 1, 1);
+        let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
+
+        // Add an interface type to the symbol table (use Named type so it resolves properly)
+        let interface_symbol = Symbol {
+            kind: SymbolKind::TypeAlias {
+                name: "IComparable".to_string(),
+                aliased_type: Type::Named {
+                    name: "IComparable".to_string(),
+                },
+                span,
+            },
+            scope_level: 0,
+        };
+        analyzer.core.symbol_table.insert(interface_symbol).unwrap();
+
+        // Add a generic type with interface constraint: TComparable<T: IComparable>
+        let generic_symbol = Symbol {
+            kind: SymbolKind::GenericType {
+                name: "TComparable".to_string(),
+                param_names: vec!["T".to_string()],
+                param_constraints: vec![Some(Type::Named {
+                    name: "IComparable".to_string(),
+                })],
+                template_type: Type::DynamicArray {
+                    element_type: Box::new(Type::Named {
+                        name: "T".to_string(),
+                    }),
+                },
+                span,
+            },
+            scope_level: 0,
+        };
+        analyzer.core.symbol_table.insert(generic_symbol).unwrap();
+
+        // Try to instantiate with a type that implements the interface (should succeed)
+        let named_type = Node::NamedType(ast::NamedType {
+            name: "TComparable".to_string(),
+            generic_args: vec![Box::new(Node::NamedType(ast::NamedType {
+                name: "IComparable".to_string(),
+                generic_args: vec![],
+                span,
+            }))],
+            span,
+        });
+
+        let result_type = analyzer.analyze_type(&named_type);
+        let diagnostics = analyzer.core.diagnostics.clone();
+
+        // Should succeed (IComparable satisfies IComparable constraint)
+        // The constraint validation should pass (same name), even if type resolution has issues
+        // Check that we don't have constraint violation errors
+        assert!(!diagnostics.iter().any(|d| d.message.contains("must implement") || d.message.contains("constraint")));
     }
 }

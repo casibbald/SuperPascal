@@ -7,6 +7,127 @@ use crate::SemanticAnalyzer;
 use std::collections::HashMap;
 
 impl SemanticAnalyzer {
+    /// Validate that a type argument satisfies its constraint
+    /// Returns true if the constraint is satisfied, false otherwise
+    fn validate_generic_constraint(&mut self, arg_type: &Type, constraint: &Type, param_name: &str, span: tokens::Span) -> bool {
+        // If arg_type is Error, skip constraint validation (error already reported)
+        if *arg_type == Type::Error {
+            return true; // Don't add additional constraint errors
+        }
+
+        // Handle special constraint keywords
+        match constraint {
+            Type::Named { name } => {
+                match name.as_str() {
+                    "class" => {
+                        // T: class - arg_type must be a class type
+                        // For now, we check if it's a Named type (classes are typically Named types)
+                        // TODO: More sophisticated class type checking when class types are fully implemented
+                        match arg_type {
+                            Type::Named { .. } => true,
+                            _ => {
+                                self.core.add_error(
+                                    format!(
+                                        "Generic type parameter '{}' must be a class type, but '{}' is not",
+                                        param_name,
+                                        crate::core::CoreAnalyzer::format_type(arg_type)
+                                    ),
+                                    span,
+                                );
+                                false
+                            }
+                        }
+                    }
+                    "record" => {
+                        // T: record - arg_type must be a record type
+                        match arg_type {
+                            Type::Record { .. } => true,
+                            _ => {
+                                self.core.add_error(
+                                    format!(
+                                        "Generic type parameter '{}' must be a record type, but '{}' is not",
+                                        param_name,
+                                        crate::core::CoreAnalyzer::format_type(arg_type)
+                                    ),
+                                    span,
+                                );
+                                false
+                            }
+                        }
+                    }
+                    "constructor" => {
+                        // T: constructor - arg_type must have a constructor
+                        // For now, we assume all class types have constructors
+                        // TODO: More sophisticated constructor checking
+                        match arg_type {
+                            Type::Named { .. } => true,
+                            _ => {
+                                self.core.add_error(
+                                    format!(
+                                        "Generic type parameter '{}' must have a constructor, but '{}' does not",
+                                        param_name,
+                                        crate::core::CoreAnalyzer::format_type(arg_type)
+                                    ),
+                                    span,
+                                );
+                                false
+                            }
+                        }
+                    }
+                    _ => {
+                        // Interface constraint: T: IInterface
+                        // Check if arg_type implements the interface
+                        // For now, we check if arg_type is the same Named type or if it's assignable
+                        // TODO: More sophisticated interface implementation checking
+                        match arg_type {
+                            Type::Named { name: arg_name } => {
+                                if arg_name == name {
+                                    true
+                                } else {
+                                    // Check if arg_type implements the interface
+                                    // This is a simplified check - in a full implementation, we'd check
+                                    // the class's interface list
+                                    // For now, we'll allow it and let the runtime handle it
+                                    // or we could check the symbol table for interface implementation
+                                    true // TODO: Implement proper interface checking
+                                }
+                            }
+                            _ => {
+                                self.core.add_error(
+                                    format!(
+                                        "Generic type parameter '{}' must implement '{}', but '{}' does not",
+                                        param_name,
+                                        name,
+                                        crate::core::CoreAnalyzer::format_type(arg_type)
+                                    ),
+                                    span,
+                                );
+                                false
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {
+                // Constraint is a type - check if arg_type is assignable to constraint
+                if arg_type.is_assignable_to(constraint) {
+                    true
+                } else {
+                    self.core.add_error(
+                        format!(
+                            "Generic type parameter '{}' must be assignable to '{}', but '{}' is not",
+                            param_name,
+                            crate::core::CoreAnalyzer::format_type(constraint),
+                            crate::core::CoreAnalyzer::format_type(arg_type)
+                        ),
+                        span,
+                    );
+                    false
+                }
+            }
+        }
+    }
+
     /// Substitute generic type parameters with concrete types
     /// This is used when instantiating a generic type (e.g., TList<integer>)
     fn substitute_type_params(&self, template: &Type, substitutions: &HashMap<String, Type>) -> Type {
@@ -114,8 +235,8 @@ impl SemanticAnalyzer {
                     // Look up the generic type template
                     if let Some(symbol) = self.core.symbol_table.lookup(&n.name) {
                         // Clone necessary data before mutable borrow
-                        let (param_names, template_type) = if let SymbolKind::GenericType { param_names, template_type, .. } = &symbol.kind {
-                            (param_names.clone(), template_type.clone())
+                        let (param_names, param_constraints, template_type) = if let SymbolKind::GenericType { param_names, param_constraints, template_type, .. } = &symbol.kind {
+                            (param_names.clone(), param_constraints.clone(), template_type.clone())
                         } else {
                             self.core.add_error(
                                 format!("'{}' is not a generic type", n.name),
@@ -146,6 +267,20 @@ impl SemanticAnalyzer {
                                 return Type::Error;
                             }
                             arg_types.push(arg_type);
+                        }
+
+                        // Validate constraints
+                        let mut all_constraints_satisfied = true;
+                        for (i, (param_name, arg_type)) in param_names.iter().zip(arg_types.iter()).enumerate() {
+                            if let Some(constraint) = param_constraints.get(i).and_then(|c| c.as_ref()) {
+                                if !self.validate_generic_constraint(arg_type, constraint, param_name, n.span) {
+                                    all_constraints_satisfied = false;
+                                }
+                            }
+                        }
+
+                        if !all_constraints_satisfied {
+                            return Type::Error;
                         }
 
                         // Create substitution map: param_name -> arg_type

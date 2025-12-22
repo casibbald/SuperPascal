@@ -39,6 +39,7 @@ pub enum SymbolKind {
     GenericType {
         name: String,
         param_names: Vec<String>, // Generic parameter names (e.g., ["T", "U"])
+        param_constraints: Vec<Option<Type>>, // Constraints for each parameter (e.g., [Some(Type::class()), None])
         template_type: Type,      // The base type with placeholders
         span: Span,
     },
