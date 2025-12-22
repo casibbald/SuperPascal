@@ -35,6 +35,17 @@ pub enum Type {
     Named {
         name: String,
     },
+    /// Generic type template (e.g., TList<T>)
+    Generic {
+        name: String,
+        param_names: Vec<String>,
+        template: Box<Type>, // The base type with placeholders
+    },
+    /// Instantiated generic type (e.g., TList<integer>)
+    Instantiated {
+        generic_name: String,
+        args: Vec<Type>,
+    },
     /// Error type (for error recovery)
     Error,
 }
@@ -190,6 +201,10 @@ impl Type {
                 Type::Pointer { base_type: b2 },
             ) => b1.equals(b2),
             (Type::Named { name: n1 }, Type::Named { name: n2 }) => n1 == n2,
+            (Type::Generic { name: n1, .. }, Type::Generic { name: n2, .. }) => n1 == n2,
+            (Type::Instantiated { generic_name: n1, args: a1 }, Type::Instantiated { generic_name: n2, args: a2 }) => {
+                n1 == n2 && a1.len() == a2.len() && a1.iter().zip(a2.iter()).all(|(t1, t2)| t1.equals(t2))
+            },
             (Type::Error, Type::Error) => true,
             _ => false,
         }
@@ -244,6 +259,8 @@ impl Type {
             Type::Record { size, .. } => *size,
             Type::Pointer { .. } => Some(2), // Pointers are 16-bit (2 bytes) on 8-bit/16-bit targets
             Type::Named { .. } => None, // Need to resolve named type first
+            Type::Generic { .. } => None, // Generic templates have no size until instantiated
+            Type::Instantiated { .. } => None, // Need to resolve instantiated type first
             Type::Error => None,
         }
     }
@@ -264,6 +281,8 @@ impl Type {
             }
             Type::Pointer { .. } => 2, // Pointers are 16-bit aligned
             Type::Named { .. } => 1, // Unknown, use minimum
+            Type::Generic { .. } => 1, // Unknown until instantiated
+            Type::Instantiated { .. } => 1, // Unknown until resolved
             Type::Error => 1,
         }
     }

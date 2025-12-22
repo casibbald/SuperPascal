@@ -48,6 +48,13 @@ impl CoreAnalyzer {
             }
             Type::Error => "error".to_string(),
             Type::Named { name, .. } => name.clone(),
+            Type::Generic { name, param_names, .. } => {
+                format!("{}<{}>", name, param_names.join(", "))
+            }
+            Type::Instantiated { generic_name, args } => {
+                let arg_strs: Vec<String> = args.iter().map(|t| Self::format_type(t)).collect();
+                format!("{}<{}>", generic_name, arg_strs.join(", "))
+            }
         }
     }
 }

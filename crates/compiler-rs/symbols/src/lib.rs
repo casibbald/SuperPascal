@@ -35,6 +35,13 @@ pub enum SymbolKind {
         aliased_type: Type,
         span: Span,
     },
+    /// Generic type symbol (template)
+    GenericType {
+        name: String,
+        param_names: Vec<String>, // Generic parameter names (e.g., ["T", "U"])
+        template_type: Type,      // The base type with placeholders
+        span: Span,
+    },
     /// Procedure symbol
     Procedure {
         name: String,
@@ -138,6 +145,7 @@ impl Symbol {
             SymbolKind::Variable { name, .. } => name,
             SymbolKind::Constant { name, .. } => name,
             SymbolKind::TypeAlias { name, .. } => name,
+            SymbolKind::GenericType { name, .. } => name,
             SymbolKind::Procedure { name, .. } => name,
             SymbolKind::Function { name, .. } => name,
         }
@@ -149,6 +157,7 @@ impl Symbol {
             SymbolKind::Variable { span, .. } => *span,
             SymbolKind::Constant { span, .. } => *span,
             SymbolKind::TypeAlias { span, .. } => *span,
+            SymbolKind::GenericType { span, .. } => *span,
             SymbolKind::Procedure { span, .. } => *span,
             SymbolKind::Function { span, .. } => *span,
         }

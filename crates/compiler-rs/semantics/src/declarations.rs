@@ -55,23 +55,34 @@ impl SemanticAnalyzer {
             // Check for generic type parameters
             if !t.generic_params.is_empty() {
                 // Generic type declaration: TList<T>
-                // TODO: Full generic type support
-                // For now, provide a helpful error message
                 let param_names: Vec<String> = t.generic_params
                     .iter()
                     .map(|p| p.name.clone())
                     .collect();
-                self.core.add_error(
-                    format!(
-                        "Generic type declaration '{}<{}>' is not yet fully supported in semantic analysis",
-                        t.name,
-                        param_names.join(", ")
-                    ),
-                    t.span,
-                );
+
+                // Analyze the type expression (may contain generic parameters as NamedType nodes)
+                // Generic parameters should be represented as Type::Named nodes in the template
+                // We need to allow generic parameter names during analysis
+                let template_type = self.analyze_type_with_generic_params(&t.type_expr, &param_names);
+
+                // Create and insert generic type symbol
+                let symbol = Symbol {
+                    kind: SymbolKind::GenericType {
+                        name: t.name.clone(),
+                        param_names: param_names.clone(),
+                        template_type,
+                        span: t.span,
+                    },
+                    scope_level: self.core.symbol_table.scope_level(),
+                };
+
+                if let Err(e) = self.core.symbol_table.insert(symbol) {
+                    self.core.add_error(e, t.span);
+                }
                 return;
             }
 
+            // Non-generic type declaration
             // Analyze the type expression
             let type_expr = self.analyze_type(&t.type_expr);
 
