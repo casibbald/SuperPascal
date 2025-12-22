@@ -71,6 +71,7 @@ pub enum Node {
     ProceduralType(ProceduralType),
     InterfaceType(InterfaceType),
     EnumType(EnumType),
+    HelperType(HelperType),  // Class/Record helper: class helper for Type
     
     // ===== Set Literals =====
     SetLiteral(SetLiteral),
@@ -751,6 +752,24 @@ pub struct ClassType {
     pub span: Span,
 }
 
+/// Helper type declaration (class/record helper for type)
+#[derive(Debug, Clone, PartialEq)]
+pub struct HelperType {
+    pub helper_kind: HelperKind,  // Class, Record, or Type helper
+    pub base_helpers: Vec<String>, // Optional parent helpers (inheritance)
+    pub target_type: Box<Node>,   // The type being extended (after FOR)
+    pub members: Vec<(Visibility, ClassMember)>, // Helper members (methods, properties)
+    pub span: Span,
+}
+
+/// Kind of helper (class, record, or type)
+#[derive(Debug, Clone, PartialEq)]
+pub enum HelperKind {
+    Class,   // class helper
+    Record,  // record helper
+    Type,    // type helper
+}
+
 // ===== Helper Methods =====
 
 impl Node {
@@ -810,6 +829,7 @@ impl Node {
             Node::ProceduralType(p) => p.span,
             Node::InterfaceType(i) => i.span,
             Node::EnumType(e) => e.span,
+            Node::HelperType(h) => h.span,
             Node::EnumLiteralExpr(e) => e.span,
             Node::SetLiteral(s) => s.span,
             Node::Directive(d) => d.span,

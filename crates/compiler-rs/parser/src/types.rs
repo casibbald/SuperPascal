@@ -108,6 +108,15 @@ impl super::Parser {
                 element_type,
                 span,
             }))
+        } else if self.check(&TokenKind::KwClass) && self.check_peek(&TokenKind::KwHelper) {
+            // Class helper: class helper for Type (check before regular class)
+            self.parse_helper_type(ast::HelperKind::Class)
+        } else if self.check(&TokenKind::KwRecord) && self.check_peek(&TokenKind::KwHelper) {
+            // Record helper: record helper for Type (check before regular record)
+            self.parse_helper_type(ast::HelperKind::Record)
+        } else if self.check(&TokenKind::KwType) && self.check_peek(&TokenKind::KwHelper) {
+            // Type helper: type helper for Type
+            self.parse_helper_type(ast::HelperKind::Type)
         } else if self.check(&TokenKind::KwRecord) {
             self.advance()?;
             let mut fields = vec![];
@@ -749,6 +758,120 @@ impl super::Parser {
             else_variant,
             span,
         })
+    }
+
+    /// Parse helper type: [class|record|type] helper [ ( base_helpers ) ] for target_type [ members ] end
+    pub(super) fn parse_helper_type(&mut self, helper_kind: ast::HelperKind) -> ParserResult<Node> {
+        let start_span = self
+            .current()
+            .map(|t| t.span)
+            .unwrap_or_else(|| Span::at(0, 1, 1));
+
+        // Consume the helper kind keyword (class, record, or type)
+        match helper_kind {
+            ast::HelperKind::Class => {
+                self.consume(TokenKind::KwClass, "CLASS")?;
+            }
+            ast::HelperKind::Record => {
+                self.consume(TokenKind::KwRecord, "RECORD")?;
+            }
+            ast::HelperKind::Type => {
+                self.consume(TokenKind::KwType, "TYPE")?;
+            }
+        }
+
+        // Consume HELPER keyword
+        self.consume(TokenKind::KwHelper, "HELPER")?;
+
+        // Parse optional base helpers: ( BaseHelper1, BaseHelper2 )
+        let mut base_helpers = vec![];
+        if self.check(&TokenKind::LeftParen) {
+            self.advance()?; // consume (
+            loop {
+                let base_token = self.consume(TokenKind::Identifier(String::new()), "base helper name")?;
+                let base_name = match &base_token.kind {
+                    TokenKind::Identifier(name) => name.clone(),
+                    _ => return Err(ParserError::InvalidSyntax {
+                        message: "Expected identifier for base helper".to_string(),
+                        span: base_token.span,
+                    }),
+                };
+                base_helpers.push(base_name);
+
+                if !self.check(&TokenKind::Comma) {
+                    break;
+                }
+                self.advance()?; // consume comma
+            }
+            self.consume(TokenKind::RightParen, ")")?;
+        }
+
+        // Consume FOR keyword
+        self.consume(TokenKind::KwFor, "FOR")?;
+
+        // Parse target type (the type being extended)
+        let target_type = Box::new(self.parse_type()?);
+
+        // Parse helper members (same as class members)
+        let mut members = vec![];
+        let mut current_visibility = ast::Visibility::Default;
+
+        while !self.check(&TokenKind::KwEnd) {
+            // Check for visibility specifiers
+            if self.check(&TokenKind::KwPrivate) {
+                self.advance()?;
+                current_visibility = ast::Visibility::Private;
+                continue;
+            } else if self.check(&TokenKind::KwProtected) {
+                self.advance()?;
+                current_visibility = ast::Visibility::Protected;
+                continue;
+            } else if self.check(&TokenKind::KwPublic) {
+                self.advance()?;
+                current_visibility = ast::Visibility::Public;
+                continue;
+            } else if self.check(&TokenKind::KwPublished) {
+                self.advance()?;
+                current_visibility = ast::Visibility::Published;
+                continue;
+            } else if self.check(&TokenKind::KwStrict) {
+                self.advance()?;
+                if self.check(&TokenKind::KwPrivate) {
+                    self.advance()?;
+                    current_visibility = ast::Visibility::StrictPrivate;
+                } else if self.check(&TokenKind::KwProtected) {
+                    self.advance()?;
+                    current_visibility = ast::Visibility::StrictProtected;
+                }
+                continue;
+            }
+
+            // Parse members (similar to class members)
+            if self.check(&TokenKind::KwProcedure) {
+                let proc = self.parse_procedure_decl_in_class()?;
+                members.push((current_visibility, ast::ClassMember::Method(proc)));
+            } else if self.check(&TokenKind::KwFunction) {
+                let func = self.parse_function_decl_in_class()?;
+                members.push((current_visibility, ast::ClassMember::Method(func)));
+            } else if self.check(&TokenKind::KwProperty) {
+                let prop = super::properties::parse_property_decl(self)?;
+                members.push((current_visibility, ast::ClassMember::Property(prop)));
+            } else {
+                // Unknown member - break and let caller handle
+                break;
+            }
+        }
+
+        let end_token = self.consume(TokenKind::KwEnd, "END")?;
+        let span = start_span.merge(end_token.span);
+
+        Ok(Node::HelperType(ast::HelperType {
+            helper_kind,
+            base_helpers,
+            target_type,
+            members,
+            span,
+        }))
     }
 }
 
@@ -2230,6 +2353,150 @@ mod tests {
                     }
                 } else {
                     panic!("Expected ProcDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_class_helper() {
+        let source = r#"
+            program Test;
+            type
+                TStringHelper = class helper for string
+                    function Reverse: string;
+                end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    assert_eq!(type_decl.name, "TStringHelper");
+                    if let Node::HelperType(helper) = type_decl.type_expr.as_ref() {
+                        assert_eq!(helper.helper_kind, ast::HelperKind::Class);
+                        assert_eq!(helper.members.len(), 1);
+                        // Check target type (string is parsed as StringType, not NamedType)
+                        match helper.target_type.as_ref() {
+                            Node::StringType(_) => {
+                                // Correct - string is a built-in type
+                            }
+                            Node::NamedType(named_type) => {
+                                // Also valid if parsed as named type
+                                assert_eq!(named_type.name, "string");
+                            }
+                            _ => {
+                                panic!("Expected StringType or NamedType for target type, got: {:?}", helper.target_type);
+                            }
+                        }
+                    } else {
+                        panic!("Expected HelperType, got: {:?}", type_decl.type_expr);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_record_helper() {
+        let source = r#"
+            program Test;
+            type
+                TMyRecord = record
+                    x: integer;
+                end;
+                TMyRecordHelper = record helper for TMyRecord
+                    procedure DoSomething;
+                end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[1] {
+                    assert_eq!(type_decl.name, "TMyRecordHelper");
+                    if let Node::HelperType(helper) = type_decl.type_expr.as_ref() {
+                        assert_eq!(helper.helper_kind, ast::HelperKind::Record);
+                        assert_eq!(helper.members.len(), 1);
+                    } else {
+                        panic!("Expected HelperType");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_class_helper_with_base() {
+        let source = r#"
+            program Test;
+            type
+                TBaseHelper = class helper for integer
+                    function ToString: string;
+                end;
+                TExtendedHelper = class helper (TBaseHelper) for integer
+                    function ToHex: string;
+                end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[1] {
+                    assert_eq!(type_decl.name, "TExtendedHelper");
+                    if let Node::HelperType(helper) = type_decl.type_expr.as_ref() {
+                        assert_eq!(helper.base_helpers.len(), 1);
+                        assert_eq!(helper.base_helpers[0], "TBaseHelper");
+                        assert_eq!(helper.members.len(), 1);
+                    } else {
+                        panic!("Expected HelperType");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_class_helper_with_properties() {
+        let source = r#"
+            program Test;
+            type
+                TStringHelper = class helper for string
+                    property Length: integer read GetLength;
+                    function GetLength: integer;
+                end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    if let Node::HelperType(helper) = type_decl.type_expr.as_ref() {
+                        assert_eq!(helper.members.len(), 2);
+                        // Should have both property and method
+                        let has_property = helper.members.iter()
+                            .any(|(_, member)| matches!(member, ast::ClassMember::Property(_)));
+                        let has_method = helper.members.iter()
+                            .any(|(_, member)| matches!(member, ast::ClassMember::Method(_)));
+                        assert!(has_property, "Expected property in helper");
+                        assert!(has_method, "Expected method in helper");
+                    }
                 }
             }
         }

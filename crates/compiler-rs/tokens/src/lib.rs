@@ -156,6 +156,7 @@ pub enum TokenKind {
     KwNil,
     KwSelf,
     KwInherited,
+    KwHelper,  // HELPER keyword for class/record helpers
 
     // ===== Identifiers =====
     Identifier(String),
@@ -320,6 +321,7 @@ impl Token {
                 | TokenKind::KwNil
                 | TokenKind::KwSelf
                 | TokenKind::KwInherited
+                | TokenKind::KwHelper
         )
     }
 
@@ -520,6 +522,7 @@ pub fn lookup_keyword(s: &str) -> Option<TokenKind> {
     if eq_ignore_ascii_case(s, "label") { return Some(TokenKind::KwLabel); }
     if eq_ignore_ascii_case(s, "if") { return Some(TokenKind::KwIf); }
     if eq_ignore_ascii_case(s, "in") { return Some(TokenKind::KwIn); }
+    if eq_ignore_ascii_case(s, "helper") { return Some(TokenKind::KwHelper); }
     if eq_ignore_ascii_case(s, "inherited") { return Some(TokenKind::KwInherited); }
     if eq_ignore_ascii_case(s, "integer") { return Some(TokenKind::KwInteger); }
     if eq_ignore_ascii_case(s, "is") { return Some(TokenKind::KwIs); }
@@ -587,6 +590,7 @@ pub fn lookup_keyword(s: &str) -> Option<TokenKind> {
     // Special
     if eq_ignore_ascii_case(s, "nil") { return Some(TokenKind::KwNil); }
     if eq_ignore_ascii_case(s, "self") { return Some(TokenKind::KwSelf); }
+    if eq_ignore_ascii_case(s, "helper") { return Some(TokenKind::KwHelper); }
     if eq_ignore_ascii_case(s, "inherited") { return Some(TokenKind::KwInherited); }
     None
 }
