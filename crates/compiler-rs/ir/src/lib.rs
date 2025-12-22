@@ -10,6 +10,7 @@
 use ast::Node;
 use tokens::Span;
 use types::Type;
+use runtime::variant::VariantType as RuntimeVariantType;
 
 /// Represents an IR value (immediate, register, memory, temporary)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -179,6 +180,9 @@ pub struct IRBuilder {
     current_function: Option<Function>,
     temp_counter: usize,
     label_counter: usize,
+    /// Variable type information (name -> type)
+    /// Used to determine when to use Variant runtime functions
+    variable_types: std::collections::HashMap<String, Type>,
 }
 
 impl IRBuilder {
@@ -188,6 +192,7 @@ impl IRBuilder {
             current_function: None,
             temp_counter: 0,
             label_counter: 0,
+            variable_types: std::collections::HashMap::new(),
         }
     }
 
@@ -223,10 +228,340 @@ impl IRBuilder {
     }
 
     /// Build IR from AST
-    pub fn build(&mut self, _ast: &Node) -> Program {
-        // TODO: Implement AST to IR translation
-        // For now, return empty program
+    pub fn build(&mut self, ast: &Node) -> Program {
+        match ast {
+            Node::Program(prog) => {
+                if let Node::Block(block) = prog.block.as_ref() {
+                    self.build_block(block);
+                }
+            }
+            _ => {
+                // For other top-level nodes, build them directly
+                self.build_node(ast);
+            }
+        }
         self.program.clone()
+    }
+
+    /// Build a single AST node
+    fn build_node(&mut self, node: &Node) {
+        match node {
+            Node::Block(block) => {
+                self.build_block(block);
+            }
+            Node::VarDecl(var_decl) => {
+                self.build_var_decl(var_decl);
+            }
+            Node::AssignStmt(assign) => {
+                self.build_assign_stmt(assign);
+            }
+            Node::CallStmt(call) => {
+                self.build_call_stmt(call);
+            }
+            Node::IfStmt(if_stmt) => {
+                self.build_if_stmt(if_stmt);
+            }
+            Node::WhileStmt(while_stmt) => {
+                self.build_while_stmt(while_stmt);
+            }
+            Node::ForStmt(for_stmt) => {
+                self.build_for_stmt(for_stmt);
+            }
+            Node::RepeatStmt(repeat) => {
+                self.build_repeat_stmt(repeat);
+            }
+            Node::CaseStmt(case_stmt) => {
+                self.build_case_stmt(case_stmt);
+            }
+            // Add other statement types as needed
+            _ => {
+                // For now, ignore unsupported nodes
+            }
+        }
+    }
+
+    /// Build a block (declarations and statements)
+    fn build_block(&mut self, block: &ast::Block) {
+        // Build declarations first (to register variable types)
+        for decl in &block.var_decls {
+            self.build_node(decl);
+        }
+        // Then build statements
+        for stmt in &block.statements {
+            self.build_node(stmt);
+        }
+    }
+
+    /// Build a variable declaration
+    fn build_var_decl(&mut self, var_decl: &ast::VarDecl) {
+        // Determine the type of the variable
+        let var_type = self.analyze_type_expr(&var_decl.type_expr);
+        
+        // Register variable types for later use
+        for name in &var_decl.names {
+            self.variable_types.insert(name.clone(), var_type.clone());
+        }
+
+        // Generate IR for variable allocation
+        // For Variant types, we need to allocate memory and initialize
+        if var_type == Type::variant() {
+            // Generate instructions first (before borrowing func)
+            let mut instructions = Vec::new();
+            for _name in &var_decl.names {
+                // Initialize Variant to empty
+                let (inst, _result) = self.generate_variant_new_empty();
+                instructions.push(inst);
+            }
+            
+            // Then add instructions to the function
+            if let Some(func) = self.current_function_mut() {
+                let entry_label = func.entry_block.clone();
+                if let Some(entry) = func.get_block_mut(&entry_label) {
+                    for inst in instructions {
+                        entry.add_instruction(inst);
+                    }
+                }
+            }
+        }
+        // For other types, allocation would be handled by the backend
+    }
+
+    /// Build an assignment statement
+    fn build_assign_stmt(&mut self, assign: &ast::AssignStmt) {
+        // Get target variable name and type (before any borrowing)
+        let target_name = if let Node::IdentExpr(ident) = assign.target.as_ref() {
+            Some(ident.name.clone())
+        } else {
+            None
+        };
+
+        let target_type = target_name
+            .as_ref()
+            .and_then(|name| self.variable_types.get(name))
+            .cloned();
+
+        // Build the value expression first (before borrowing func)
+        let value_result = self.build_expression(assign.value.as_ref());
+        let value_type = self.analyze_expression_type(assign.value.as_ref());
+
+        // Generate instructions based on types (before borrowing func)
+        let mut instructions = Vec::new();
+
+        // Check if target is Variant type
+        if let Some(Type::Variant) = target_type {
+            // Check if source is also Variant (Variant to Variant assignment)
+            if let Some(value_ty) = value_type {
+                if value_ty == Type::variant() {
+                    // Variant to Variant: use variant_copy
+                    let dest_ptr = self.get_variable_address(&target_name.unwrap());
+                    let src_ptr = value_result;
+                    let inst = self.generate_variant_copy(dest_ptr, src_ptr);
+                    instructions.push(inst);
+                } else {
+                    // Variant assignment: use variant_assign runtime function
+                    let variant_ptr = self.get_variable_address(&target_name.unwrap());
+                    let type_id = self.get_variant_type_id(&value_ty);
+                    
+                    // Generate variant_assign call
+                    let inst = self.generate_variant_assign(variant_ptr, type_id, value_result);
+                    instructions.push(inst);
+                }
+            } else {
+                // Fallback: use variant_assign with Error type
+                let variant_ptr = self.get_variable_address(&target_name.unwrap());
+                let type_id = Value::Immediate(0); // VariantType::Empty
+                let inst = self.generate_variant_assign(variant_ptr, type_id, value_result);
+                instructions.push(inst);
+            }
+        } else if let Some(value_ty) = value_type {
+            // Check if source is Variant type (assigning from Variant)
+            if value_ty == Type::variant() {
+                // Variant to other type assignment: use conversion function
+                let target_ptr = self.get_variable_address(&target_name.unwrap());
+                
+                // Determine target type and use appropriate conversion
+                if let Some(target_ty) = target_type {
+                    match target_ty {
+                        Type::Primitive(types::PrimitiveType::Integer) => {
+                            let (inst, converted_value) = self.generate_variant_to_integer(value_result);
+                            instructions.push(inst);
+                            instructions.push(Instruction::new(
+                                Opcode::Store,
+                                vec![target_ptr, converted_value],
+                            ));
+                        }
+                        Type::Primitive(types::PrimitiveType::Boolean) => {
+                            // Use variant_to_boolean (would need to add this helper)
+                            let (inst, converted_value) = self.generate_variant_to_integer(value_result); // Placeholder
+                            instructions.push(inst);
+                            instructions.push(Instruction::new(
+                                Opcode::Store,
+                                vec![target_ptr, converted_value],
+                            ));
+                        }
+                        _ => {
+                            // For other types, use generic conversion or error
+                            // In a full implementation, we'd have more conversion functions
+                        }
+                    }
+                }
+            } else {
+                // Regular assignment (non-Variant)
+                let target_ptr = self.get_variable_address(&target_name.unwrap());
+                instructions.push(Instruction::new(
+                    Opcode::Store,
+                    vec![target_ptr, value_result],
+                ));
+            }
+        } else {
+            // Regular assignment (fallback)
+            if let Some(name) = &target_name {
+                let target_ptr = self.get_variable_address(name);
+                instructions.push(Instruction::new(
+                    Opcode::Store,
+                    vec![target_ptr, value_result],
+                ));
+            }
+        }
+
+        // Add all instructions to the function (after generating them)
+        if let Some(func) = self.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                for inst in instructions {
+                    entry.add_instruction(inst);
+                }
+            }
+        }
+    }
+
+    /// Build an expression and return the IR value
+    fn build_expression(&mut self, expr: &Node) -> Value {
+        match expr {
+            Node::LiteralExpr(lit) => {
+                match &lit.value {
+                    ast::LiteralValue::Integer(i) => Value::Immediate(*i as i32),
+                    ast::LiteralValue::Boolean(b) => Value::Immediate(if *b { 1 } else { 0 }),
+                    ast::LiteralValue::Char(c) => Value::Immediate(*c as i32),
+                    ast::LiteralValue::String(_) => {
+                        // String literals would need special handling
+                        Value::Immediate(0) // Placeholder
+                    }
+                }
+            }
+            Node::IdentExpr(ident) => {
+                // Return the address/value of the variable
+                self.get_variable_address(&ident.name)
+            }
+            Node::BinaryExpr(bin) => {
+                let left = self.build_expression(bin.left.as_ref());
+                let right = self.build_expression(bin.right.as_ref());
+                let result = self.new_temp();
+                
+                if let Some(func) = self.current_function_mut() {
+                    let entry_label = func.entry_block.clone();
+                    if let Some(entry) = func.get_block_mut(&entry_label) {
+                        let opcode = match bin.op {
+                            ast::BinaryOp::Add => Opcode::Add,
+                            ast::BinaryOp::Subtract => Opcode::Sub,
+                            ast::BinaryOp::Multiply => Opcode::Mul,
+                            ast::BinaryOp::Divide => Opcode::Div,
+                            ast::BinaryOp::Mod => Opcode::Mod,
+                            _ => {
+                                // For comparison operators, we'd need different handling
+                                return result; // Placeholder
+                            }
+                        };
+                        entry.add_instruction(Instruction::new(
+                            opcode,
+                            vec![result.clone(), left, right],
+                        ));
+                    }
+                }
+                result
+            }
+            _ => {
+                // For other expression types, return a placeholder
+                self.new_temp()
+            }
+        }
+    }
+
+    /// Analyze a type expression to get the Type
+    fn analyze_type_expr(&self, type_expr: &Node) -> Type {
+        match type_expr {
+            Node::NamedType(named) => {
+                match named.name.to_lowercase().as_str() {
+                    "integer" => Type::integer(),
+                    "boolean" => Type::boolean(),
+                    "char" => Type::char(),
+                    "byte" => Type::byte(),
+                    "word" => Type::word(),
+                    "variant" => Type::variant(),
+                    _ => Type::Error,
+                }
+            }
+            _ => Type::Error,
+        }
+    }
+
+    /// Analyze an expression to determine its type
+    fn analyze_expression_type(&self, expr: &Node) -> Option<Type> {
+        match expr {
+            Node::LiteralExpr(lit) => {
+                match &lit.value {
+                    ast::LiteralValue::Integer(_) => Some(Type::integer()),
+                    ast::LiteralValue::Boolean(_) => Some(Type::boolean()),
+                    ast::LiteralValue::Char(_) => Some(Type::char()),
+                    ast::LiteralValue::String(_) => Some(Type::array(Type::integer(), Type::char())),
+                }
+            }
+            Node::IdentExpr(ident) => {
+                self.variable_types.get(&ident.name).cloned()
+            }
+            _ => None,
+        }
+    }
+
+    /// Get the VariantType ID for a given Type
+    fn get_variant_type_id(&self, ty: &Type) -> Value {
+        let variant_type = RuntimeVariantType::from_type(ty);
+        Value::Immediate(variant_type as i32)
+    }
+
+    /// Get the address/value of a variable
+    fn get_variable_address(&self, _name: &str) -> Value {
+        // In a full implementation, this would look up the variable's memory location
+        // For now, use a simplified memory address
+        Value::Memory {
+            base: "sp".to_string(),
+            offset: 0, // Would be calculated based on variable's position
+        }
+    }
+
+    // Placeholder methods for other statement types
+    fn build_call_stmt(&mut self, _call: &ast::CallStmt) {
+        // TODO: Implement
+    }
+
+    fn build_if_stmt(&mut self, _if_stmt: &ast::IfStmt) {
+        // TODO: Implement
+    }
+
+    fn build_while_stmt(&mut self, _while_stmt: &ast::WhileStmt) {
+        // TODO: Implement
+    }
+
+    fn build_for_stmt(&mut self, _for_stmt: &ast::ForStmt) {
+        // TODO: Implement
+    }
+
+    fn build_repeat_stmt(&mut self, _repeat: &ast::RepeatStmt) {
+        // TODO: Implement
+    }
+
+    fn build_case_stmt(&mut self, _case_stmt: &ast::CaseStmt) {
+        // TODO: Implement
     }
 
     /// Get the built program
@@ -1116,5 +1451,251 @@ mod tests {
         assert_eq!(inst.operands.len(), 2);
         assert_eq!(inst.operands[0], Value::Label("closure_free".to_string()));
         assert_eq!(inst.operands[1], closure_ptr);
+    }
+
+    // ===== Variant AST→IR Integration Tests =====
+
+    #[test]
+    fn test_build_variant_variable_declaration() {
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+
+        // Create: var v: Variant;
+        let var_decl = Node::VarDecl(ast::VarDecl {
+            names: vec!["v".to_string()],
+            type_expr: Box::new(Node::NamedType(ast::NamedType {
+                name: "Variant".to_string(),
+                generic_args: vec![],
+                span: Span::new(0, 10, 1, 1),
+            })),
+            is_class_var: false,
+            absolute_address: None,
+            span: Span::new(0, 10, 1, 1),
+        });
+
+        if let Node::VarDecl(var_decl_stmt) = &var_decl {
+            builder.build_var_decl(var_decl_stmt);
+        }
+
+        // Verify variable type was registered
+        assert_eq!(builder.variable_types.get("v"), Some(&Type::variant()));
+
+        // Verify initialization instruction was added
+        if let Some(func) = builder.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                assert!(entry.instructions.len() >= 1);
+                assert_eq!(entry.instructions[0].opcode, Opcode::Call);
+                assert_eq!(entry.instructions[0].operands[0], Value::Label("variant_new_empty".to_string()));
+            }
+        }
+    }
+
+    #[test]
+    fn test_build_variant_assignment_integer() {
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+
+        // Register Variant variable
+        builder.variable_types.insert("v".to_string(), Type::variant());
+
+        // Create: v := 42;
+        let assign = Node::AssignStmt(ast::AssignStmt {
+            target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                name: "v".to_string(),
+                span: Span::new(0, 10, 1, 1),
+            })),
+            value: Box::new(Node::LiteralExpr(ast::LiteralExpr {
+                value: ast::LiteralValue::Integer(42),
+                span: Span::new(0, 10, 1, 1),
+            })),
+            span: Span::new(0, 10, 1, 1),
+        });
+
+        if let Node::AssignStmt(assign_stmt) = &assign {
+            builder.build_assign_stmt(assign_stmt);
+        }
+
+        // Verify variant_assign instruction was generated
+        if let Some(func) = builder.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                // Should have variant_assign call
+                let variant_assign_inst = entry.instructions.iter()
+                    .find(|inst| inst.opcode == Opcode::Call && 
+                          matches!(&inst.operands[0], Value::Label(label) if label == "variant_assign"));
+                assert!(variant_assign_inst.is_some(), "Should have variant_assign instruction");
+            }
+        }
+    }
+
+    #[test]
+    fn test_build_variant_to_integer_assignment() {
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+
+        // Register variables
+        builder.variable_types.insert("v".to_string(), Type::variant());
+        builder.variable_types.insert("i".to_string(), Type::integer());
+
+        // Create: i := v;
+        let assign = Node::AssignStmt(ast::AssignStmt {
+            target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                name: "i".to_string(),
+                span: Span::new(0, 10, 1, 1),
+            })),
+            value: Box::new(Node::IdentExpr(ast::IdentExpr {
+                name: "v".to_string(),
+                span: Span::new(0, 10, 1, 1),
+            })),
+            span: Span::new(0, 10, 1, 1),
+        });
+
+        if let Node::AssignStmt(assign_stmt) = &assign {
+            builder.build_assign_stmt(assign_stmt);
+        }
+
+        // Verify variant_to_integer conversion was generated
+        if let Some(func) = builder.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                // Should have variant_to_integer call followed by Store
+                let variant_to_int = entry.instructions.iter()
+                    .find(|inst| inst.opcode == Opcode::Call && 
+                          matches!(&inst.operands[0], Value::Label(label) if label == "variant_to_integer"));
+                assert!(variant_to_int.is_some(), "Should have variant_to_integer instruction");
+            }
+        }
+    }
+
+    #[test]
+    fn test_build_variant_assignment_string() {
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+
+        // Register Variant variable
+        builder.variable_types.insert("v".to_string(), Type::variant());
+
+        // Create: v := 'Hello';
+        let assign = Node::AssignStmt(ast::AssignStmt {
+            target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                name: "v".to_string(),
+                span: Span::new(0, 10, 1, 1),
+            })),
+            value: Box::new(Node::LiteralExpr(ast::LiteralExpr {
+                value: ast::LiteralValue::String("Hello".to_string()),
+                span: Span::new(0, 10, 1, 1),
+            })),
+            span: Span::new(0, 10, 1, 1),
+        });
+
+        if let Node::AssignStmt(assign_stmt) = &assign {
+            builder.build_assign_stmt(assign_stmt);
+        }
+
+        // Verify variant_assign instruction was generated
+        if let Some(func) = builder.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                let variant_assign_inst = entry.instructions.iter()
+                    .find(|inst| inst.opcode == Opcode::Call && 
+                          matches!(&inst.operands[0], Value::Label(label) if label == "variant_assign"));
+                assert!(variant_assign_inst.is_some(), "Should have variant_assign instruction");
+            }
+        }
+    }
+
+    #[test]
+    fn test_build_variant_copy_assignment() {
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+
+        // Register Variant variables
+        builder.variable_types.insert("v1".to_string(), Type::variant());
+        builder.variable_types.insert("v2".to_string(), Type::variant());
+
+        // Create: v2 := v1;
+        let assign = Node::AssignStmt(ast::AssignStmt {
+            target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                name: "v2".to_string(),
+                span: Span::new(0, 10, 1, 1),
+            })),
+            value: Box::new(Node::IdentExpr(ast::IdentExpr {
+                name: "v1".to_string(),
+                span: Span::new(0, 10, 1, 1),
+            })),
+            span: Span::new(0, 10, 1, 1),
+        });
+
+        if let Node::AssignStmt(assign_stmt) = &assign {
+            builder.build_assign_stmt(assign_stmt);
+        }
+
+        // Verify variant_copy instruction was generated
+        if let Some(func) = builder.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                let variant_copy_inst = entry.instructions.iter()
+                    .find(|inst| inst.opcode == Opcode::Call && 
+                          matches!(&inst.operands[0], Value::Label(label) if label == "variant_copy"));
+                assert!(variant_copy_inst.is_some(), "Should have variant_copy instruction");
+            }
+        }
+    }
+
+    #[test]
+    fn test_build_program_with_variant() {
+        let mut builder = IRBuilder::new();
+        
+        // Create a simple program: var v: Variant; v := 42;
+        let program = Node::Program(ast::Program {
+            name: "test".to_string(),
+            directives: vec![],
+            block: Box::new(Node::Block(ast::Block {
+                directives: vec![],
+                label_decls: vec![],
+                const_decls: vec![],
+                type_decls: vec![],
+                var_decls: vec![Node::VarDecl(ast::VarDecl {
+                    names: vec!["v".to_string()],
+                    type_expr: Box::new(Node::NamedType(ast::NamedType {
+                        name: "Variant".to_string(),
+                        generic_args: vec![],
+                        span: Span::new(0, 10, 1, 1),
+                    })),
+                    is_class_var: false,
+                    absolute_address: None,
+                    span: Span::new(0, 10, 1, 1),
+                })],
+                threadvar_decls: vec![],
+                proc_decls: vec![],
+                func_decls: vec![],
+                operator_decls: vec![],
+                statements: vec![Node::AssignStmt(ast::AssignStmt {
+                    target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                        name: "v".to_string(),
+                        span: Span::new(0, 10, 1, 1),
+                    })),
+                    value: Box::new(Node::LiteralExpr(ast::LiteralExpr {
+                        value: ast::LiteralValue::Integer(42),
+                        span: Span::new(0, 10, 1, 1),
+                    })),
+                    span: Span::new(0, 10, 1, 1),
+                })],
+                span: Span::new(0, 50, 1, 1),
+            })),
+            span: Span::new(0, 50, 1, 1),
+        });
+
+        // Start a function before building (build() doesn't create functions automatically)
+        builder.start_function("main".to_string(), None);
+        let _ir_program = builder.build(&program);
+        builder.finish_function();
+
+        // Verify the program was built
+        assert_eq!(builder.program.functions.len(), 1);
+        
+        // Verify Variant variable was registered
+        assert_eq!(builder.variable_types.get("v"), Some(&Type::variant()));
     }
 }

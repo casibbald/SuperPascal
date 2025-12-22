@@ -7,3 +7,4 @@ edition.workspace = true
 ast = { path = "../ast" }
 types = { path = "../types" }
 tokens = { path = "../tokens" }
+runtime = { path = "../runtime" }
