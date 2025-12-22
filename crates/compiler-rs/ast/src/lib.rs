@@ -175,10 +175,19 @@ pub struct ConstDecl {
     pub span: Span,
 }
 
+/// Generic type parameter (e.g., `T` or `T: constraint`)
+#[derive(Debug, Clone, PartialEq)]
+pub struct GenericParam {
+    pub name: String,              // Parameter name (e.g., "T")
+    pub constraint: Option<Box<Node>>, // Optional constraint type (e.g., `T: class`)
+    pub span: Span,
+}
+
 /// Type declaration
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeDecl {
     pub name: String,
+    pub generic_params: Vec<GenericParam>, // Generic type parameters (e.g., `<T, U>`)
     pub type_expr: Box<Node>,     // Type node
     pub span: Span,
 }
@@ -188,6 +197,7 @@ pub struct TypeDecl {
 pub struct ProcDecl {
     pub name: String,
     pub class_name: Option<String>, // Optional class name for methods (ClassName.MethodName)
+    pub generic_params: Vec<GenericParam>, // Generic type parameters (e.g., `<T>`)
     pub params: Vec<Param>,        // Parameters
     pub block: Box<Node>,          // Block node
     pub is_forward: bool,          // true if FORWARD keyword is present
@@ -202,6 +212,7 @@ pub struct ProcDecl {
 pub struct FuncDecl {
     pub name: String,
     pub class_name: Option<String>, // Optional class name for methods (ClassName.MethodName)
+    pub generic_params: Vec<GenericParam>, // Generic type parameters (e.g., `<T>`)
     pub params: Vec<Param>,        // Parameters
     pub return_type: Box<Node>,    // Type node
     pub block: Box<Node>,           // Block node
@@ -590,10 +601,11 @@ pub struct DynamicArrayType {
     pub span: Span,
 }
 
-/// Named type (type alias)
+/// Named type (type alias) - can include generic arguments (e.g., `TList<integer>`)
 #[derive(Debug, Clone, PartialEq)]
 pub struct NamedType {
     pub name: String,
+    pub generic_args: Vec<Box<Node>>, // Generic type arguments (e.g., `<integer, string>`)
     pub span: Span,
 }
 
@@ -841,6 +853,7 @@ mod tests {
             names: vec!["x".to_string(), "y".to_string()],
             type_expr: Box::new(Node::NamedType(NamedType {
                 name: "integer".to_string(),
+                generic_args: vec![],
                 span,
             })),
             absolute_address: None,
@@ -872,6 +885,7 @@ mod tests {
             names: vec!["x".to_string()],
             type_expr: Box::new(Node::NamedType(NamedType {
                 name: "integer".to_string(),
+                generic_args: vec![],
                 span,
             })),
             absolute_address: None,
@@ -888,6 +902,7 @@ mod tests {
             names: vec!["a".to_string(), "b".to_string(), "c".to_string()],
             type_expr: Box::new(Node::NamedType(NamedType {
                 name: "integer".to_string(),
+                generic_args: vec![],
                 span,
             })),
             absolute_address: None,
@@ -917,8 +932,10 @@ mod tests {
         let span = Span::new(0, 20, 1, 1);
         let type_decl = Node::TypeDecl(TypeDecl {
             name: "MyInt".to_string(),
+            generic_params: vec![],
             type_expr: Box::new(Node::NamedType(NamedType {
                 name: "integer".to_string(),
+                generic_args: vec![],
                 span,
             })),
             span,
@@ -945,6 +962,7 @@ mod tests {
         let proc_decl = Node::ProcDecl(ProcDecl {
             name: "DoSomething".to_string(),
             class_name: None,
+            generic_params: vec![],
             params: vec![],
             block: Box::new(block),
             is_forward: false,
@@ -977,6 +995,7 @@ mod tests {
             param_type: ParamType::Value,
             type_expr: Box::new(Node::NamedType(NamedType {
                 name: "integer".to_string(),
+                generic_args: vec![],
                 span,
             })),
             default_value: None,
@@ -985,6 +1004,7 @@ mod tests {
         let proc_decl = Node::ProcDecl(ProcDecl {
             name: "Print".to_string(),
             class_name: None,
+            generic_params: vec![],
             params: vec![param],
             block: Box::new(block),
             is_forward: false,
@@ -1015,9 +1035,11 @@ mod tests {
         let func_decl = Node::FuncDecl(FuncDecl {
             name: "Add".to_string(),
             class_name: None,
+            generic_params: vec![],
             params: vec![],
             return_type: Box::new(Node::NamedType(NamedType {
                 name: "integer".to_string(),
+                generic_args: vec![],
                 span,
             })),
             block: Box::new(block),
@@ -1587,6 +1609,7 @@ mod tests {
             names: vec!["x".to_string(), "y".to_string()],
             type_expr: Box::new(Node::NamedType(NamedType {
                 name: "integer".to_string(),
+                generic_args: vec![],
                 span,
             })),
             span,
@@ -1606,10 +1629,12 @@ mod tests {
         let array_type = Node::ArrayType(ArrayType {
             is_packed: false,
             index_type: Box::new(Node::NamedType(NamedType {
+                generic_args: vec![],
                 name: "integer".to_string(),
                 span,
             })),
             element_type: Box::new(Node::NamedType(NamedType {
+                generic_args: vec![],
                 name: "integer".to_string(),
                 span,
             })),
@@ -1623,6 +1648,7 @@ mod tests {
         let span = Span::new(0, 10, 1, 1);
         let named_type = Node::NamedType(NamedType {
             name: "integer".to_string(),
+            generic_args: vec![],
             span,
         });
         assert_eq!(named_type.span(), span);
@@ -1639,6 +1665,7 @@ mod tests {
             names: vec!["x".to_string()],
             type_expr: Box::new(Node::NamedType(NamedType {
                 name: "integer".to_string(),
+                generic_args: vec![],
                 span,
             })),
             absolute_address: None,
@@ -1719,6 +1746,7 @@ mod tests {
             param_type: ParamType::Value,
             type_expr: Box::new(Node::NamedType(NamedType {
                 name: "integer".to_string(),
+                generic_args: vec![],
                 span,
             })),
             default_value: None,
@@ -1763,9 +1791,11 @@ mod tests {
         let func_decl = Node::FuncDecl(FuncDecl {
             name: "Add".to_string(),
             class_name: None,
+            generic_params: vec![],
             params: vec![param],
             return_type: Box::new(Node::NamedType(NamedType {
                 name: "integer".to_string(),
+                generic_args: vec![],
                 span,
             })),
             block: Box::new(block),

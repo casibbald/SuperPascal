@@ -183,6 +183,13 @@ impl super::Parser {
                     kind: TokenKind::Identifier("word".to_string()),
                     span: token.span,
                 }
+            } else if self.check(&TokenKind::KwString) {
+                let token = self.current().unwrap().clone();
+                self.advance()?;
+                Token {
+                    kind: TokenKind::Identifier("string".to_string()),
+                    span: token.span,
+                }
             } else {
                 return Err(ParserError::InvalidSyntax {
                     message: format!(
@@ -200,11 +207,150 @@ impl super::Parser {
                     span: name_token.span,
                 }),
             };
+            
+            // Check for generic type arguments: <T1, T2, ...>
+            let generic_args = if self.check(&TokenKind::Less) {
+                self.advance()?; // consume <
+                let args = self.parse_generic_type_arguments()?;
+                // After parse_generic_type_arguments, we've consumed the closing >
+                // The span will be calculated from name_token to the last token we saw
+                args
+            } else {
+                vec![]
+            };
+            
+            // Calculate span: from name to end of generic args (if any)
+            let span = if !generic_args.is_empty() {
+                // Find the maximum end position from all generic args
+                let max_end = generic_args.iter()
+                    .map(|arg| arg.span().end)
+                    .max()
+                    .unwrap_or(name_token.span.end);
+                Span::new(
+                    name_token.span.start,
+                    max_end,
+                    name_token.span.line,
+                    name_token.span.column,
+                )
+            } else {
+                name_token.span
+            };
+            
             Ok(Node::NamedType(ast::NamedType {
                 name,
-                span: name_token.span,
+                generic_args,
+                span,
             }))
         }
+    }
+
+    /// Parse generic type arguments: <T1, T2, ...>
+    /// Used in type instantiations like `TList<integer>`
+    /// Note: The opening < has already been consumed by the caller
+    fn parse_generic_type_arguments(&mut self) -> ParserResult<Vec<Box<Node>>> {
+        let mut args = vec![];
+        loop {
+            // Parse a type argument
+            let arg_type = self.parse_type()?;
+            args.push(Box::new(arg_type));
+            
+            // Check for comma (more arguments) or closing >
+            if self.check(&TokenKind::Comma) {
+                self.advance()?;
+            } else if self.check(&TokenKind::Greater) {
+                self.advance()?; // consume >
+                break;
+            } else {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected ',' or '>' in generic type arguments".to_string(),
+                    span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                });
+            }
+        }
+        
+        Ok(args)
+    }
+
+    /// Parse generic type parameters: <T> or <T: constraint> or <T, U>
+    /// Used in type declarations like `TList<T> = class ... end;`
+    pub(crate) fn parse_generic_type_parameters(&mut self) -> ParserResult<Vec<ast::GenericParam>> {
+        self.consume(TokenKind::Less, "<")?;
+        
+        let mut params = vec![];
+        loop {
+            // Parse parameter name(s) - can be comma-separated: <T, U> or <T; U: constraint>
+            let mut param_names = vec![];
+            
+            // First parameter name
+            let name_token = self.current().ok_or_else(|| ParserError::UnexpectedEof {
+                expected: "identifier".to_string(),
+                span: Span::at(0, 1, 1),
+            })?.clone();
+            self.advance()?;
+            let param_name = match &name_token.kind {
+                TokenKind::Identifier(name) => name.clone(),
+                _ => return Err(ParserError::InvalidSyntax {
+                    message: "Expected identifier in generic type parameter".to_string(),
+                    span: name_token.span,
+                }),
+            };
+            param_names.push(param_name);
+            
+            // Check for more names (comma-separated): <T, U>
+            while self.check(&TokenKind::Comma) {
+                self.advance()?; // consume comma
+                let next_name_token = self.current().ok_or_else(|| ParserError::UnexpectedEof {
+                    expected: "identifier".to_string(),
+                    span: Span::at(0, 1, 1),
+                })?.clone();
+                self.advance()?;
+                let next_name = match &next_name_token.kind {
+                    TokenKind::Identifier(name) => name.clone(),
+                    _ => return Err(ParserError::InvalidSyntax {
+                        message: "Expected identifier in generic type parameter".to_string(),
+                        span: next_name_token.span,
+                    }),
+                };
+                param_names.push(next_name);
+            }
+            
+            // Check for constraint: <T: constraint> or <T; U: constraint>
+            let constraint = if self.check(&TokenKind::Colon) {
+                self.advance()?; // consume :
+                Some(Box::new(self.parse_type()?))
+            } else {
+                None
+            };
+            
+            // Create GenericParam for each name (they share the same constraint if present)
+            for name in param_names {
+                params.push(ast::GenericParam {
+                    name,
+                    constraint: constraint.as_ref().map(|c| (*c).clone()),
+                    span: name_token.span, // Use first name's span
+                });
+            }
+            
+            // Check for semicolon (separates parameter groups with different constraints)
+            // or closing >
+            if self.check(&TokenKind::Semicolon) {
+                self.advance()?; // consume ;
+                // Continue to next parameter group
+            } else if self.check(&TokenKind::Greater) {
+                self.advance()?; // consume >
+                break;
+            } else if self.check(&TokenKind::Comma) {
+                // Another parameter without constraint, continue
+                continue;
+            } else {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected ',', ';', or '>' in generic type parameters".to_string(),
+                    span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                });
+            }
+        }
+        
+        Ok(params)
     }
 
     /// Parse enum type: ( identifier, identifier, ... )
@@ -1590,6 +1736,500 @@ mod tests {
                     } else {
                         panic!("Expected DynamicArrayType");
                     }
+                }
+            }
+        }
+    }
+
+    // ===== Generic Type Tests =====
+
+    #[test]
+    fn test_parse_generic_type_declaration_simple() {
+        let source = r#"
+            program Test;
+            type
+                TList<T> = class
+                end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    assert_eq!(type_decl.name, "TList");
+                    assert_eq!(type_decl.generic_params.len(), 1);
+                    assert_eq!(type_decl.generic_params[0].name, "T");
+                    assert!(type_decl.generic_params[0].constraint.is_none());
+                } else {
+                    panic!("Expected TypeDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_generic_type_declaration_multiple_params() {
+        let source = r#"
+            program Test;
+            type
+                TDictionary<TKey, TValue> = class
+                end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    assert_eq!(type_decl.name, "TDictionary");
+                    assert_eq!(type_decl.generic_params.len(), 2);
+                    assert_eq!(type_decl.generic_params[0].name, "TKey");
+                    assert_eq!(type_decl.generic_params[1].name, "TValue");
+                } else {
+                    panic!("Expected TypeDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_generic_type_declaration_with_constraint() {
+        let source = r#"
+            program Test;
+            type
+                TComparable<T: IComparable> = class
+                end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    assert_eq!(type_decl.name, "TComparable");
+                    assert_eq!(type_decl.generic_params.len(), 1);
+                    assert_eq!(type_decl.generic_params[0].name, "T");
+                    assert!(type_decl.generic_params[0].constraint.is_some());
+                    if let Some(constraint) = &type_decl.generic_params[0].constraint {
+                        if let Node::NamedType(named) = constraint.as_ref() {
+                            assert_eq!(named.name, "IComparable");
+                        } else {
+                            panic!("Expected NamedType constraint");
+                        }
+                    }
+                } else {
+                    panic!("Expected TypeDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_generic_type_instantiation_simple() {
+        let source = r#"
+            program Test;
+            var
+                list: TList<integer>;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::VarDecl(var_decl) = &block.var_decls[0] {
+                    if let Node::NamedType(named) = var_decl.type_expr.as_ref() {
+                        assert_eq!(named.name, "TList");
+                        assert_eq!(named.generic_args.len(), 1);
+                        if let Node::NamedType(arg) = named.generic_args[0].as_ref() {
+                            assert_eq!(arg.name, "integer");
+                        } else {
+                            panic!("Expected NamedType as generic argument");
+                        }
+                    } else {
+                        panic!("Expected NamedType");
+                    }
+                } else {
+                    panic!("Expected VarDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_generic_type_instantiation_multiple_args() {
+        let source = r#"
+            program Test;
+            var
+                dict: TDictionary<string, integer>;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::VarDecl(var_decl) = &block.var_decls[0] {
+                    if let Node::NamedType(named) = var_decl.type_expr.as_ref() {
+                        assert_eq!(named.name, "TDictionary");
+                        assert_eq!(named.generic_args.len(), 2);
+                        // First argument should be string (can be StringType or NamedType)
+                        match named.generic_args[0].as_ref() {
+                            Node::StringType(_) => {
+                                // string keyword parsed as StringType - this is acceptable
+                            }
+                            Node::NamedType(arg1) => {
+                                assert_eq!(arg1.name, "string");
+                            }
+                            _ => {
+                                panic!("Expected StringType or NamedType as first generic argument, got: {:?}", named.generic_args[0]);
+                            }
+                        }
+                        if let Node::NamedType(arg2) = named.generic_args[1].as_ref() {
+                            assert_eq!(arg2.name, "integer");
+                        } else {
+                            panic!("Expected NamedType as second generic argument");
+                        }
+                    } else {
+                        panic!("Expected NamedType");
+                    }
+                } else {
+                    panic!("Expected VarDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_generic_type_instantiation_nested() {
+        let source = r#"
+            program Test;
+            var
+                matrix: TList<TList<integer>>;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::VarDecl(var_decl) = &block.var_decls[0] {
+                    if let Node::NamedType(named) = var_decl.type_expr.as_ref() {
+                        assert_eq!(named.name, "TList");
+                        assert_eq!(named.generic_args.len(), 1);
+                        // The nested generic arg should be TList<integer>
+                        if let Node::NamedType(nested) = named.generic_args[0].as_ref() {
+                            assert_eq!(nested.name, "TList");
+                            assert_eq!(nested.generic_args.len(), 1);
+                            if let Node::NamedType(inner) = nested.generic_args[0].as_ref() {
+                                assert_eq!(inner.name, "integer");
+                            } else {
+                                panic!("Expected NamedType as inner generic argument");
+                            }
+                        } else {
+                            panic!("Expected NamedType as nested generic argument");
+                        }
+                    } else {
+                        panic!("Expected NamedType");
+                    }
+                } else {
+                    panic!("Expected VarDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_generic_procedure() {
+        let source = r#"
+            program Test;
+            procedure Swap<T>(var a, b: T);
+            begin
+            end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::ProcDecl(proc) = &block.proc_decls[0] {
+                    assert_eq!(proc.name, "Swap");
+                    assert_eq!(proc.generic_params.len(), 1);
+                    assert_eq!(proc.generic_params[0].name, "T");
+                    assert_eq!(proc.params.len(), 1);
+                } else {
+                    panic!("Expected ProcDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_generic_function() {
+        let source = r#"
+            program Test;
+            function Max<T>(a, b: T): T;
+            begin
+                Max := a;
+            end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::FuncDecl(func) = &block.func_decls[0] {
+                    assert_eq!(func.name, "Max");
+                    assert_eq!(func.generic_params.len(), 1);
+                    assert_eq!(func.generic_params[0].name, "T");
+                    assert_eq!(func.params.len(), 1);
+                    // Return type should be T
+                    if let Node::NamedType(return_type) = func.return_type.as_ref() {
+                        assert_eq!(return_type.name, "T");
+                        assert_eq!(return_type.generic_args.len(), 0);
+                    } else {
+                        panic!("Expected NamedType as return type");
+                    }
+                } else {
+                    panic!("Expected FuncDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_generic_function_multiple_params() {
+        let source = r#"
+            program Test;
+            function Combine<TKey, TValue>(key: TKey; value: TValue): TDictionary<TKey, TValue>;
+            begin
+            end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::FuncDecl(func) = &block.func_decls[0] {
+                    assert_eq!(func.name, "Combine");
+                    assert_eq!(func.generic_params.len(), 2);
+                    assert_eq!(func.generic_params[0].name, "TKey");
+                    assert_eq!(func.generic_params[1].name, "TValue");
+                    // Return type should be TDictionary<TKey, TValue>
+                    if let Node::NamedType(return_type) = func.return_type.as_ref() {
+                        assert_eq!(return_type.name, "TDictionary");
+                        assert_eq!(return_type.generic_args.len(), 2);
+                    } else {
+                        panic!("Expected NamedType as return type");
+                    }
+                } else {
+                    panic!("Expected FuncDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_generic_type_in_class() {
+        let source = r#"
+            program Test;
+            type
+                TList<T> = class
+                    Items: array of T;
+                    procedure Add(Item: T);
+                end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    assert_eq!(type_decl.name, "TList");
+                    assert_eq!(type_decl.generic_params.len(), 1);
+                    if let Node::ClassType(class_type) = type_decl.type_expr.as_ref() {
+                        // Check that Items field uses T
+                        if let Some((_, ast::ClassMember::Field(field_node))) = class_type.members.iter().find(|(_, m)| {
+                            if let ast::ClassMember::Field(f) = m {
+                                if let Node::VarDecl(var) = f {
+                                    var.names.contains(&"Items".to_string())
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            }
+                        }) {
+                            if let Node::VarDecl(var) = field_node {
+                                if let Node::DynamicArrayType(dyn_arr) = var.type_expr.as_ref() {
+                                    if let Node::NamedType(elem_type) = dyn_arr.element_type.as_ref() {
+                                        assert_eq!(elem_type.name, "T");
+                                    } else {
+                                        panic!("Expected NamedType for array element");
+                                    }
+                                } else {
+                                    panic!("Expected DynamicArrayType");
+                                }
+                            } else {
+                                panic!("Expected VarDecl in Field");
+                            }
+                        } else {
+                            panic!("Expected Items field");
+                        }
+                    } else {
+                        panic!("Expected ClassType");
+                    }
+                } else {
+                    panic!("Expected TypeDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_generic_type_with_constraint_multiple() {
+        let source = r#"
+            program Test;
+            type
+                TComparable<T: IComparable; U: ICloneable> = class
+                end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    assert_eq!(type_decl.name, "TComparable");
+                    assert_eq!(type_decl.generic_params.len(), 2);
+                    assert_eq!(type_decl.generic_params[0].name, "T");
+                    assert!(type_decl.generic_params[0].constraint.is_some());
+                    assert_eq!(type_decl.generic_params[1].name, "U");
+                    assert!(type_decl.generic_params[1].constraint.is_some());
+                } else {
+                    panic!("Expected TypeDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_generic_type_parameters_comma_separated() {
+        let source = r#"
+            program Test;
+            type
+                TPair<T, U> = class
+                end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    assert_eq!(type_decl.name, "TPair");
+                    assert_eq!(type_decl.generic_params.len(), 2);
+                    assert_eq!(type_decl.generic_params[0].name, "T");
+                    assert_eq!(type_decl.generic_params[1].name, "U");
+                } else {
+                    panic!("Expected TypeDecl");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_non_generic_type_after_generic() {
+        let source = r#"
+            program Test;
+            type
+                TList<T> = class
+                end;
+                TSimple = integer;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                assert_eq!(block.type_decls.len(), 2);
+                // First should be generic
+                if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
+                    assert_eq!(type_decl.name, "TList");
+                    assert_eq!(type_decl.generic_params.len(), 1);
+                }
+                // Second should be non-generic
+                if let Node::TypeDecl(type_decl) = &block.type_decls[1] {
+                    assert_eq!(type_decl.name, "TSimple");
+                    assert_eq!(type_decl.generic_params.len(), 0);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_generic_in_parameter_type() {
+        let source = r#"
+            program Test;
+            procedure Process(list: TList<integer>);
+            begin
+            end;
+            begin
+            end.
+        "#;
+        let mut parser = Parser::new(source).unwrap();
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            if let Node::Block(block) = program.block.as_ref() {
+                if let Node::ProcDecl(proc) = &block.proc_decls[0] {
+                    assert_eq!(proc.params.len(), 1);
+                    if let Node::NamedType(param_type) = proc.params[0].type_expr.as_ref() {
+                        assert_eq!(param_type.name, "TList");
+                        assert_eq!(param_type.generic_args.len(), 1);
+                    } else {
+                        panic!("Expected NamedType for parameter type");
+                    }
+                } else {
+                    panic!("Expected ProcDecl");
                 }
             }
         }

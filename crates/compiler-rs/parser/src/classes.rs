@@ -47,6 +47,7 @@ impl super::Parser {
                 };
                 Node::NamedType(ast::NamedType {
                     name,
+                    generic_args: vec![],
                     span: name_token.span,
                 })
             } else {
@@ -281,6 +282,7 @@ impl super::Parser {
         Ok(Node::ProcDecl(ast::ProcDecl {
             name,
             class_name: None,
+            generic_params: vec![],
             params,
             block: Box::new(empty_block),
             is_forward: false,
@@ -336,6 +338,7 @@ impl super::Parser {
         Ok(Node::ProcDecl(ast::ProcDecl {
             name,
             class_name: None,
+            generic_params: vec![],
             params,
             block: Box::new(empty_block),
             is_forward: false,

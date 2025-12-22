@@ -250,6 +250,7 @@ mod tests {
         let var_decl = Node::VarDecl(ast::VarDecl {
             names: vec!["x".to_string()],
             type_expr: Box::new(Node::NamedType(ast::NamedType {
+                generic_args: vec![],
                 name: "integer".to_string(),
                 span,
             })),

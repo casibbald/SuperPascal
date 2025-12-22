@@ -504,12 +504,20 @@ impl super::Parser {
             }),
         };
 
+        // Check for generic type parameters: <T> or <T: constraint>
+        let generic_params = if self.check(&TokenKind::Less) {
+            self.parse_generic_type_parameters()?
+        } else {
+            vec![]
+        };
+
         self.consume(TokenKind::Equal, "=")?;
         let type_expr = self.parse_type()?;
 
         let span = start_span.merge(type_expr.span());
         Ok(Node::TypeDecl(ast::TypeDecl {
             name,
+            generic_params,
             type_expr: Box::new(type_expr),
             span,
         }))
@@ -632,6 +640,13 @@ impl super::Parser {
         // Parse method name: ClassName.MethodName or just MethodName
         let (class_name, name) = self.parse_qualified_name()?;
 
+        // Check for generic type parameters: <T> or <T: constraint>
+        let generic_params = if self.check(&TokenKind::Less) {
+            self.parse_generic_type_parameters()?
+        } else {
+            vec![]
+        };
+
         let params = if self.check(&TokenKind::LeftParen) {
             self.parse_params()?
         } else {
@@ -659,6 +674,7 @@ impl super::Parser {
         Ok(Node::ProcDecl(ast::ProcDecl {
             name,
             class_name,
+            generic_params,
             params,
             block: Box::new(empty_block),
             is_forward: false,
@@ -680,6 +696,13 @@ impl super::Parser {
 
         // Parse method name: ClassName.MethodName or just MethodName
         let (class_name, name) = self.parse_qualified_name()?;
+
+        // Check for generic type parameters: <T> or <T: constraint>
+        let generic_params = if self.check(&TokenKind::Less) {
+            self.parse_generic_type_parameters()?
+        } else {
+            vec![]
+        };
 
         let params = if self.check(&TokenKind::LeftParen) {
             self.parse_params()?
@@ -710,6 +733,7 @@ impl super::Parser {
         Ok(Node::FuncDecl(ast::FuncDecl {
             name,
             class_name,
+            generic_params,
             params,
             return_type: Box::new(return_type),
             block: Box::new(empty_block),
@@ -753,6 +777,13 @@ impl super::Parser {
 
         // Parse method name: ClassName.MethodName or just MethodName
         let (class_name, name) = self.parse_qualified_name()?;
+
+        // Check for generic type parameters: <T> or <T: constraint>
+        let generic_params = if self.check(&TokenKind::Less) {
+            self.parse_generic_type_parameters()?
+        } else {
+            vec![]
+        };
 
         let params = if self.check(&TokenKind::LeftParen) {
             self.parse_params()?
@@ -801,6 +832,7 @@ impl super::Parser {
             return Ok(Node::ProcDecl(ast::ProcDecl {
                 name,
                 class_name,
+                generic_params,
                 params,
                 block: Box::new(block),
                 is_forward: false,
@@ -823,6 +855,7 @@ impl super::Parser {
             return Ok(Node::ProcDecl(ast::ProcDecl {
                 name,
                 class_name,
+                generic_params,
                 params,
                 block: Box::new(block),
                 is_forward: false,
@@ -843,6 +876,7 @@ impl super::Parser {
             return Ok(Node::ProcDecl(ast::ProcDecl {
                 name,
                 class_name,
+                generic_params,
                 params,
                 block: Box::new(block),
                 is_forward: false,
@@ -875,6 +909,7 @@ impl super::Parser {
         Ok(Node::ProcDecl(ast::ProcDecl {
             name,
             class_name,
+            generic_params,
             params,
             block: Box::new(empty_block),
             is_forward,
@@ -914,6 +949,13 @@ impl super::Parser {
 
         // Parse method name: ClassName.MethodName or just MethodName
         let (class_name, name) = self.parse_qualified_name()?;
+
+        // Check for generic type parameters: <T> or <T: constraint>
+        let generic_params = if self.check(&TokenKind::Less) {
+            self.parse_generic_type_parameters()?
+        } else {
+            vec![]
+        };
 
         let params = if self.check(&TokenKind::LeftParen) {
             self.parse_params()?
@@ -964,6 +1006,7 @@ impl super::Parser {
             return Ok(Node::FuncDecl(ast::FuncDecl {
                 name,
                 class_name,
+                generic_params,
                 params,
                 return_type: Box::new(return_type),
                 block: Box::new(block),
@@ -987,6 +1030,7 @@ impl super::Parser {
             return Ok(Node::FuncDecl(ast::FuncDecl {
                 name,
                 class_name,
+                generic_params,
                 params,
                 return_type: Box::new(return_type),
                 block: Box::new(block),
@@ -1008,6 +1052,7 @@ impl super::Parser {
             return Ok(Node::FuncDecl(ast::FuncDecl {
                 name,
                 class_name,
+                generic_params,
                 params,
                 return_type: Box::new(return_type),
                 block: Box::new(block),
@@ -1041,6 +1086,7 @@ impl super::Parser {
         Ok(Node::FuncDecl(ast::FuncDecl {
             name,
             class_name,
+            generic_params,
             params,
             return_type: Box::new(return_type),
             block: Box::new(empty_block),
