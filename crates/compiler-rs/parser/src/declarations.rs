@@ -20,11 +20,14 @@ impl super::Parser {
 
         // Collect directives before PROGRAM keyword
         // Also handle conditional compilation - directives may wrap PROGRAM
+        // Note: {$INCLUDE} directives are handled in parse_block, not here
         let mut directives = vec![];
         loop {
             // Check for directives first
             if self.check(&TokenKind::Directive(String::new())) {
                 if let Some(directive) = self.parse_directive()? {
+                    // If it's an included block, we need to merge it into the program's block later
+                    // For now, just store it as a directive - parse_block will handle merging
                     directives.push(directive);
                 }
                 // Continue to check for more directives or PROGRAM
@@ -82,7 +85,29 @@ impl super::Parser {
         self.consume(TokenKind::Semicolon, ";")?;
 
         // Block
-        let block = self.parse_block()?;
+        let mut block = self.parse_block()?;
+        
+        // Merge any included blocks from directives collected before PROGRAM
+        if let Node::Block(ref mut program_block) = block {
+            for directive in &directives {
+                if let Node::Block(included_block) = directive {
+                    // Merge included block's content into program block
+                    program_block.directives.extend(included_block.directives.clone());
+                    program_block.label_decls.extend(included_block.label_decls.clone());
+                    program_block.const_decls.extend(included_block.const_decls.clone());
+                    program_block.type_decls.extend(included_block.type_decls.clone());
+                    program_block.var_decls.extend(included_block.var_decls.clone());
+                    program_block.threadvar_decls.extend(included_block.threadvar_decls.clone());
+                    program_block.proc_decls.extend(included_block.proc_decls.clone());
+                    program_block.func_decls.extend(included_block.func_decls.clone());
+                    program_block.operator_decls.extend(included_block.operator_decls.clone());
+                    program_block.statements.extend(included_block.statements.clone());
+                } else {
+                    // Regular directive - add to directives list
+                    program_block.directives.push(directive.clone());
+                }
+            }
+        }
 
         // Period
         self.consume(TokenKind::Dot, ".")?;
@@ -162,12 +187,25 @@ impl super::Parser {
             return Ok(None);
         }
         
+        // Handle INCLUDE directive specially - read and parse the file
+        if let DirectiveType::Include(filename) = &directive_type {
+            if should_include {
+                // Read and parse the included file
+                return self.handle_include_directive(filename, token.span);
+            } else {
+                // Include is in inactive branch, skip it
+                return Ok(None);
+            }
+        }
+        
         // Only include directive in AST if it's active or if it's a control directive
-        // Control directives (IFDEF, IFNDEF, ELSE, ENDIF) are included for debugging
+        // Control directives (IFDEF, IFNDEF, IF, ELSEIF, ELSE, ENDIF) are included for debugging
         // DEFINE/UNDEF are included if active
         let include_in_ast = match directive_type {
             DirectiveType::IfDef(_)
             | DirectiveType::IfNDef(_)
+            | DirectiveType::If(_)
+            | DirectiveType::ElseIf(_)
             | DirectiveType::Else
             | DirectiveType::EndIf => true, // Always include control directives
             DirectiveType::Define(_)
@@ -183,6 +221,105 @@ impl super::Parser {
         } else {
             Ok(None) // Directive processed but not included in AST
         }
+    }
+
+    /// Handle {$INCLUDE} directive - read file and parse it
+    fn handle_include_directive(&mut self, filename: &str, span: tokens::Span) -> ParserResult<Option<Node>> {
+        use std::fs;
+        
+        // Resolve file path
+        let file_path = self.resolve_include_path(filename)?;
+        
+        // Check for circular includes
+        let canonical_path = fs::canonicalize(&file_path)
+            .map_err(|e| ParserError::InvalidSyntax {
+                message: format!("Cannot resolve include path '{}': {}", filename, e),
+                span,
+            })?;
+        let canonical_str = canonical_path.to_string_lossy().to_string();
+        
+        if self.included_files.contains(&canonical_str) {
+            return Err(ParserError::InvalidSyntax {
+                message: format!("Circular include detected: '{}'", filename),
+                span,
+            });
+        }
+        
+        // Read the file
+        let file_content = fs::read_to_string(&file_path)
+            .map_err(|e| ParserError::InvalidSyntax {
+                message: format!("Cannot read include file '{}': {}", filename, e),
+                span,
+            })?;
+        
+        // Mark file as included
+        self.included_files.insert(canonical_str.clone());
+        
+        // Create a new parser for the included file
+        let included_filename = Some(file_path.to_string_lossy().to_string());
+        let mut included_parser = super::Parser::new_with_file_and_symbols(
+            &file_content,
+            included_filename.clone(),
+            self.directive_evaluator().defined_symbols().iter().cloned().collect(),
+        )?;
+        
+        // Copy include paths and included files to the new parser
+        included_parser.include_paths = self.include_paths.clone();
+        included_parser.included_files = self.included_files.clone();
+        
+        // Parse the included file - it can contain:
+        // 1. A block (declarations and statements with BEGIN...END)
+        // 2. Just declarations (for header files)
+        // 3. Just statements (for code files)
+        // Try to parse as declarations-only first (most common for header files)
+        let included_ast = included_parser.parse_declarations_only()?;
+        
+        // Return the included content
+        // The included block will be merged into the current context by the caller
+        Ok(Some(included_ast))
+    }
+    
+    /// Resolve include file path (check current directory, then include paths)
+    fn resolve_include_path(&self, filename: &str) -> ParserResult<std::path::PathBuf> {
+        use std::path::PathBuf;
+        
+        // If filename is absolute, use it directly
+        let path = PathBuf::from(filename);
+        if path.is_absolute() {
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+        
+        // Try relative to current file's directory
+        if let Some(ref current_file) = self.filename {
+            if let Some(parent) = std::path::Path::new(current_file).parent() {
+                let candidate = parent.join(filename);
+                if candidate.exists() {
+                    return Ok(candidate);
+                }
+            }
+        }
+        
+        // Try include paths
+        for include_path in &self.include_paths {
+            let candidate = PathBuf::from(include_path).join(filename);
+            if candidate.exists() {
+                return Ok(candidate);
+            }
+        }
+        
+        // Try current directory
+        let candidate = PathBuf::from(filename);
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+        
+        // Not found
+        Err(ParserError::InvalidSyntax {
+            message: format!("Include file not found: '{}'", filename),
+            span: tokens::Span::at(0, 1, 1),
+        })
     }
 
     /// Skip tokens until we reach ELSE or ENDIF (for conditional compilation)
@@ -251,6 +388,131 @@ impl super::Parser {
         Ok(false) // Should not reach here normally
     }
 
+    /// Parse declarations only (no BEGIN...END) - used for included header files
+    fn parse_declarations_only(&mut self) -> ParserResult<Node> {
+        let start_span = self
+            .current()
+            .map(|t| t.span)
+            .unwrap_or_else(|| Span::at(0, 1, 1));
+
+        let mut directives = vec![];
+        let mut label_decls = vec![];
+        let mut const_decls = vec![];
+        let mut type_decls = vec![];
+        let mut var_decls = vec![];
+        let mut threadvar_decls = vec![];
+        let mut proc_decls = vec![];
+        let mut func_decls = vec![];
+        let mut operator_decls = vec![];
+        let mut statements = vec![];
+
+        // Parse declarations and optionally statements (if BEGIN is present)
+        loop {
+            // Check for directives first
+            if self.check(&TokenKind::Directive(String::new())) {
+                if let Some(directive) = self.parse_directive()? {
+                    // Handle nested includes
+                    if let Node::Block(included_block) = directive {
+                        directives.extend(included_block.directives);
+                        label_decls.extend(included_block.label_decls);
+                        const_decls.extend(included_block.const_decls);
+                        type_decls.extend(included_block.type_decls);
+                        var_decls.extend(included_block.var_decls);
+                        threadvar_decls.extend(included_block.threadvar_decls);
+                        proc_decls.extend(included_block.proc_decls);
+                        func_decls.extend(included_block.func_decls);
+                        operator_decls.extend(included_block.operator_decls);
+                        statements.extend(included_block.statements);
+                    } else {
+                        directives.push(directive);
+                    }
+                }
+                continue;
+            }
+            
+            // Skip tokens if we're in an inactive conditional branch
+            if !self.directive_evaluator().is_active() {
+                self.advance()?;
+                continue;
+            }
+            
+            // Check for BEGIN - if present, parse statements
+            if self.check(&TokenKind::KwBegin) {
+                self.advance()?; // consume BEGIN
+                while !self.check(&TokenKind::KwEnd) && !self.check(&TokenKind::Eof) {
+                    statements.push(self.parse_statement()?);
+                    if self.check(&TokenKind::Semicolon) {
+                        self.advance()?;
+                    }
+                }
+                if self.check(&TokenKind::KwEnd) {
+                    self.advance()?; // consume END
+                }
+                break;
+            }
+            
+            // Parse declarations
+            if self.check(&TokenKind::KwLabel) {
+                label_decls.extend(self.parse_label_decls()?);
+            } else if self.check(&TokenKind::KwConst) {
+                const_decls.extend(self.parse_const_decls()?);
+            } else if self.check(&TokenKind::KwResourcestring) {
+                const_decls.extend(self.parse_resourcestring_decls()?);
+            } else if self.check(&TokenKind::KwType) {
+                type_decls.extend(self.parse_type_decls()?);
+            } else if self.check(&TokenKind::KwVar) {
+                var_decls.extend(self.parse_var_decls()?);
+            } else if self.check(&TokenKind::KwThreadvar) {
+                threadvar_decls.extend(self.parse_threadvar_decls()?);
+            } else if self.check(&TokenKind::KwProcedure) {
+                proc_decls.push(self.parse_procedure_decl()?);
+            } else if self.check(&TokenKind::KwFunction) {
+                func_decls.push(self.parse_function_decl()?);
+            } else if self.check(&TokenKind::KwOperator) {
+                operator_decls.push(self.parse_operator_decl()?);
+            } else if self.check(&TokenKind::Eof) {
+                // End of file - done
+                break;
+            } else {
+                // Unknown token - might be a statement (for code-only includes)
+                // Try to parse as statement, but if it fails, we're done
+                let _saved_pos = self.current().map(|t| t.span);
+                match self.parse_statement() {
+                    Ok(stmt) => {
+                        statements.push(stmt);
+                        if self.check(&TokenKind::Semicolon) {
+                            self.advance()?;
+                        }
+                    }
+                    Err(_) => {
+                        // Not a statement - we're done parsing
+                        break;
+                    }
+                }
+            }
+        }
+
+        let end_span = self
+            .current()
+            .map(|t| t.span)
+            .unwrap_or_else(|| Span::at(0, 1, 1));
+        let span = start_span.merge(end_span);
+
+        Ok(Node::Block(ast::Block {
+            directives,
+            label_decls,
+            const_decls,
+            type_decls,
+            var_decls,
+            threadvar_decls,
+            proc_decls,
+            func_decls,
+            operator_decls,
+            statements,
+            span,
+        }))
+    }
+
     /// Parse block: [declarations] BEGIN statements END
     pub(crate) fn parse_block(&mut self) -> ParserResult<Node> {
         let start_span = self
@@ -273,7 +535,22 @@ impl super::Parser {
             // Check for directives first
             if self.check(&TokenKind::Directive(String::new())) {
                 if let Some(directive) = self.parse_directive()? {
-                    directives.push(directive);
+                    // Handle included blocks specially - merge their content into current block
+                    if let Node::Block(included_block) = directive {
+                        // Merge included block's content into current block
+                        directives.extend(included_block.directives);
+                        label_decls.extend(included_block.label_decls);
+                        const_decls.extend(included_block.const_decls);
+                        type_decls.extend(included_block.type_decls);
+                        var_decls.extend(included_block.var_decls);
+                        threadvar_decls.extend(included_block.threadvar_decls);
+                        proc_decls.extend(included_block.proc_decls);
+                        func_decls.extend(included_block.func_decls);
+                        operator_decls.extend(included_block.operator_decls);
+                        // Note: included block's statements will be added when we parse the statements section
+                    } else {
+                        directives.push(directive);
+                    }
                 }
                 continue;
             }
@@ -2809,5 +3086,196 @@ mod tests {
         } else {
             panic!("Expected Program node");
         }
+    }
+
+    #[test]
+    fn test_parse_include_directive() {
+        use std::fs;
+        use std::path::Path;
+        
+        // Create a unique temporary include directory for this test
+        let include_dir = Path::new("test_includes_directive");
+        // Ensure directory exists, ignore error if it already exists
+        let _ = fs::create_dir_all(include_dir);
+        let include_file = include_dir.join("test_header.pas");
+        fs::write(&include_file, "const TestConst = 42;\n")
+            .expect("Failed to write include file");
+        
+        let source = r#"
+            program Test;
+            {$INCLUDE 'test_includes_directive/test_header.pas'}
+            begin end.
+        "#;
+        
+        let mut parser = Parser::new_with_file_and_symbols(
+            source,
+            Some("test_main.pas".to_string()),
+            vec![],
+        ).unwrap();
+        parser.include_paths.push(".".to_string());
+        
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        if let Ok(Node::Program(program)) = result {
+            assert_eq!(program.name, "Test");
+            // Check that the included constant is in the block
+            if let Node::Block(block) = program.block.as_ref() {
+                assert!(!block.const_decls.is_empty(), "Should have included constant declaration");
+            }
+        } else {
+            panic!("Expected Program node, got: {:?}", result);
+        }
+        
+        // Cleanup
+        fs::remove_file(&include_file).ok();
+        fs::remove_dir(include_dir).ok();
+    }
+
+    #[test]
+    fn test_parse_include_with_quotes() {
+        use std::fs;
+        use std::path::Path;
+        
+        let include_dir = Path::new("test_includes_quotes");
+        let _ = fs::create_dir_all(include_dir);
+        let include_file = include_dir.join("utils.pas");
+        fs::write(&include_file, "var GlobalVar: integer;\n")
+            .expect("Failed to write include file");
+        
+        let source = r#"
+            {$INCLUDE "test_includes_quotes/utils.pas"}
+            program Test;
+            begin end.
+        "#;
+        
+        let mut parser = Parser::new_with_file_and_symbols(
+            source,
+            Some("test_main.pas".to_string()),
+            vec![],
+        ).unwrap();
+        parser.include_paths.push(".".to_string());
+        
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        // Cleanup
+        let _ = fs::remove_file(&include_file);
+        let _ = fs::remove_dir(include_dir);
+    }
+
+    #[test]
+    fn test_parse_include_circular_detection() {
+        use std::fs;
+        use std::path::Path;
+        
+        let include_dir = Path::new("test_includes_circular");
+        let _ = fs::create_dir_all(include_dir);
+        let include_file1 = include_dir.join("file1.pas");
+        let include_file2 = include_dir.join("file2.pas");
+        
+        // file1 includes file2
+        fs::write(&include_file1, "{$INCLUDE 'test_includes_circular/file2.pas'}\n")
+            .expect("Failed to write include file1");
+        // file2 includes file1 (circular)
+        fs::write(&include_file2, "{$INCLUDE 'test_includes_circular/file1.pas'}\n")
+            .expect("Failed to write include file2");
+        
+        let source = r#"
+            {$INCLUDE 'test_includes_circular/file1.pas'}
+            program Test;
+            begin end.
+        "#;
+        
+        let mut parser = Parser::new_with_file_and_symbols(
+            source,
+            Some("test_main.pas".to_string()),
+            vec![],
+        ).unwrap();
+        parser.include_paths.push(".".to_string());
+        
+        let result = parser.parse();
+        // Should detect circular include and return an error
+        assert!(result.is_err(), "Should detect circular include");
+        
+        if let Err(e) = result {
+            assert!(format!("{:?}", e).contains("circular") || format!("{:?}", e).contains("Circular"), 
+                "Error should mention circular include: {:?}", e);
+        }
+        
+        // Cleanup
+        let _ = fs::remove_file(&include_file1);
+        let _ = fs::remove_file(&include_file2);
+        let _ = fs::remove_dir(include_dir);
+    }
+
+    #[test]
+    fn test_parse_include_with_symbols() {
+        use std::fs;
+        use std::path::Path;
+        
+        let include_dir = Path::new("test_includes_symbols");
+        let _ = fs::create_dir_all(include_dir);
+        let include_file = include_dir.join("config.pas");
+        // Simple include file - conditional compilation in includes is tested elsewhere
+        fs::write(&include_file, "const ConfigValue = 100;\n")
+            .expect("Failed to write include file");
+        
+        let source = r#"
+            program Test;
+            {$INCLUDE 'test_includes_symbols/config.pas'}
+            begin end.
+        "#;
+        
+        let mut parser = Parser::new_with_file_and_symbols(
+            source,
+            Some("test_main.pas".to_string()),
+            vec!["DEBUG".to_string()], // Predefine symbols (not used in this simple test)
+        ).unwrap();
+        parser.include_paths.push(".".to_string());
+        
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        // Cleanup
+        let _ = fs::remove_file(&include_file);
+        let _ = fs::remove_dir(include_dir);
+    }
+
+    #[test]
+    fn test_parse_include_nested() {
+        use std::fs;
+        use std::path::Path;
+        
+        let include_dir = Path::new("test_includes_nested");
+        let _ = fs::create_dir_all(include_dir);
+        let include_file1 = include_dir.join("header1.pas");
+        let include_file2 = include_dir.join("header2.pas");
+        
+        fs::write(&include_file1, "const Const1 = 1;\n{$INCLUDE 'test_includes_nested/header2.pas'}\n")
+            .expect("Failed to write include file1");
+        fs::write(&include_file2, "const Const2 = 2;\n")
+            .expect("Failed to write include file2");
+        
+        let source = r#"
+            {$INCLUDE 'test_includes_nested/header1.pas'}
+            program Test;
+            begin end.
+        "#;
+        
+        let mut parser = Parser::new_with_file_and_symbols(
+            source,
+            Some("test_main.pas".to_string()),
+            vec![],
+        ).unwrap();
+        parser.include_paths.push(".".to_string());
+        
+        let result = parser.parse();
+        assert!(result.is_ok(), "Parse failed: {:?}", result);
+        
+        // Cleanup
+        let _ = fs::remove_file(&include_file1);
+        let _ = fs::remove_file(&include_file2);
+        let _ = fs::remove_dir(include_dir);
     }
 }

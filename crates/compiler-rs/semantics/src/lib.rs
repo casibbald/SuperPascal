@@ -530,7 +530,7 @@ mod tests {
 
         // Analyze the anonymous function
         let result_type = analyzer.analyze_expression(&anon_func);
-        let diagnostics = analyzer.core.diagnostics.clone();
+        let _diagnostics = analyzer.core.diagnostics.clone();
 
         // Should return integer type (the return type)
         assert_eq!(result_type, Type::integer());
@@ -583,13 +583,13 @@ mod tests {
 
         // Analyze the anonymous procedure
         let result_type = analyzer.analyze_expression(&anon_proc);
-        let diagnostics = analyzer.core.diagnostics.clone();
+        let _diagnostics = analyzer.core.diagnostics.clone();
 
         // Procedures return Error type in expression context (for now)
         assert_eq!(result_type, Type::Error);
         // Should have no errors about parameter 'x' (it's in scope)
         // May have errors about writeln not being found, but that's expected
-        assert!(diagnostics.len() >= 0);
+        // (diagnostics.len() >= 0 is always true, so we just verify analysis completes)
     }
 
     #[test]
@@ -666,7 +666,7 @@ mod tests {
 
         // Analyze the anonymous function
         let result_type = analyzer.analyze_expression(&anon_func);
-        let diagnostics = analyzer.core.diagnostics.clone();
+        let _diagnostics = analyzer.core.diagnostics.clone();
 
         // Should return integer type
         assert_eq!(result_type, Type::integer());
@@ -725,7 +725,7 @@ mod tests {
             span,
         });
 
-        let result_type = analyzer.analyze_type(&named_type);
+        let _result_type = analyzer.analyze_type(&named_type);
         let diagnostics = analyzer.core.diagnostics.clone();
 
         // Should succeed (class type satisfies class constraint)
@@ -870,7 +870,7 @@ mod tests {
             span,
         });
 
-        let result_type = analyzer.analyze_type(&named_type);
+        let _result_type = analyzer.analyze_type(&named_type);
         let diagnostics = analyzer.core.diagnostics.clone();
 
         // Should succeed (IComparable satisfies IComparable constraint)
@@ -910,7 +910,7 @@ mod tests {
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
 
         // Add Variant variable to symbol table
-        analyzer.core.symbol_table.insert(symbols::Symbol {
+        let _ = analyzer.core.symbol_table.insert(symbols::Symbol {
             kind: symbols::SymbolKind::Variable {
                 name: "v".to_string(),
                 var_type: Type::variant(),
@@ -945,7 +945,7 @@ mod tests {
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
 
         // Add Variant variable to symbol table
-        analyzer.core.symbol_table.insert(symbols::Symbol {
+        let _ = analyzer.core.symbol_table.insert(symbols::Symbol {
             kind: symbols::SymbolKind::Variable {
                 name: "v".to_string(),
                 var_type: Type::variant(),
@@ -980,7 +980,7 @@ mod tests {
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
 
         // Add Variant variable to symbol table
-        analyzer.core.symbol_table.insert(symbols::Symbol {
+        let _ = analyzer.core.symbol_table.insert(symbols::Symbol {
             kind: symbols::SymbolKind::Variable {
                 name: "v".to_string(),
                 var_type: Type::variant(),
@@ -990,7 +990,7 @@ mod tests {
         });
 
         // Add integer variable to symbol table
-        analyzer.core.symbol_table.insert(symbols::Symbol {
+        let _ = analyzer.core.symbol_table.insert(symbols::Symbol {
             kind: symbols::SymbolKind::Variable {
                 name: "i".to_string(),
                 var_type: Type::integer(),

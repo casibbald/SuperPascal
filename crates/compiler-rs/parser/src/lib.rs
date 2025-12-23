@@ -29,6 +29,10 @@ pub struct Parser {
     peek: Option<Token>,
     filename: Option<String>,
     directive_evaluator: DirectiveEvaluator,
+    /// Track included files to prevent circular includes
+    included_files: std::collections::HashSet<String>,
+    /// Include search paths for resolving relative file paths
+    include_paths: Vec<String>,
 }
 
 impl Parser {
@@ -49,17 +53,34 @@ impl Parser {
         predefined_symbols: Vec<String>,
     ) -> ParserResult<Self> {
         let lexer = Lexer::new(source);
+        let mut included_files = std::collections::HashSet::new();
+        // Add current file to included files to prevent self-inclusion
+        if let Some(ref fname) = filename {
+            included_files.insert(fname.clone());
+        }
         let mut parser = Self {
             lexer,
             current: None,
             peek: None,
-            filename,
+            filename: filename.clone(),
             directive_evaluator: DirectiveEvaluator::with_symbols(predefined_symbols),
+            included_files,
+            include_paths: vec![],
         };
         // Prime the parser with first two tokens
         parser.advance()?;
         parser.advance()?;
         Ok(parser)
+    }
+
+    /// Add an include search path
+    pub fn add_include_path(&mut self, path: String) {
+        self.include_paths.push(path);
+    }
+
+    /// Set include search paths
+    pub fn set_include_paths(&mut self, paths: Vec<String>) {
+        self.include_paths = paths;
     }
 
     /// Get mutable reference to directive evaluator

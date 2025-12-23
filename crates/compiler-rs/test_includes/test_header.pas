@@ -1,0 +1,1 @@
+const TestConst = 42;
