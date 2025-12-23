@@ -25,7 +25,17 @@ impl SemanticAnalyzer {
                     match &symbol.kind {
                         SymbolKind::Variable { var_type, .. } => var_type.clone(),
                         SymbolKind::Constant { const_type, .. } => const_type.clone(),
-                        SymbolKind::Function { return_type, .. } => return_type.clone(),
+                        SymbolKind::Function { return_type, .. } => {
+                            // Function name used as value - return return type for now
+                            // If used in assignment to procedural type, will be handled in assignment analysis
+                            return_type.clone()
+                        }
+                        SymbolKind::Procedure { .. } => {
+                            // Procedure name used as value - this should be converted to procedural type
+                            // For now, return Error (will be handled in assignment context if needed)
+                            // TODO: Create procedural type representation
+                            Type::Error
+                        }
                         _ => {
                             self.core.add_error(
                                 format!("'{}' is not a value", i.name),
@@ -214,6 +224,51 @@ impl SemanticAnalyzer {
                         self.core.add_error(
                             "Index expression must be applied to an array".to_string(),
                             idx.span,
+                        );
+                        Type::Error
+                    }
+                }
+            }
+            Node::SliceExpr(slice) => {
+                let array_type = self.analyze_expression(&slice.array);
+                match array_type {
+                    Type::Array { element_type, .. } | Type::DynamicArray { element_type } => {
+                        // Analyze start, end, and step expressions if present
+                        if let Some(start) = &slice.start {
+                            let start_type = self.analyze_expression(start);
+                            if !start_type.is_assignable_to(&Type::integer()) {
+                                self.core.add_error(
+                                    "Slice start index must be an integer".to_string(),
+                                    start.span(),
+                                );
+                            }
+                        }
+                        if let Some(end) = &slice.end {
+                            let end_type = self.analyze_expression(end);
+                            if !end_type.is_assignable_to(&Type::integer()) {
+                                self.core.add_error(
+                                    "Slice end index must be an integer".to_string(),
+                                    end.span(),
+                                );
+                            }
+                        }
+                        if let Some(step) = &slice.step {
+                            let step_type = self.analyze_expression(step);
+                            if !step_type.is_assignable_to(&Type::integer()) {
+                                self.core.add_error(
+                                    "Slice step must be an integer".to_string(),
+                                    step.span(),
+                                );
+                            }
+                        }
+                        // Slice returns an array of the same element type
+                        // For now, return dynamic array type (slices are runtime-sized)
+                        Type::dynamic_array(*element_type)
+                    }
+                    _ => {
+                        self.core.add_error(
+                            "Slice expression must be applied to an array".to_string(),
+                            slice.span,
                         );
                         Type::Error
                     }
@@ -440,6 +495,18 @@ impl SemanticAnalyzer {
             Node::IndexExpr(idx) => {
                 self.collect_identifiers(&idx.array, captured, outer_scope_level, anon_scope_level);
                 self.collect_identifiers(&idx.index, captured, outer_scope_level, anon_scope_level);
+            }
+            Node::SliceExpr(slice) => {
+                self.collect_identifiers(&slice.array, captured, outer_scope_level, anon_scope_level);
+                if let Some(start) = &slice.start {
+                    self.collect_identifiers(start, captured, outer_scope_level, anon_scope_level);
+                }
+                if let Some(end) = &slice.end {
+                    self.collect_identifiers(end, captured, outer_scope_level, anon_scope_level);
+                }
+                if let Some(step) = &slice.step {
+                    self.collect_identifiers(step, captured, outer_scope_level, anon_scope_level);
+                }
             }
             Node::FieldExpr(field) => {
                 self.collect_identifiers(&field.record, captured, outer_scope_level, anon_scope_level);

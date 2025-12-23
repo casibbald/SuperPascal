@@ -32,7 +32,45 @@ impl SemanticAnalyzer {
         let target_type = self.analyze_lvalue(&assign.target);
 
         // Analyze value (rvalue)
-        let value_type = self.analyze_expression(&assign.value);
+        let mut value_type = self.analyze_expression(&assign.value);
+
+        // Special handling: If target is procedural type and value is a function/procedure name,
+        // convert the function/procedure to a procedural type
+        if let Type::Procedural { .. } = target_type {
+            if let Node::IdentExpr(ident) = assign.value.as_ref() {
+                if let Some(symbol) = self.core.symbol_table.lookup(&ident.name) {
+                    match &symbol.kind {
+                        SymbolKind::Function { return_type, params, .. } => {
+                            // Convert function to procedural type
+                            let param_types: Vec<Type> = params.iter()
+                                .map(|p| p.param_type.clone())
+                                .collect();
+                            value_type = Type::procedural(
+                                true, // is_function
+                                param_types,
+                                Some(return_type.clone()),
+                                false, // is_method_pointer (TODO: check if method)
+                            );
+                        }
+                        SymbolKind::Procedure { params, .. } => {
+                            // Convert procedure to procedural type
+                            let param_types: Vec<Type> = params.iter()
+                                .map(|p| p.param_type.clone())
+                                .collect();
+                            value_type = Type::procedural(
+                                false, // is_function
+                                param_types,
+                                None, // no return type
+                                false, // is_method_pointer (TODO: check if method)
+                            );
+                        }
+                        _ => {
+                            // Not a function/procedure, will be caught by type checking below
+                        }
+                    }
+                }
+            }
+        }
 
         // Check assignment compatibility
         if !value_type.is_assignable_to(&target_type) {

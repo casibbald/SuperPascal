@@ -297,15 +297,103 @@ impl super::Parser {
     fn parse_postfix(&mut self, mut expr: Node) -> ParserResult<Node> {
         loop {
             if self.check(&TokenKind::LeftBracket) {
-                self.advance()?;
-                let index = self.parse_expression()?;
-                self.consume(TokenKind::RightBracket, "]")?;
-                let span = expr.span().merge(index.span());
-                expr = Node::IndexExpr(ast::IndexExpr {
-                    array: Box::new(expr),
-                    index: Box::new(index),
-                    span,
-                });
+                self.advance()?; // consume [
+                let bracket_start_span = expr.span();
+                
+                // Check if this starts with colon (slice from beginning) or has an expression
+                if self.check(&TokenKind::Colon) {
+                    // Slice starting from beginning: arr[:end] or arr[:end:step] or arr[:] or arr[::step]
+                    self.advance()?; // consume :
+                    
+                    // Parse end (optional)
+                    let end = if self.check(&TokenKind::RightBracket) {
+                        None // arr[:]
+                    } else if self.check(&TokenKind::Colon) {
+                        None // arr[::step] - no end, will parse step next
+                    } else {
+                        // Has an end expression
+                        Some(Box::new(self.parse_expression()?))
+                    };
+                    
+                    // Parse step (optional)
+                    let step = if self.check(&TokenKind::Colon) {
+                        self.advance()?; // consume :
+                        if self.check(&TokenKind::RightBracket) {
+                            None // arr[::] or arr[start::]
+                        } else {
+                            Some(Box::new(self.parse_expression()?))
+                        }
+                    } else {
+                        None
+                    };
+                    
+                    let end_token = self.consume(TokenKind::RightBracket, "]")?;
+                    let span = bracket_start_span.merge(end_token.span);
+                    
+                    expr = Node::SliceExpr(ast::SliceExpr {
+                        array: Box::new(expr),
+                        start: None, // From beginning
+                        end,
+                        step,
+                        span,
+                    });
+                } else {
+                    // Has an expression - could be index or start of slice
+                    let first_expr = self.parse_expression()?;
+                    
+                    if self.check(&TokenKind::Colon) {
+                    // This is a slice: arr[start:end:step]
+                    self.advance()?; // consume :
+                    
+                    // Parse end (optional)
+                    let end = if self.check(&TokenKind::RightBracket) {
+                        None
+                    } else if self.check(&TokenKind::Colon) {
+                        // arr[start::step] - no end, has step
+                        None
+                    } else {
+                        Some(Box::new(self.parse_expression()?))
+                    };
+                    
+                    // Parse step (optional)
+                    let step = if self.check(&TokenKind::Colon) {
+                        self.advance()?; // consume :
+                        if self.check(&TokenKind::RightBracket) {
+                            None
+                        } else {
+                            Some(Box::new(self.parse_expression()?))
+                        }
+                    } else {
+                        None
+                    };
+                    
+                    let end_token = self.consume(TokenKind::RightBracket, "]")?;
+                    let span = bracket_start_span.merge(end_token.span);
+                    
+                    expr = Node::SliceExpr(ast::SliceExpr {
+                        array: Box::new(expr),
+                        start: Some(Box::new(first_expr)),
+                        end,
+                        step,
+                        span,
+                    });
+                } else if self.check(&TokenKind::RightBracket) {
+                    // Regular index: arr[index]
+                    self.consume(TokenKind::RightBracket, "]")?;
+                    let span = expr.span().merge(first_expr.span());
+                    expr = Node::IndexExpr(ast::IndexExpr {
+                        array: Box::new(expr),
+                        index: Box::new(first_expr),
+                        span,
+                    });
+                } else {
+                    // Error: expected ] or :
+                    return Err(ParserError::InvalidSyntax {
+                        message: "Expected ']' or ':' in array access".to_string(),
+                        span: first_expr.span(),
+                    });
+                }
+                }
             } else if self.check(&TokenKind::Dot) {
                 self.advance()?;
                 let field_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
@@ -885,6 +973,109 @@ mod tests {
                     }
                 }
             }
+        }
+    }
+
+    #[test]
+    fn test_parse_slice_basic() {
+        let source = "arr[1:5]";
+        let mut parser = Parser::new(source).unwrap();
+        let expr = parser.parse_expression().unwrap();
+        
+        if let Node::SliceExpr(slice) = expr {
+            assert!(slice.start.is_some());
+            assert!(slice.end.is_some());
+            assert!(slice.step.is_none());
+        } else {
+            panic!("Expected SliceExpr, got {:?}", expr);
+        }
+    }
+
+    #[test]
+    fn test_parse_slice_from_beginning() {
+        let source = "arr[:5]";
+        let mut parser = Parser::new(source).unwrap();
+        let expr = parser.parse_expression().unwrap();
+        
+        if let Node::SliceExpr(slice) = expr {
+            assert!(slice.start.is_none());
+            assert!(slice.end.is_some());
+            assert!(slice.step.is_none());
+        } else {
+            panic!("Expected SliceExpr, got {:?}", expr);
+        }
+    }
+
+    #[test]
+    fn test_parse_slice_to_end() {
+        let source = "arr[3:]";
+        let mut parser = Parser::new(source).unwrap();
+        let expr = parser.parse_expression().unwrap();
+        
+        if let Node::SliceExpr(slice) = expr {
+            assert!(slice.start.is_some());
+            assert!(slice.end.is_none());
+            assert!(slice.step.is_none());
+        } else {
+            panic!("Expected SliceExpr, got {:?}", expr);
+        }
+    }
+
+    #[test]
+    fn test_parse_slice_full() {
+        let source = "arr[:]";
+        let mut parser = Parser::new(source).unwrap();
+        let expr = parser.parse_expression().unwrap();
+        
+        if let Node::SliceExpr(slice) = expr {
+            assert!(slice.start.is_none());
+            assert!(slice.end.is_none());
+            assert!(slice.step.is_none());
+        } else {
+            panic!("Expected SliceExpr, got {:?}", expr);
+        }
+    }
+
+    #[test]
+    fn test_parse_slice_with_step() {
+        let source = "arr[0:10:2]";
+        let mut parser = Parser::new(source).unwrap();
+        let expr = parser.parse_expression().unwrap();
+        
+        if let Node::SliceExpr(slice) = expr {
+            assert!(slice.start.is_some());
+            assert!(slice.end.is_some());
+            assert!(slice.step.is_some());
+        } else {
+            panic!("Expected SliceExpr, got {:?}", expr);
+        }
+    }
+
+    #[test]
+    fn test_parse_slice_reverse() {
+        let source = "arr[::-1]";
+        let mut parser = Parser::new(source).unwrap();
+        let expr = parser.parse_expression().unwrap();
+        
+        if let Node::SliceExpr(slice) = expr {
+            assert!(slice.start.is_none());
+            assert!(slice.end.is_none());
+            assert!(slice.step.is_some());
+        } else {
+            panic!("Expected SliceExpr, got {:?}", expr);
+        }
+    }
+
+    #[test]
+    fn test_parse_regular_index_still_works() {
+        let source = "arr[5]";
+        let mut parser = Parser::new(source).unwrap();
+        let expr = parser.parse_expression().unwrap();
+        
+        if let Node::IndexExpr(index) = expr {
+            assert!(matches!(*index.index, Node::LiteralExpr(_)));
+        } else {
+            panic!("Expected IndexExpr, got {:?}", expr);
         }
     }
 }

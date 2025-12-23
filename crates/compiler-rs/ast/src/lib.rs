@@ -50,6 +50,7 @@ pub enum Node {
     IdentExpr(IdentExpr),
     CallExpr(CallExpr),
     IndexExpr(IndexExpr),
+    SliceExpr(SliceExpr),  // Array slicing: arr[start:end:step]
     FieldExpr(FieldExpr),
     DerefExpr(DerefExpr),
     InheritedExpr(InheritedExpr),
@@ -524,6 +525,16 @@ pub struct IndexExpr {
     pub span: Span,
 }
 
+/// Slice expression (array slicing: arr[start:end:step])
+#[derive(Debug, Clone, PartialEq)]
+pub struct SliceExpr {
+    pub array: Box<Node>,           // Expression node (array)
+    pub start: Option<Box<Node>>,  // Start index (None = from beginning)
+    pub end: Option<Box<Node>>,    // End index (None = to end)
+    pub step: Option<Box<Node>>,   // Step size (None = step 1)
+    pub span: Span,
+}
+
 /// Field expression (record field access)
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldExpr {
@@ -821,6 +832,7 @@ impl Node {
             Node::IdentExpr(i) => i.span,
             Node::CallExpr(c) => c.span,
             Node::IndexExpr(i) => i.span,
+            Node::SliceExpr(s) => s.span,
             Node::FieldExpr(f) => f.span,
             Node::DerefExpr(d) => d.span,
             Node::InheritedExpr(i) => i.span,

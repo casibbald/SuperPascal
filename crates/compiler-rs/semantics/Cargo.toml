@@ -10,3 +10,6 @@ types = { path = "../types" }
 symbols = { path = "../symbols" }
 errors = { path = "../errors" }
 tokens = { path = "../tokens" }
+
+[dev-dependencies]
+parser = { path = "../parser" }

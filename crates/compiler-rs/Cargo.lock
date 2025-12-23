@@ -470,6 +470,7 @@ version = "0.1.0"
 dependencies = [
  "ast",
  "errors",
+ "parser",
  "runtime-spec",
  "symbols",
  "tokens",

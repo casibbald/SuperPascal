@@ -56,6 +56,27 @@ impl CoreAnalyzer {
                 format!("{}<{}>", generic_name, arg_strs.join(", "))
             }
             Type::Variant => "Variant".to_string(),
+            Type::Procedural {
+                is_function,
+                params,
+                return_type,
+                is_method_pointer,
+            } => {
+                let kind = if *is_function { "function" } else { "procedure" };
+                let method = if *is_method_pointer { " of object" } else { "" };
+                let param_strs: Vec<String> = params.iter().map(|t| Self::format_type(t)).collect();
+                let params_str = if param_strs.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("({})", param_strs.join(", "))
+                };
+                let return_str = if let Some(rt) = return_type {
+                    format!(": {}", Self::format_type(rt))
+                } else {
+                    "".to_string()
+                };
+                format!("{}{}{}{}", kind, params_str, return_str, method)
+            }
         }
     }
 }

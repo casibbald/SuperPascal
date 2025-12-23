@@ -221,6 +221,28 @@ impl SemanticAnalyzer {
                 record.calculate_record_offsets();
                 record
             }
+            Node::ProceduralType(p) => {
+                // Analyze parameter types
+                let param_types: Vec<Type> = p.params.iter()
+                    .map(|param| {
+                        self.analyze_type_with_generic_params(&param.type_expr, generic_params)
+                    })
+                    .collect();
+                
+                // Analyze return type (for functions)
+                let return_type = if p.is_function {
+                    Some(self.analyze_type_with_generic_params(p.return_type.as_ref().unwrap(), generic_params))
+                } else {
+                    None
+                };
+                
+                Type::procedural(
+                    p.is_function,
+                    param_types,
+                    return_type,
+                    p.is_method_pointer,
+                )
+            }
             _ => self.analyze_type(type_expr),
         }
     }
@@ -369,6 +391,28 @@ impl SemanticAnalyzer {
                 let mut record = Type::record(fields);
                 record.calculate_record_offsets();
                 record
+            }
+            Node::ProceduralType(p) => {
+                // Analyze parameter types
+                let param_types: Vec<Type> = p.params.iter()
+                    .map(|param| {
+                        self.analyze_type(&param.type_expr)
+                    })
+                    .collect();
+                
+                // Analyze return type (for functions)
+                let return_type = if p.is_function {
+                    Some(self.analyze_type(&p.return_type.as_ref().unwrap()))
+                } else {
+                    None
+                };
+                
+                Type::procedural(
+                    p.is_function,
+                    param_types,
+                    return_type,
+                    p.is_method_pointer,
+                )
             }
             _ => {
                 self.core.add_error("Invalid type expression".to_string(), type_expr.span());

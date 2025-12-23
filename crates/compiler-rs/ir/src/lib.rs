@@ -292,6 +292,37 @@ impl IRBuilder {
         }
     }
 
+    /// Build statements and return the generated instructions
+    /// This is a helper method to avoid borrow checker issues when building control flow
+    fn build_statements_to_instructions(&mut self, statements: &[Node]) -> Vec<Instruction> {
+        // Save current function state
+        let current_func = self.current_function.take();
+        let saved_variable_types = self.variable_types.clone();
+        
+        // Create a temporary function to build into
+        let temp_func_name = format!("temp_{}", self.label_counter);
+        self.start_function(temp_func_name.clone(), None);
+        
+        // Build statements
+        for stmt in statements {
+            self.build_node(stmt);
+        }
+        
+        // Extract instructions from the temporary function's entry block
+        let mut instructions = Vec::new();
+        if let Some(temp_func) = self.current_function.take() {
+            if let Some(entry) = temp_func.blocks.first() {
+                instructions = entry.instructions.clone();
+            }
+        }
+        
+        // Restore state
+        self.current_function = current_func;
+        self.variable_types = saved_variable_types;
+        
+        instructions
+    }
+
     /// Build a variable declaration
     fn build_var_decl(&mut self, var_decl: &ast::VarDecl) {
         // Determine the type of the variable
@@ -347,8 +378,29 @@ impl IRBuilder {
         // Generate instructions based on types (before borrowing func)
         let mut instructions = Vec::new();
 
+        // Check if target is Procedural type
+        if let Some(Type::Procedural { .. }) = target_type {
+            // Procedural type assignment: store function address
+            // If value is a function name (IdentExpr), get its address
+            if let Node::IdentExpr(ident) = assign.value.as_ref() {
+                // Store function address in procedural type variable
+                let dest_ptr = self.get_variable_address(&target_name.unwrap());
+                let func_addr = Value::Label(ident.name.clone());
+                instructions.push(Instruction::new(
+                    Opcode::Mov,
+                    vec![dest_ptr, func_addr],
+                ));
+            } else {
+                // Value is already a procedural type variable - copy it
+                let dest_ptr = self.get_variable_address(&target_name.unwrap());
+                instructions.push(Instruction::new(
+                    Opcode::Mov,
+                    vec![dest_ptr, value_result],
+                ));
+            }
+        }
         // Check if target is Variant type
-        if let Some(Type::Variant) = target_type {
+        else if let Some(Type::Variant) = target_type {
             // Check if source is also Variant (Variant to Variant assignment)
             if let Some(value_ty) = value_type {
                 if value_ty == Type::variant() {
@@ -444,8 +496,9 @@ impl IRBuilder {
                     ast::LiteralValue::Boolean(b) => Value::Immediate(if *b { 1 } else { 0 }),
                     ast::LiteralValue::Char(c) => Value::Immediate(*c as i32),
                     ast::LiteralValue::String(_) => {
-                        // String literals would need special handling
-                        Value::Immediate(0) // Placeholder
+                        // String literals would need special handling (string pool)
+                        // For now, return a placeholder
+                        Value::Immediate(0)
                     }
                 }
             }
@@ -461,27 +514,238 @@ impl IRBuilder {
                 if let Some(func) = self.current_function_mut() {
                     let entry_label = func.entry_block.clone();
                     if let Some(entry) = func.get_block_mut(&entry_label) {
-                        let opcode = match bin.op {
-                            ast::BinaryOp::Add => Opcode::Add,
-                            ast::BinaryOp::Subtract => Opcode::Sub,
-                            ast::BinaryOp::Multiply => Opcode::Mul,
-                            ast::BinaryOp::Divide => Opcode::Div,
-                            ast::BinaryOp::Mod => Opcode::Mod,
-                            _ => {
-                                // For comparison operators, we'd need different handling
-                                return result; // Placeholder
+                        match bin.op {
+                            // Arithmetic operations
+                            ast::BinaryOp::Add => {
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Add,
+                                    vec![result.clone(), left, right],
+                                ));
                             }
-                        };
+                            ast::BinaryOp::Subtract => {
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Sub,
+                                    vec![result.clone(), left, right],
+                                ));
+                            }
+                            ast::BinaryOp::Multiply => {
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Mul,
+                                    vec![result.clone(), left, right],
+                                ));
+                            }
+                            ast::BinaryOp::Divide | ast::BinaryOp::Div => {
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Div,
+                                    vec![result.clone(), left, right],
+                                ));
+                            }
+                            ast::BinaryOp::Mod => {
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Mod,
+                                    vec![result.clone(), left, right],
+                                ));
+                            }
+                            // Comparison operations - generate CMP and return boolean result
+                            ast::BinaryOp::Equal => {
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Cmp,
+                                    vec![left, right],
+                                ));
+                                // Result is 1 if equal, 0 otherwise (handled by backend)
+                                // For now, return the temp - backend will set it based on condition flags
+                            }
+                            ast::BinaryOp::NotEqual => {
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Cmp,
+                                    vec![left, right],
+                                ));
+                            }
+                            ast::BinaryOp::Less => {
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Cmp,
+                                    vec![left, right],
+                                ));
+                            }
+                            ast::BinaryOp::LessEqual => {
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Cmp,
+                                    vec![left, right],
+                                ));
+                            }
+                            ast::BinaryOp::Greater => {
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Cmp,
+                                    vec![left, right],
+                                ));
+                            }
+                            ast::BinaryOp::GreaterEqual => {
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Cmp,
+                                    vec![left, right],
+                                ));
+                            }
+                            // Logical operations - need to be handled specially
+                            ast::BinaryOp::And | ast::BinaryOp::Or => {
+                                // Short-circuit evaluation would need control flow
+                                // For now, treat as arithmetic (non-short-circuit)
+                                // TODO: Implement proper short-circuit evaluation
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Cmp,
+                                    vec![left, right],
+                                ));
+                            }
+                            // Set membership, type operations - need special handling
+                            ast::BinaryOp::In | ast::BinaryOp::Is | ast::BinaryOp::As => {
+                                // These need runtime support or special code generation
+                                // For now, return placeholder
+                            }
+                        }
+                    }
+                }
+                result
+            }
+            Node::UnaryExpr(unary) => {
+                let expr_val = self.build_expression(unary.expr.as_ref());
+                let result = self.new_temp();
+                
+                if let Some(func) = self.current_function_mut() {
+                    let entry_label = func.entry_block.clone();
+                    if let Some(entry) = func.get_block_mut(&entry_label) {
+                        match unary.op {
+                            ast::UnaryOp::Plus => {
+                                // Unary plus - no operation needed, just return the value
+                                return expr_val;
+                            }
+                            ast::UnaryOp::Minus => {
+                                // Unary minus - subtract from 0
+                                let zero = Value::Immediate(0);
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Sub,
+                                    vec![result.clone(), zero, expr_val],
+                                ));
+                            }
+                            ast::UnaryOp::Not => {
+                                // Logical NOT - XOR with 1
+                                let one = Value::Immediate(1);
+                                entry.add_instruction(Instruction::new(
+                                    Opcode::Cmp,
+                                    vec![expr_val, one],
+                                ));
+                                // Result is 1 if expr_val == 0, 0 otherwise
+                                // Backend will handle this based on condition flags
+                            }
+                            ast::UnaryOp::AddressOf => {
+                                // Address-of operator - return the address directly
+                                // For now, return the expression value (would need proper address calculation)
+                                return expr_val;
+                            }
+                        }
+                    }
+                }
+                result
+            }
+            Node::CallExpr(call) => {
+                // Build argument expressions
+                let mut args = Vec::new();
+                for arg in &call.args {
+                    args.push(self.build_expression(arg));
+                }
+                
+                let result = self.new_temp();
+                
+                if let Some(func) = self.current_function_mut() {
+                    let entry_label = func.entry_block.clone();
+                    if let Some(entry) = func.get_block_mut(&entry_label) {
+                        // Build CALL instruction: CALL function_name, result, arg1, arg2, ...
+                        let mut operands = vec![Value::Label(call.name.clone()), result.clone()];
+                        operands.extend(args);
                         entry.add_instruction(Instruction::new(
-                            opcode,
-                            vec![result.clone(), left, right],
+                            Opcode::Call,
+                            operands,
                         ));
                     }
                 }
                 result
             }
+            Node::IndexExpr(index) => {
+                // Array indexing: array[index]
+                let array_val = self.build_expression(index.array.as_ref());
+                let index_val = self.build_expression(index.index.as_ref());
+                let result = self.new_temp();
+                let temp_offset = self.new_temp();
+                
+                if let Some(func) = self.current_function_mut() {
+                    let entry_label = func.entry_block.clone();
+                    if let Some(entry) = func.get_block_mut(&entry_label) {
+                        // Calculate address: array_base + (index * element_size)
+                        // For now, simplified - backend will handle element size
+                        entry.add_instruction(Instruction::new(
+                            Opcode::Mul,
+                            vec![temp_offset.clone(), index_val, Value::Immediate(1)], // element_size = 1 for now
+                        ));
+                        entry.add_instruction(Instruction::new(
+                            Opcode::Add,
+                            vec![result.clone(), array_val, temp_offset],
+                        ));
+                        // Load from memory
+                        entry.add_instruction(Instruction::new(
+                            Opcode::Load,
+                            vec![result.clone(), result.clone()],
+                        ));
+                    }
+                }
+                result
+            }
+            Node::FieldExpr(field) => {
+                // Field access: record.field
+                let record_val = self.build_expression(field.record.as_ref());
+                let result = self.new_temp();
+                let temp_addr = self.new_temp();
+                
+                if let Some(func) = self.current_function_mut() {
+                    let entry_label = func.entry_block.clone();
+                    if let Some(entry) = func.get_block_mut(&entry_label) {
+                        // Calculate field offset (would need type information)
+                        // For now, simplified - backend will handle field offsets
+                        let field_offset = Value::Immediate(0); // Placeholder
+                        entry.add_instruction(Instruction::new(
+                            Opcode::Add,
+                            vec![temp_addr.clone(), record_val, field_offset],
+                        ));
+                        entry.add_instruction(Instruction::new(
+                            Opcode::Load,
+                            vec![result.clone(), temp_addr],
+                        ));
+                    }
+                }
+                result
+            }
+            Node::DerefExpr(deref) => {
+                // Pointer dereference: ^pointer
+                let pointer_val = self.build_expression(deref.pointer.as_ref());
+                let result = self.new_temp();
+                
+                if let Some(func) = self.current_function_mut() {
+                    let entry_label = func.entry_block.clone();
+                    if let Some(entry) = func.get_block_mut(&entry_label) {
+                        // Load from address stored in pointer
+                        entry.add_instruction(Instruction::new(
+                            Opcode::Load,
+                            vec![result.clone(), pointer_val],
+                        ));
+                    }
+                }
+                result
+            }
+            Node::AddressOfExpr(addr) => {
+                // Address-of: @variable
+                // Return the address of the target
+                self.build_expression(addr.target.as_ref())
+            }
             _ => {
-                // For other expression types, return a placeholder
+                // For other expression types (EnumLiteralExpr, AnonymousFunction, etc.)
+                // return a placeholder for now
                 self.new_temp()
             }
         }
@@ -539,29 +803,458 @@ impl IRBuilder {
         }
     }
 
-    // Placeholder methods for other statement types
-    fn build_call_stmt(&mut self, _call: &ast::CallStmt) {
-        // TODO: Implement
+    /// Build a call statement (procedure call)
+    fn build_call_stmt(&mut self, call: &ast::CallStmt) {
+        // Build argument expressions
+        let mut args = Vec::new();
+        for arg in &call.args {
+            args.push(self.build_expression(arg));
+        }
+        
+        if let Some(func) = self.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                // Build CALL instruction: CALL procedure_name, arg1, arg2, ...
+                let mut operands = vec![Value::Label(call.name.clone())];
+                operands.extend(args);
+                entry.add_instruction(Instruction::new(
+                    Opcode::Call,
+                    operands,
+                ));
+            }
+        }
     }
 
-    fn build_if_stmt(&mut self, _if_stmt: &ast::IfStmt) {
-        // TODO: Implement
+    /// Build an if statement
+    fn build_if_stmt(&mut self, if_stmt: &ast::IfStmt) {
+        // Generate labels first (before borrowing func)
+        let then_label = self.new_label("if_then");
+        let else_label = if if_stmt.else_block.is_some() {
+            Some(self.new_label("if_else"))
+        } else {
+            None
+        };
+        let end_label = self.new_label("if_end");
+        
+        // Evaluate condition (before borrowing func)
+        let cond_val = self.build_expression(if_stmt.condition.as_ref());
+        
+        // Build then block statements (before borrowing func)
+        let then_instructions = if let Node::Block(block) = if_stmt.then_block.as_ref() {
+            self.build_statements_to_instructions(&block.statements)
+        } else {
+            // Single statement
+            self.build_statements_to_instructions(&[if_stmt.then_block.as_ref().clone()])
+        };
+        
+        // Build else block statements if present (before borrowing func)
+        let else_instructions = if let Some(else_block_node) = &if_stmt.else_block {
+            if let Some(else_lbl) = &else_label {
+                let instructions = if let Node::Block(block) = else_block_node.as_ref() {
+                    self.build_statements_to_instructions(&block.statements)
+                } else {
+                    // Single statement
+                    self.build_statements_to_instructions(&[else_block_node.as_ref().clone()])
+                };
+                Some((else_lbl.clone(), instructions))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        
+        if let Some(func) = self.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                // Compare condition with 0 (false)
+                let zero = Value::Immediate(0);
+                entry.add_instruction(Instruction::new(
+                    Opcode::Cmp,
+                    vec![cond_val, zero],
+                ));
+                
+                // Conditional jump: if condition is false (0), jump to else or end
+                if let Some(else_lbl) = &else_label {
+                    entry.add_instruction(Instruction::new(
+                        Opcode::CJump,
+                        vec![
+                            Value::Label(else_lbl.clone()),
+                            Value::Label(then_label.clone()),
+                        ],
+                    ));
+                } else {
+                    entry.add_instruction(Instruction::new(
+                        Opcode::CJump,
+                        vec![
+                            Value::Label(end_label.clone()),
+                            Value::Label(then_label.clone()),
+                        ],
+                    ));
+                }
+                
+                // Update entry block to point to then/else (before dropping entry borrow)
+                entry.successors.push(then_label.clone());
+                if let Some(else_lbl) = &else_label {
+                    entry.successors.push(else_lbl.clone());
+                }
+            } // Drop entry borrow here
+            
+            // Now we can add blocks without conflicting borrows
+            // Add then block
+            let mut then_block = BasicBlock::new(then_label.clone());
+            then_block.instructions = then_instructions;
+            // Jump to end after then block
+            then_block.add_instruction(Instruction::new(
+                Opcode::Jump,
+                vec![Value::Label(end_label.clone())],
+            ));
+            then_block.successors.push(end_label.clone());
+            func.add_block(then_block);
+            
+            // Add else block if present
+            if let Some((else_lbl, instructions)) = else_instructions {
+                let mut else_block = BasicBlock::new(else_lbl.clone());
+                else_block.instructions = instructions;
+                // Jump to end after else block
+                else_block.add_instruction(Instruction::new(
+                    Opcode::Jump,
+                    vec![Value::Label(end_label.clone())],
+                ));
+                else_block.successors.push(end_label.clone());
+                func.add_block(else_block);
+            }
+            
+            // Add end block (merge point)
+            let end_block = BasicBlock::new(end_label.clone());
+            func.add_block(end_block);
+        }
     }
 
-    fn build_while_stmt(&mut self, _while_stmt: &ast::WhileStmt) {
-        // TODO: Implement
+    /// Build a while statement
+    fn build_while_stmt(&mut self, while_stmt: &ast::WhileStmt) {
+        // Generate labels first (before borrowing func)
+        let loop_label = self.new_label("while_loop");
+        let body_label = self.new_label("while_body");
+        let end_label = self.new_label("while_end");
+        
+        // Evaluate condition (before borrowing func)
+        let cond_val = self.build_expression(while_stmt.condition.as_ref());
+        
+        // Build body statements (before borrowing func)
+        let body_instructions = if let Node::Block(block) = while_stmt.body.as_ref() {
+            self.build_statements_to_instructions(&block.statements)
+        } else {
+            // Single statement
+            self.build_statements_to_instructions(&[while_stmt.body.as_ref().clone()])
+        };
+        
+        if let Some(func) = self.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                // Jump to loop condition check
+                entry.add_instruction(Instruction::new(
+                    Opcode::Jump,
+                    vec![Value::Label(loop_label.clone())],
+                ));
+                entry.successors.push(loop_label.clone());
+                
+                // Loop condition block
+                let mut loop_block = BasicBlock::new(loop_label.clone());
+                let zero = Value::Immediate(0);
+                loop_block.add_instruction(Instruction::new(
+                    Opcode::Cmp,
+                    vec![cond_val, zero],
+                ));
+                // If condition is false, jump to end; otherwise jump to body
+                loop_block.add_instruction(Instruction::new(
+                    Opcode::CJump,
+                    vec![
+                        Value::Label(end_label.clone()),
+                        Value::Label(body_label.clone()),
+                    ],
+                ));
+                loop_block.successors.push(end_label.clone());
+                loop_block.successors.push(body_label.clone());
+                func.add_block(loop_block);
+                
+                // Body block
+                let mut body_block = BasicBlock::new(body_label.clone());
+                body_block.instructions = body_instructions;
+                // Jump back to loop condition
+                body_block.add_instruction(Instruction::new(
+                    Opcode::Jump,
+                    vec![Value::Label(loop_label.clone())],
+                ));
+                body_block.successors.push(loop_label.clone());
+                func.add_block(body_block);
+                
+                // End block (after loop)
+                let end_block = BasicBlock::new(end_label.clone());
+                func.add_block(end_block);
+            }
+        }
     }
 
-    fn build_for_stmt(&mut self, _for_stmt: &ast::ForStmt) {
-        // TODO: Implement
+    /// Build a for statement
+    fn build_for_stmt(&mut self, for_stmt: &ast::ForStmt) {
+        // Get loop variable name
+        let var_name = for_stmt.var_name.clone();
+        
+        // Generate labels first (before borrowing func)
+        let loop_label = self.new_label("for_loop");
+        let body_label = self.new_label("for_body");
+        let inc_label = self.new_label("for_inc");
+        let end_label = self.new_label("for_end");
+        
+        // Build expressions (before borrowing func)
+        let start_val = self.build_expression(for_stmt.start_expr.as_ref());
+        let end_val = self.build_expression(for_stmt.end_expr.as_ref());
+        let var_addr = self.get_variable_address(&var_name);
+        
+        // Build body statements (before borrowing func)
+        let body_instructions = if let Node::Block(block) = for_stmt.body.as_ref() {
+            self.build_statements_to_instructions(&block.statements)
+        } else {
+            // Single statement
+            self.build_statements_to_instructions(&[for_stmt.body.as_ref().clone()])
+        };
+        
+        if let Some(func) = self.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                // Initialize loop variable
+                entry.add_instruction(Instruction::new(
+                    Opcode::Mov,
+                    vec![var_addr.clone(), start_val],
+                ));
+                entry.add_instruction(Instruction::new(
+                    Opcode::Jump,
+                    vec![Value::Label(loop_label.clone())],
+                ));
+                entry.successors.push(loop_label.clone());
+                
+                // Loop condition check
+                let mut loop_block = BasicBlock::new(loop_label.clone());
+                // Compare loop variable with end value
+                loop_block.add_instruction(Instruction::new(
+                    Opcode::Cmp,
+                    vec![var_addr.clone(), end_val],
+                ));
+                // If loop variable > end (for TO) or < end (for DOWNTO), jump to end
+                // For now, use simple comparison - backend will handle direction
+                loop_block.add_instruction(Instruction::new(
+                    Opcode::CJump,
+                    vec![
+                        Value::Label(end_label.clone()),
+                        Value::Label(body_label.clone()),
+                    ],
+                ));
+                loop_block.successors.push(end_label.clone());
+                loop_block.successors.push(body_label.clone());
+                func.add_block(loop_block);
+                
+                // Body block
+                let mut body_block = BasicBlock::new(body_label.clone());
+                body_block.instructions = body_instructions;
+                body_block.add_instruction(Instruction::new(
+                    Opcode::Jump,
+                    vec![Value::Label(inc_label.clone())],
+                ));
+                body_block.successors.push(inc_label.clone());
+                func.add_block(body_block);
+                
+                // Increment/decrement block
+                let mut inc_block = BasicBlock::new(inc_label.clone());
+                let one = Value::Immediate(1);
+                if for_stmt.direction == ast::ForDirection::To {
+                    // Increment: var := var + 1
+                    inc_block.add_instruction(Instruction::new(
+                        Opcode::Add,
+                        vec![var_addr.clone(), var_addr.clone(), one],
+                    ));
+                } else {
+                    // Decrement: var := var - 1
+                    inc_block.add_instruction(Instruction::new(
+                        Opcode::Sub,
+                        vec![var_addr.clone(), var_addr.clone(), one],
+                    ));
+                }
+                // Jump back to loop condition
+                inc_block.add_instruction(Instruction::new(
+                    Opcode::Jump,
+                    vec![Value::Label(loop_label.clone())],
+                ));
+                inc_block.successors.push(loop_label.clone());
+                func.add_block(inc_block);
+                
+                // End block
+                let end_block = BasicBlock::new(end_label.clone());
+                func.add_block(end_block);
+            }
+        }
     }
 
-    fn build_repeat_stmt(&mut self, _repeat: &ast::RepeatStmt) {
-        // TODO: Implement
+    /// Build a repeat statement
+    fn build_repeat_stmt(&mut self, repeat: &ast::RepeatStmt) {
+        // Generate labels first (before borrowing func)
+        let body_label = self.new_label("repeat_body");
+        let cond_label = self.new_label("repeat_cond");
+        let end_label = self.new_label("repeat_end");
+        
+        // Build body statements (before borrowing func)
+        let body_instructions = self.build_statements_to_instructions(&repeat.statements);
+        
+        // Evaluate condition (before borrowing func)
+        let cond_val = self.build_expression(repeat.condition.as_ref());
+        
+        if let Some(func) = self.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                // Jump to body
+                entry.add_instruction(Instruction::new(
+                    Opcode::Jump,
+                    vec![Value::Label(body_label.clone())],
+                ));
+                entry.successors.push(body_label.clone());
+                
+                // Body block
+                let mut body_block = BasicBlock::new(body_label.clone());
+                body_block.instructions = body_instructions;
+                body_block.add_instruction(Instruction::new(
+                    Opcode::Jump,
+                    vec![Value::Label(cond_label.clone())],
+                ));
+                body_block.successors.push(cond_label.clone());
+                func.add_block(body_block);
+                
+                // Condition check block
+                let mut cond_block = BasicBlock::new(cond_label.clone());
+                let zero = Value::Immediate(0);
+                cond_block.add_instruction(Instruction::new(
+                    Opcode::Cmp,
+                    vec![cond_val, zero],
+                ));
+                // If condition is false, jump back to body; otherwise jump to end
+                cond_block.add_instruction(Instruction::new(
+                    Opcode::CJump,
+                    vec![
+                        Value::Label(body_label.clone()),
+                        Value::Label(end_label.clone()),
+                    ],
+                ));
+                cond_block.successors.push(body_label.clone());
+                cond_block.successors.push(end_label.clone());
+                func.add_block(cond_block);
+                
+                // End block
+                let end_block = BasicBlock::new(end_label.clone());
+                func.add_block(end_block);
+            }
+        }
     }
 
-    fn build_case_stmt(&mut self, _case_stmt: &ast::CaseStmt) {
-        // TODO: Implement
+    /// Build a case statement
+    fn build_case_stmt(&mut self, case_stmt: &ast::CaseStmt) {
+        // Evaluate selector expression (before borrowing func)
+        let selector_val = self.build_expression(case_stmt.expr.as_ref());
+        
+        // Create labels and build branch instructions (before borrowing func)
+        let mut case_labels = Vec::new();
+        let end_label = self.new_label("case_end");
+        let mut branch_instructions = Vec::new();
+        
+        for (i, branch) in case_stmt.cases.iter().enumerate() {
+            let branch_label = self.new_label(&format!("case_branch_{}", i));
+            case_labels.push(branch_label.clone());
+            
+            // Build branch statement instructions
+            let instructions = if let Node::Block(block) = branch.statement.as_ref() {
+                self.build_statements_to_instructions(&block.statements)
+            } else {
+                // Single statement
+                self.build_statements_to_instructions(&[branch.statement.as_ref().clone()])
+            };
+            branch_instructions.push((branch_label, instructions));
+        }
+        
+        // Build else branch instructions if present (before borrowing func)
+        let else_instructions = if let Some(else_block) = &case_stmt.else_branch {
+            let else_label = self.new_label("case_else");
+            let instructions = if let Node::Block(block) = else_block.as_ref() {
+                self.build_statements_to_instructions(&block.statements)
+            } else {
+                // Single statement
+                self.build_statements_to_instructions(&[else_block.as_ref().clone()])
+            };
+            Some((else_label, instructions))
+        } else {
+            None
+        };
+        
+        // Build case value expressions (before borrowing func)
+        let mut case_value_pairs = Vec::new();
+        for (i, branch) in case_stmt.cases.iter().enumerate() {
+            for case_val_expr in &branch.values {
+                let case_val = self.build_expression(case_val_expr);
+                case_value_pairs.push((i, case_val));
+            }
+        }
+        
+        if let Some(func) = self.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                // Build dispatch logic in entry block
+                // Compare selector with each case value and jump to appropriate branch
+                for (i, case_val) in case_value_pairs {
+                    entry.add_instruction(Instruction::new(
+                        Opcode::Cmp,
+                        vec![selector_val.clone(), case_val],
+                    ));
+                    entry.add_instruction(Instruction::new(
+                        Opcode::CJump,
+                        vec![
+                            Value::Label(case_labels[i].clone()),
+                            Value::Label(end_label.clone()), // Default: continue to next case
+                        ],
+                    ));
+                }
+                
+                // Update entry block successors (before dropping entry borrow)
+                entry.successors.extend(case_labels.clone());
+                entry.successors.push(end_label.clone());
+            } // Drop entry borrow here
+            
+            // Now we can add blocks without conflicting borrows
+            // Add case branch blocks
+            for (branch_label, instructions) in branch_instructions {
+                let mut branch_block = BasicBlock::new(branch_label.clone());
+                branch_block.instructions = instructions;
+                // Jump to end after branch
+                branch_block.add_instruction(Instruction::new(
+                    Opcode::Jump,
+                    vec![Value::Label(end_label.clone())],
+                ));
+                branch_block.successors.push(end_label.clone());
+                func.add_block(branch_block);
+            }
+            
+            // Handle else branch if present
+            if let Some((else_label, instructions)) = else_instructions {
+                let mut else_block_ir = BasicBlock::new(else_label.clone());
+                else_block_ir.instructions = instructions;
+                else_block_ir.add_instruction(Instruction::new(
+                    Opcode::Jump,
+                    vec![Value::Label(end_label.clone())],
+                ));
+                else_block_ir.successors.push(end_label.clone());
+                func.add_block(else_block_ir);
+            }
+            
+            // End block
+            let end_block = BasicBlock::new(end_label.clone());
+            func.add_block(end_block);
+        }
     }
 
     /// Get the built program
@@ -1871,5 +2564,466 @@ mod tests {
         
         // Verify Variant variable was registered
         assert_eq!(builder.variable_types.get("v"), Some(&Type::variant()));
+    }
+
+    // ===== AST→IR Conversion Tests =====
+
+    #[test]
+    fn test_build_if_statement() {
+        use ast::{IfStmt, LiteralExpr, LiteralValue, Block};
+        use tokens::Span;
+        
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+        
+        // Create: if true then x := 1 else x := 2
+        let condition = Node::LiteralExpr(LiteralExpr {
+            value: LiteralValue::Boolean(true),
+            span: Span::at(0, 1, 1),
+        });
+        
+        let then_stmt = Node::AssignStmt(ast::AssignStmt {
+            target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                name: "x".to_string(),
+                span: Span::at(10, 1, 11),
+            })),
+            value: Box::new(Node::LiteralExpr(LiteralExpr {
+                value: LiteralValue::Integer(1),
+                span: Span::at(14, 1, 15),
+            })),
+            span: Span::at(10, 1, 15),
+        });
+        
+        let else_stmt = Node::AssignStmt(ast::AssignStmt {
+            target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                name: "x".to_string(),
+                span: Span::at(20, 1, 21),
+            })),
+            value: Box::new(Node::LiteralExpr(LiteralExpr {
+                value: LiteralValue::Integer(2),
+                span: Span::at(24, 1, 25),
+            })),
+            span: Span::at(20, 1, 25),
+        });
+        
+        let if_stmt = IfStmt {
+            condition: Box::new(condition),
+            then_block: Box::new(then_stmt),
+            else_block: Some(Box::new(else_stmt)),
+            span: Span::at(0, 1, 25),
+        };
+        
+        builder.build_if_stmt(&if_stmt);
+        builder.finish_function();
+        
+        let program = builder.into_program();
+        assert_eq!(program.functions.len(), 1);
+        let func = &program.functions[0];
+        // Should have entry, then, else, and end blocks
+        assert!(func.blocks.len() >= 4);
+    }
+
+    #[test]
+    fn test_build_while_statement() {
+        use ast::{WhileStmt, LiteralExpr, LiteralValue};
+        use tokens::Span;
+        
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+        
+        // Create: while x < 10 do x := x + 1
+        let condition = Node::BinaryExpr(ast::BinaryExpr {
+            op: ast::BinaryOp::Less,
+            left: Box::new(Node::IdentExpr(ast::IdentExpr {
+                name: "x".to_string(),
+                span: Span::at(6, 1, 7),
+            })),
+            right: Box::new(Node::LiteralExpr(LiteralExpr {
+                value: LiteralValue::Integer(10),
+                span: Span::at(10, 1, 12),
+            })),
+            span: Span::at(6, 1, 12),
+        });
+        
+        let body = Node::AssignStmt(ast::AssignStmt {
+            target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                name: "x".to_string(),
+                span: Span::at(16, 1, 17),
+            })),
+            value: Box::new(Node::BinaryExpr(ast::BinaryExpr {
+                op: ast::BinaryOp::Add,
+                left: Box::new(Node::IdentExpr(ast::IdentExpr {
+                    name: "x".to_string(),
+                    span: Span::at(20, 1, 21),
+                })),
+                right: Box::new(Node::LiteralExpr(LiteralExpr {
+                    value: LiteralValue::Integer(1),
+                    span: Span::at(24, 1, 25),
+                })),
+                span: Span::at(20, 1, 25),
+            })),
+            span: Span::at(16, 1, 25),
+        });
+        
+        let while_stmt = WhileStmt {
+            condition: Box::new(condition),
+            body: Box::new(body),
+            span: Span::at(0, 1, 25),
+        };
+        
+        builder.build_while_stmt(&while_stmt);
+        builder.finish_function();
+        
+        let program = builder.into_program();
+        assert_eq!(program.functions.len(), 1);
+        let func = &program.functions[0];
+        // Should have entry, loop, body, and end blocks
+        assert!(func.blocks.len() >= 4);
+    }
+
+    #[test]
+    fn test_build_for_statement() {
+        use ast::{ForStmt, ForDirection, LiteralExpr, LiteralValue};
+        use tokens::Span;
+        
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+        
+        // Create: for i := 1 to 10 do x := x + i
+        let for_stmt = ForStmt {
+            var_name: "i".to_string(),
+            start_expr: Box::new(Node::LiteralExpr(LiteralExpr {
+                value: LiteralValue::Integer(1),
+                span: Span::at(8, 1, 9),
+            })),
+            direction: ForDirection::To,
+            end_expr: Box::new(Node::LiteralExpr(LiteralExpr {
+                value: LiteralValue::Integer(10),
+                span: Span::at(13, 1, 15),
+            })),
+            body: Box::new(Node::AssignStmt(ast::AssignStmt {
+                target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                    name: "x".to_string(),
+                    span: Span::at(19, 1, 20),
+                })),
+                value: Box::new(Node::BinaryExpr(ast::BinaryExpr {
+                    op: ast::BinaryOp::Add,
+                    left: Box::new(Node::IdentExpr(ast::IdentExpr {
+                        name: "x".to_string(),
+                        span: Span::at(23, 1, 24),
+                    })),
+                    right: Box::new(Node::IdentExpr(ast::IdentExpr {
+                        name: "i".to_string(),
+                        span: Span::at(27, 1, 28),
+                    })),
+                    span: Span::at(23, 1, 28),
+                })),
+                span: Span::at(19, 1, 28),
+            })),
+            span: Span::at(0, 1, 28),
+        };
+        
+        builder.build_for_stmt(&for_stmt);
+        builder.finish_function();
+        
+        let program = builder.into_program();
+        assert_eq!(program.functions.len(), 1);
+        let func = &program.functions[0];
+        // Should have entry, loop, body, inc, and end blocks
+        assert!(func.blocks.len() >= 5);
+    }
+
+    #[test]
+    fn test_build_repeat_statement() {
+        use ast::{RepeatStmt, LiteralExpr, LiteralValue};
+        use tokens::Span;
+        
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+        
+        // Create: repeat x := x + 1 until x > 10
+        let repeat_stmt = RepeatStmt {
+            statements: vec![
+                Node::AssignStmt(ast::AssignStmt {
+                    target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                        name: "x".to_string(),
+                        span: Span::at(7, 1, 8),
+                    })),
+                    value: Box::new(Node::BinaryExpr(ast::BinaryExpr {
+                        op: ast::BinaryOp::Add,
+                        left: Box::new(Node::IdentExpr(ast::IdentExpr {
+                            name: "x".to_string(),
+                            span: Span::at(11, 1, 12),
+                        })),
+                        right: Box::new(Node::LiteralExpr(LiteralExpr {
+                            value: LiteralValue::Integer(1),
+                            span: Span::at(15, 1, 16),
+                        })),
+                        span: Span::at(11, 1, 16),
+                    })),
+                    span: Span::at(7, 1, 16),
+                }),
+            ],
+            condition: Box::new(Node::BinaryExpr(ast::BinaryExpr {
+                op: ast::BinaryOp::Greater,
+                left: Box::new(Node::IdentExpr(ast::IdentExpr {
+                    name: "x".to_string(),
+                    span: Span::at(23, 1, 24),
+                })),
+                right: Box::new(Node::LiteralExpr(LiteralExpr {
+                    value: LiteralValue::Integer(10),
+                    span: Span::at(27, 1, 29),
+                })),
+                span: Span::at(23, 1, 29),
+            })),
+            span: Span::at(0, 1, 29),
+        };
+        
+        builder.build_repeat_stmt(&repeat_stmt);
+        builder.finish_function();
+        
+        let program = builder.into_program();
+        assert_eq!(program.functions.len(), 1);
+        let func = &program.functions[0];
+        // Should have entry, body, cond, and end blocks
+        assert!(func.blocks.len() >= 4);
+    }
+
+    #[test]
+    fn test_build_case_statement() {
+        use ast::{CaseStmt, CaseBranch, LiteralExpr, LiteralValue};
+        use tokens::Span;
+        
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+        
+        // Create: case x of 1: y := 10; 2: y := 20; else y := 0; end
+        let case_stmt = CaseStmt {
+            expr: Box::new(Node::IdentExpr(ast::IdentExpr {
+                name: "x".to_string(),
+                span: Span::at(5, 1, 6),
+            })),
+            cases: vec![
+                CaseBranch {
+                    values: vec![
+                        Node::LiteralExpr(LiteralExpr {
+                            value: LiteralValue::Integer(1),
+                            span: Span::at(10, 1, 11),
+                        }),
+                    ],
+                    statement: Box::new(Node::AssignStmt(ast::AssignStmt {
+                        target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                            name: "y".to_string(),
+                            span: Span::at(13, 1, 14),
+                        })),
+                        value: Box::new(Node::LiteralExpr(LiteralExpr {
+                            value: LiteralValue::Integer(10),
+                            span: Span::at(17, 1, 19),
+                        })),
+                        span: Span::at(13, 1, 19),
+                    })),
+                    span: Span::at(10, 1, 19),
+                },
+                CaseBranch {
+                    values: vec![
+                        Node::LiteralExpr(LiteralExpr {
+                            value: LiteralValue::Integer(2),
+                            span: Span::at(21, 1, 22),
+                        }),
+                    ],
+                    statement: Box::new(Node::AssignStmt(ast::AssignStmt {
+                        target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                            name: "y".to_string(),
+                            span: Span::at(24, 1, 25),
+                        })),
+                        value: Box::new(Node::LiteralExpr(LiteralExpr {
+                            value: LiteralValue::Integer(20),
+                            span: Span::at(28, 1, 30),
+                        })),
+                        span: Span::at(24, 1, 30),
+                    })),
+                    span: Span::at(21, 1, 30),
+                },
+            ],
+            else_branch: Some(Box::new(Node::AssignStmt(ast::AssignStmt {
+                target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                    name: "y".to_string(),
+                    span: Span::at(37, 1, 38),
+                })),
+                value: Box::new(Node::LiteralExpr(LiteralExpr {
+                    value: LiteralValue::Integer(0),
+                    span: Span::at(41, 1, 42),
+                })),
+                span: Span::at(37, 1, 42),
+            }))),
+            span: Span::at(0, 1, 42),
+        };
+        
+        builder.build_case_stmt(&case_stmt);
+        builder.finish_function();
+        
+        let program = builder.into_program();
+        assert_eq!(program.functions.len(), 1);
+        let func = &program.functions[0];
+        // Should have entry, 2 case branches, else, and end blocks
+        assert!(func.blocks.len() >= 5);
+    }
+
+    #[test]
+    fn test_build_call_statement() {
+        use ast::CallStmt;
+        use tokens::Span;
+        
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+        
+        // Create: WriteLn(42, "hello")
+        let call_stmt = CallStmt {
+            name: "WriteLn".to_string(),
+            args: vec![
+                Node::LiteralExpr(ast::LiteralExpr {
+                    value: ast::LiteralValue::Integer(42),
+                    span: Span::at(8, 1, 10),
+                }),
+                Node::LiteralExpr(ast::LiteralExpr {
+                    value: ast::LiteralValue::String("hello".to_string()),
+                    span: Span::at(12, 1, 19),
+                }),
+            ],
+            span: Span::at(0, 1, 19),
+        };
+        
+        builder.build_call_stmt(&call_stmt);
+        builder.finish_function();
+        
+        let program = builder.into_program();
+        assert_eq!(program.functions.len(), 1);
+        let func = &program.functions[0];
+        // Should have a CALL instruction in the entry block
+        let entry = func.blocks.iter().find(|b| b.label == func.entry_block).unwrap();
+        assert!(entry.instructions.iter().any(|inst| inst.opcode == Opcode::Call));
+    }
+
+    #[test]
+    fn test_build_expression_binary_ops() {
+        use ast::{BinaryExpr, BinaryOp, LiteralExpr, LiteralValue};
+        use tokens::Span;
+        
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+        
+        // Test: 5 + 3
+        let expr = Node::BinaryExpr(BinaryExpr {
+            op: BinaryOp::Add,
+            left: Box::new(Node::LiteralExpr(LiteralExpr {
+                value: LiteralValue::Integer(5),
+                span: Span::at(0, 1, 1),
+            })),
+            right: Box::new(Node::LiteralExpr(LiteralExpr {
+                value: LiteralValue::Integer(3),
+                span: Span::at(4, 1, 5),
+            })),
+            span: Span::at(0, 1, 5),
+        });
+        
+        let result = builder.build_expression(&expr);
+        builder.finish_function();
+        
+        // Should return a temp value
+        assert!(matches!(result, Value::Temp(_)));
+        
+        let program = builder.into_program();
+        let func = &program.functions[0];
+        let entry = func.blocks.iter().find(|b| b.label == func.entry_block).unwrap();
+        // Should have an ADD instruction
+        assert!(entry.instructions.iter().any(|inst| inst.opcode == Opcode::Add));
+    }
+
+    // ===== Procedural Type Tests =====
+
+    #[test]
+    fn test_procedural_type_creation() {
+        use types::Type;
+        
+        // Create a procedural type: function(x, y: integer): integer
+        let proc_type = Type::procedural(
+            true, // is_function
+            vec![Type::integer(), Type::integer()], // params
+            Some(Type::integer()), // return_type
+            false, // is_method_pointer
+        );
+        
+        // Verify it's a procedural type
+        match proc_type {
+            Type::Procedural { is_function, params, return_type, is_method_pointer } => {
+                assert!(is_function);
+                assert_eq!(params.len(), 2);
+                assert_eq!(params[0], Type::integer());
+                assert_eq!(params[1], Type::integer());
+                assert_eq!(return_type, Some(Box::new(Type::integer())));
+                assert!(!is_method_pointer);
+            }
+            _ => panic!("Expected Procedural type"),
+        }
+    }
+
+    #[test]
+    fn test_procedural_type_equality() {
+        use types::Type;
+        
+        let proc1 = Type::procedural(
+            true,
+            vec![Type::integer()],
+            Some(Type::integer()),
+            false,
+        );
+        
+        let proc2 = Type::procedural(
+            true,
+            vec![Type::integer()],
+            Some(Type::integer()),
+            false,
+        );
+        
+        let proc3 = Type::procedural(
+            false, // procedure, not function
+            vec![Type::integer()],
+            None,
+            false,
+        );
+        
+        assert!(proc1.equals(&proc2));
+        assert!(!proc1.equals(&proc3));
+    }
+
+    #[test]
+    fn test_procedural_type_assignment_compatibility() {
+        use types::Type;
+        
+        let proc1 = Type::procedural(
+            true,
+            vec![Type::integer()],
+            Some(Type::integer()),
+            false,
+        );
+        
+        let proc2 = Type::procedural(
+            true,
+            vec![Type::integer()],
+            Some(Type::integer()),
+            false,
+        );
+        
+        // Same procedural types should be assignable
+        assert!(proc1.is_assignable_to(&proc2));
+        
+        // Different parameter types should not be assignable
+        let proc3 = Type::procedural(
+            true,
+            vec![Type::boolean()], // Different param type
+            Some(Type::integer()),
+            false,
+        );
+        assert!(!proc1.is_assignable_to(&proc3));
     }
 }

@@ -1082,4 +1082,103 @@ mod tests {
         // Should have no errors
         assert_eq!(diagnostics.len(), 0);
     }
+
+    #[test]
+    fn test_analyze_slice_expression() {
+        let source = r#"
+            program Test;
+            type TIntArray = array[integer] of integer;
+            var arr: TIntArray;
+            var slice: array of integer;
+            begin
+                slice := arr[1:5];
+            end.
+        "#;
+        let mut parser = parser::Parser::new(source).unwrap();
+        let ast = parser.parse().unwrap();
+        let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
+        let _diagnostics = analyzer.analyze(&ast);
+        
+        // Should have no errors for valid slice expression
+        assert!(analyzer.core.diagnostics.is_empty(), "Unexpected errors: {:?}", analyzer.core.diagnostics);
+    }
+
+    #[test]
+    fn test_analyze_slice_from_beginning() {
+        let source = r#"
+            program Test;
+            type TIntArray = array[integer] of integer;
+            var arr: TIntArray;
+            var slice: array of integer;
+            begin
+                slice := arr[:5];
+            end.
+        "#;
+        let mut parser = parser::Parser::new(source).unwrap();
+        let ast = parser.parse().unwrap();
+        let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
+        let _diagnostics = analyzer.analyze(&ast);
+        
+        // Should have no errors
+        assert!(analyzer.core.diagnostics.is_empty(), "Unexpected errors: {:?}", analyzer.core.diagnostics);
+    }
+
+    #[test]
+    fn test_analyze_slice_to_end() {
+        let source = r#"
+            program Test;
+            type TIntArray = array[integer] of integer;
+            var arr: TIntArray;
+            var slice: array of integer;
+            begin
+                slice := arr[3:];
+            end.
+        "#;
+        let mut parser = parser::Parser::new(source).unwrap();
+        let ast = parser.parse().unwrap();
+        let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
+        let _diagnostics = analyzer.analyze(&ast);
+        
+        // Should have no errors
+        assert!(analyzer.core.diagnostics.is_empty(), "Unexpected errors: {:?}", analyzer.core.diagnostics);
+    }
+
+    #[test]
+    fn test_analyze_slice_with_step() {
+        let source = r#"
+            program Test;
+            type TIntArray = array[integer] of integer;
+            var arr: TIntArray;
+            var slice: array of integer;
+            begin
+                slice := arr[0:10:2];
+            end.
+        "#;
+        let mut parser = parser::Parser::new(source).unwrap();
+        let ast = parser.parse().unwrap();
+        let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
+        let _diagnostics = analyzer.analyze(&ast);
+        
+        // Should have no errors
+        assert!(analyzer.core.diagnostics.is_empty(), "Unexpected errors: {:?}", analyzer.core.diagnostics);
+    }
+
+    #[test]
+    fn test_analyze_slice_error_not_array() {
+        let source = r#"
+            program Test;
+            var x: integer;
+            var slice: array of integer;
+            begin
+                slice := x[1:5];
+            end.
+        "#;
+        let mut parser = parser::Parser::new(source).unwrap();
+        let ast = parser.parse().unwrap();
+        let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
+        let _diagnostics = analyzer.analyze(&ast);
+        
+        // Should have an error: slice expression must be applied to an array
+        assert!(!analyzer.core.diagnostics.is_empty(), "Expected error for slice on non-array");
+    }
 }

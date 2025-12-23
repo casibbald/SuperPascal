@@ -48,6 +48,17 @@ pub enum Type {
     },
     /// Variant type (dynamic typing - can hold any type)
     Variant,
+    /// Procedural type (procedure or function type)
+    Procedural {
+        /// true for FUNCTION, false for PROCEDURE
+        is_function: bool,
+        /// Parameter types
+        params: Vec<Type>,
+        /// Return type (only for functions)
+        return_type: Option<Box<Type>>,
+        /// true if "OF OBJECT" is present (method pointer)
+        is_method_pointer: bool,
+    },
     /// Error type (for error recovery)
     Error,
 }
@@ -133,6 +144,21 @@ impl Type {
         Type::Variant
     }
 
+    /// Create a procedural type (procedure or function type)
+    pub fn procedural(
+        is_function: bool,
+        params: Vec<Type>,
+        return_type: Option<Type>,
+        is_method_pointer: bool,
+    ) -> Self {
+        Type::Procedural {
+            is_function,
+            params,
+            return_type: return_type.map(Box::new),
+            is_method_pointer,
+        }
+    }
+
     /// Create an array type (static array)
     pub fn array(index_type: Type, element_type: Type) -> Self {
         Type::Array {
@@ -212,6 +238,39 @@ impl Type {
             (Type::Instantiated { generic_name: n1, args: a1 }, Type::Instantiated { generic_name: n2, args: a2 }) => {
                 n1 == n2 && a1.len() == a2.len() && a1.iter().zip(a2.iter()).all(|(t1, t2)| t1.equals(t2))
             },
+            (
+                Type::Procedural {
+                    is_function: f1,
+                    params: p1,
+                    return_type: r1,
+                    is_method_pointer: m1,
+                },
+                Type::Procedural {
+                    is_function: f2,
+                    params: p2,
+                    return_type: r2,
+                    is_method_pointer: m2,
+                },
+            ) => {
+                // Procedural types match if:
+                // - Both are functions or both are procedures
+                // - Parameter types match
+                // - Return types match (for functions)
+                // - Method pointer flags match
+                if f1 != f2 || m1 != m2 || p1.len() != p2.len() {
+                    return false;
+                }
+                // Check parameter types
+                if !p1.iter().zip(p2.iter()).all(|(t1, t2)| t1.equals(t2)) {
+                    return false;
+                }
+                // Check return types (for functions)
+                match (r1, r2) {
+                    (Some(rt1), Some(rt2)) => rt1.equals(rt2),
+                    (None, None) => true,
+                    _ => false,
+                }
+            }
             (Type::Variant, Type::Variant) => true,
             (Type::Error, Type::Error) => true,
             _ => false,
@@ -255,6 +314,10 @@ impl Type {
             (_, Type::Variant) => true,
             // Variant can be assigned to any type (runtime type checking required)
             (Type::Variant, _) => true,
+            // Procedural types are assignable if they match exactly
+            (Type::Procedural { .. }, Type::Procedural { .. }) => {
+                self.equals(target)
+            }
             // Error type is compatible with everything (error recovery)
             (Type::Error, _) | (_, Type::Error) => true,
             _ => false,
@@ -274,6 +337,7 @@ impl Type {
             Type::Generic { .. } => None, // Generic templates have no size until instantiated
             Type::Instantiated { .. } => None, // Need to resolve instantiated type first
             Type::Variant => None, // Variant size depends on runtime value
+            Type::Procedural { .. } => Some(2), // Procedural types are function pointers (2 bytes on 8-bit/16-bit)
             Type::Error => None,
         }
     }
@@ -297,6 +361,7 @@ impl Type {
             Type::Generic { .. } => 1, // Unknown until instantiated
             Type::Instantiated { .. } => 1, // Unknown until resolved
             Type::Variant => 1, // Variant alignment (runtime-dependent)
+            Type::Procedural { .. } => 2, // Procedural types are function pointers (2-byte aligned)
             Type::Error => 1,
         }
     }

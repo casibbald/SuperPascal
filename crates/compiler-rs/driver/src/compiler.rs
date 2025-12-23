@@ -243,9 +243,13 @@ impl Compiler {
             diagnostics.extend_from_slice(feature_checker.diagnostics());
         }
 
-        // 5. IR Generation (simplified - for now, create empty program)
-        // TODO: Implement AST to IR conversion
-        let ir_builder = IRBuilder::new();
+        // 5. IR Generation
+        let mut ir_builder = IRBuilder::new();
+        // Start the main function/program
+        ir_builder.start_function("main".to_string(), None);
+        // Build IR from AST
+        ir_builder.build(&ast);
+        ir_builder.finish_function();
         let program = ir_builder.into_program();
 
         Ok((program, diagnostics))
