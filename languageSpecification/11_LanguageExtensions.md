@@ -289,17 +289,32 @@ v3 := v1 + v2;  // Uses overloaded operator
 
 ---
 
-## 6. Lambda Expressions (Future)
+## 6. Anonymous Functions
 
-Future support for anonymous functions:
+**Status:** ✅ **FULLY IMPLEMENTED** in v1.0
+
+SuperPascal supports anonymous functions and procedures with closure capture:
 
 ```pascal
-var f: function(x: integer): integer;
-f := lambda (x: integer): integer => x * 2;
-var result := f(5);  // result = 10
+var
+  Square: function(x: integer): integer;
+begin
+  Square := function(x: integer): integer begin
+    Result := x * x;
+  end;
+  
+  WriteLn(Square(5));  // 25
+end.
 ```
 
-**Status**: Planned for future version, not in v1.0.
+**Features:**
+- ✅ Anonymous function syntax: `function(params): return_type begin ... end`
+- ✅ Anonymous procedure syntax: `procedure(params) begin ... end`
+- ✅ Closure capture (automatic detection of outer-scope variables)
+- ✅ Runtime support for closures
+- ✅ Full semantic analysis
+
+**See:** [Modern Pascal Features - Anonymous Functions](./16_ModernPascalFeatures.md#2-anonymous-functions) for complete documentation.
 
 ---
 
@@ -333,13 +348,21 @@ if x <> nil then
 
 ✅ **Operator overloading** - Available in Tier 2, taught after Tier 1 mastery  
 ✅ **Generic types** (templates) - Available in Tier 2, taught after Tier 1 mastery  
-✅ **Type helpers** - Available in Tier 2, taught after Tier 1 mastery  
+✅ **Type helpers** (class helpers, record helpers) - Available in Tier 2, taught after Tier 1 mastery  
+✅ **Anonymous functions** - Available in Tier 2, taught after Tier 1 mastery  
+✅ **Dynamic arrays** - Available in Tier 2, taught after Tier 1 mastery  
+✅ **Class methods** - Available in Tier 2, taught after Tier 1 mastery  
+✅ **Class properties/variables** - Available in Tier 2, taught after Tier 1 mastery  
 ✅ **Attributes/Annotations** - Available in Tier 2, taught after Tier 1 mastery
+
+### Fully Implemented Modern Pascal Features
+
+✅ **All 50 Modern Pascal features** - See [Modern Pascal Features](./16_ModernPascalFeatures.md) for complete documentation
 
 ### Planned for Future Versions
 
 ☐ **Type inference** (`auto` keyword)  
-☐ **Lambda expressions**  
+☐ **Lambda expression syntax** (alternative to anonymous functions)  
 ☐ **Nullable types**
 
 ---

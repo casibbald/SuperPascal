@@ -938,7 +938,87 @@ obj := ent;      // OK: TEntity is TObject
 // ent := obj;   // ERROR: TObject is not TEntity
 ```
 
-### 5.4 Method Dispatch
+### 5.4 Class Methods
+
+**Status:** ✅ **FULLY IMPLEMENTED**
+
+Class methods are methods that belong to the class itself, not to instances of the class. They don't have access to `Self`.
+
+**Syntax:**
+```pascal
+type
+  TMyClass = class
+    class procedure ClassProc;
+    class function ClassFunc: ReturnType;
+  end;
+```
+
+**Example:**
+```pascal
+type
+  TMath = class
+    class function Add(a, b: integer): integer;
+    class function Multiply(a, b: integer): integer;
+  end;
+  
+class function TMath.Add(a, b: integer): integer;
+begin
+  Result := a + b;
+end;
+
+begin
+  WriteLn(TMath.Add(5, 3));  // 8 (no instance needed)
+end.
+```
+
+**Properties:**
+- Called on class name, not instance
+- No access to `Self` (no instance)
+- Useful for utility functions and factory methods
+- Can be used with class variables and class properties
+
+**See Also:**
+- [Modern Pascal Features - Class Methods](./16_ModernPascalFeatures.md#7-class-methods) for complete documentation
+
+### 5.5 Class Properties and Variables
+
+**Status:** ✅ **FULLY IMPLEMENTED**
+
+Class properties and variables are shared across all instances of a class.
+
+**Class Variables:**
+```pascal
+type
+  TCounter = class
+  private
+    class var FCount: integer;
+  public
+    class function GetCount: integer;
+    class procedure Increment;
+  end;
+```
+
+**Class Properties:**
+```pascal
+type
+  TSettings = class
+  private
+    class var FDefaultPath: string;
+  public
+    class property DefaultPath: string read FDefaultPath write FDefaultPath;
+  end;
+```
+
+**Properties:**
+- Shared across all instances
+- Accessed via class name
+- Can have read/write accessors for properties
+- Useful for shared configuration and counters
+
+**See Also:**
+- [Modern Pascal Features - Class Properties and Variables](./16_ModernPascalFeatures.md#8-class-properties-and-variables) for complete documentation
+
+### 5.6 Method Dispatch
 
 **Non-virtual methods:**
 - Resolved at compile time
@@ -1168,25 +1248,270 @@ type
 
 ## 11. Special Types
 
-### 11.1 Procedure/Function Types
+### 11.1 Procedure/Function Types (Procedural Types)
+
+Procedural types allow you to store procedure and function addresses in variables, enabling callbacks, event handlers, and higher-order functions.
 
 **Syntax:**
 ```pascal
 type
   TProc = procedure(x: integer);
   TFunc = function(x: integer): integer;
+  TMethod = procedure(x: integer) of object;  // Method pointer
+```
+
+**Full Syntax:**
+```
+procedural-type ::= ("procedure" | "function") param-list? (":" return-type)? ("of" "object")?
+param-list ::= "(" param-decl ("," param-decl)* ")"
+param-decl ::= ident-list ":" type-spec
+return-type ::= type-spec
+```
+
+**Examples:**
+```pascal
+type
+  // Procedure type (no return value)
+  TEventHandler = procedure(Sender: pointer);
+  TCallback = procedure(Data: integer);
+  
+  // Function type (with return value)
+  TMathFunc = function(x, y: integer): integer;
+  TStringFunc = function(s: string): string;
+  
+  // Method pointer (for object methods)
+  TNotifyEvent = procedure(Sender: pointer) of object;
+  TCompareFunc = function(a, b: integer): integer of object;
+  
+  // No parameters
+  TSimpleProc = procedure;
+  TSimpleFunc = function: integer;
+```
+
+**Assignment:**
+Function and procedure names can be assigned to procedural type variables:
+
+```pascal
+function Add(a, b: integer): integer;
+begin
+  Result := a + b;
+end;
+
+function Multiply(a, b: integer): integer;
+begin
+  Result := a * b;
+end;
+
+var
+  MathOp: TMathFunc;
+begin
+  MathOp := Add;        // Assign function name
+  WriteLn(MathOp(5, 3)); // Calls Add(5, 3) → 8
+  
+  MathOp := Multiply;   // Assign different function
+  WriteLn(MathOp(5, 3)); // Calls Multiply(5, 3) → 15
+end.
+```
+
+**Calling Procedural Type Variables:**
+Procedural type variables can be called just like regular procedures/functions:
+
+```pascal
+var
+  Handler: TEventHandler;
+  Calc: TMathFunc;
+begin
+  Handler := MyEventHandler;
+  Handler(nil);  // Call procedure
+  
+  Calc := Add;
+  WriteLn(Calc(10, 20));  // Call function → 30
+end.
+```
+
+**Type Compatibility:**
+Procedural types are assignment-compatible only if:
+- Both are procedures OR both are functions
+- Parameter types match exactly (in order)
+- Return types match (for functions)
+- Method pointer flags match (`of object`)
+
+```pascal
+type
+  TFunc1 = function(x: integer): integer;
+  TFunc2 = function(y: integer): integer;  // Different param name OK
+  TFunc3 = function(x: boolean): integer;   // Different param type - NOT compatible
+  
+var
+  f1: TFunc1;
+  f2: TFunc2;
+  f3: TFunc3;
+begin
+  f1 := Add;  // OK
+  f2 := Add;  // OK (parameter names don't matter)
+  // f3 := Add;  // ERROR: parameter type mismatch
+end.
+```
+
+**Method Pointers (`OF OBJECT`):**
+Method pointers are used for object-oriented callbacks:
+
+```pascal
+type
+  TNotifyEvent = procedure(Sender: pointer) of object;
+  
+type
+  TButton = class
+  private
+    FOnClick: TNotifyEvent;
+  public
+    property OnClick: TNotifyEvent read FOnClick write FOnClick;
+    procedure Click;
+  end;
+  
+procedure TButton.Click;
+begin
+  if Assigned(FOnClick) then
+    FOnClick(Self);
+end;
+
+var
+  Button: TButton;
+begin
+  Button := TButton.Create;
+  Button.OnClick := MyClickHandler;  // Assign method
+  Button.Click;  // Calls MyClickHandler
+end.
+```
+
+**Use Cases:**
+- **Callbacks**: Pass functions as parameters
+  ```pascal
+  procedure ApplyFunc(f: TMathFunc; x, y: integer);
+  begin
+    WriteLn(f(x, y));
+  end;
+  
+  begin
+    ApplyFunc(Add, 5, 3);      // 8
+    ApplyFunc(Multiply, 5, 3); // 15
+  end.
+  ```
+
+- **Event Handlers**: Store event handler procedures
+  ```pascal
+  var
+    OnUpdate: TEventHandler;
+  begin
+    OnUpdate := UpdateDisplay;
+    OnUpdate(nil);
+  end.
+  ```
+
+- **Function Tables**: Arrays of functions
+  ```pascal
+  var
+    Operations: array[0..1] of TMathFunc;
+  begin
+    Operations[0] := Add;
+    Operations[1] := Multiply;
+    WriteLn(Operations[0](5, 3));  // 8
+    WriteLn(Operations[1](5, 3));  // 15
+  end.
+  ```
+
+**Properties:**
+- ✅ Can be assigned procedure/function addresses
+- ✅ Can be called like procedures/functions
+- ✅ Used for callbacks, event handlers, higher-order functions
+- ✅ Support method pointers (`of object`) for OOP callbacks
+- ✅ Type-safe: signature must match exactly
+
+**Limitations:**
+- ❌ No closures (cannot capture variables from outer scope)
+- ❌ No nested procedures as values (use anonymous functions instead)
+- ❌ Cannot assign anonymous functions to procedural types (use closure types)
+
+**Size and Alignment:**
+- Procedural types are function pointers: **2 bytes** (16-bit address)
+- Alignment: **2 bytes** (16-bit aligned)
+
+**See Also:**
+- [Anonymous Functions](./11_LanguageExtensions.md#anonymous-functions) for closures
+- [Classes](./03_TypeSystem.md#classes) for method pointers
+
+### 11.2 Dynamic Arrays
+
+**Status:** ✅ **FULLY IMPLEMENTED**
+
+Dynamic arrays are arrays that can grow and shrink at runtime, unlike static arrays which have a fixed size.
+
+**Syntax:**
+```pascal
+type
+  TIntArray = array of integer;
+  TStringArray = array of string;
+```
+
+**Declaration:**
+```pascal
+var
+  Numbers: array of integer;
+  Names: array of string;
+begin
+  // Arrays start empty (length 0)
+  SetLength(Numbers, 10);  // Allocate 10 elements
+end.
+```
+
+**Operations:**
+- `SetLength(arr, size)` - Allocate or resize array
+- `Length(arr)` - Get current length
+- `High(arr)` - Get highest index (Length - 1)
+- `Low(arr)` - Always 0 for dynamic arrays
+- Indexing: `arr[0]`, `arr[1]`, etc.
+
+**Example:**
+```pascal
+var
+  Numbers: array of integer;
+  i: integer;
+begin
+  SetLength(Numbers, 5);
+  for i := 0 to High(Numbers) do
+    Numbers[i] := i * 10;
+  
+  // Resize
+  SetLength(Numbers, 10);
+  Numbers[5] := 50;
+  
+  // Free
+  SetLength(Numbers, 0);
+end.
 ```
 
 **Properties:**
-- Can be assigned procedure/function addresses
-- Can be called like procedures/functions
-- Used for callbacks, event handlers
+- **Zero-based indexing**: Always starts at index 0
+- **Dynamic size**: Can grow and shrink at runtime
+- **Heap allocated**: Stored on heap, not stack
+- **Automatic cleanup**: Freed when variable goes out of scope
+- **No fixed size**: Size determined at runtime
 
-**Limitations:**
-- No closures (cannot capture variables)
-- No nested procedures as values
+**Comparison with Static Arrays:**
 
-### 11.2 Open Array Parameters
+| Feature | Static Array | Dynamic Array |
+|---------|-------------|---------------|
+| Size | Fixed at compile time | Variable at runtime |
+| Declaration | `array[0..9] of T` | `array of T` |
+| Memory | Stack or static | Heap |
+| Resize | Not possible | Possible with `SetLength` |
+| Initialization | Can initialize | Starts empty |
+
+**See Also:**
+- [Modern Pascal Features - Dynamic Arrays](./16_ModernPascalFeatures.md#5-dynamic-arrays)
+- [Standard Library - Array Functions](./13_StandardLibrary.md#array-functions)
+
+### 11.3 Open Array Parameters
 
 **Syntax:**
 ```pascal
@@ -1194,11 +1519,14 @@ procedure Process(const arr: array of integer);
 ```
 
 **Properties:**
-- Accepts arrays of any size
+- Accepts arrays of any size (static or dynamic)
 - Length available via `Length(arr)`
 - Passed as pointer + length
+- Works with both static and dynamic arrays
 
-### 11.3 Game Engine Types
+**Note:** Open array parameters (`array of T`) are different from dynamic array types (`array of T`). Open arrays are for parameters only, while dynamic arrays are a full type.
+
+### 11.4 Game Engine Types
 
 **Entity ID:**
 ```pascal
@@ -1353,6 +1681,260 @@ type
 **Educational Note:** Generics are an advanced feature. Students first learn to work with concrete types, then learn generics when they need to write reusable, type-safe code.
 
 **See**: Built-in `Result<T, E>` type (section 4.3) is an example of a generic type provided by the standard library.
+
+**See Also:**
+- [Modern Pascal Features - Generics](./16_ModernPascalFeatures.md#1-generics) for complete documentation
+
+### 11.7 Class Helpers
+
+**Status:** ✅ **FULLY IMPLEMENTED**
+
+Class helpers allow you to extend existing types (classes, records, or types) with additional methods and properties without modifying the original type definition.
+
+**Syntax:**
+```pascal
+type
+  ClassNameHelper = class helper for ClassName
+    // Additional methods and properties
+  end;
+  
+  RecordNameHelper = record helper for RecordName
+    // Additional methods and properties
+  end;
+  
+  TypeNameHelper = type helper for TypeName
+    // Additional methods and properties
+  end;
+```
+
+**Example:**
+```pascal
+type
+  TStringHelper = class helper for string
+    function ToUpper: string;
+  end;
+  
+function TStringHelper.ToUpper: string;
+var
+  i: integer;
+begin
+  Result := Self;
+  for i := 1 to System.Length(Self) do
+    if (Self[i] >= 'a') and (Self[i] <= 'z') then
+      Result[i] := Chr(Ord(Self[i]) - 32);
+end;
+
+var
+  s: string;
+begin
+  s := 'Hello';
+  WriteLn(s.ToUpper);  // 'HELLO'
+end.
+```
+
+**Helper Inheritance:**
+```pascal
+type
+  BaseHelper = class helper for TBase
+    // Base methods
+  end;
+  
+  DerivedHelper = class helper(BaseHelper) for TBase
+    // Additional methods
+  end;
+```
+
+**Properties:**
+- Can add methods, properties, class methods, class properties
+- Cannot add fields, constructors, or destructors
+- Cannot change visibility of existing members
+- Cannot override existing methods
+
+**See Also:**
+- [Modern Pascal Features - Class Helpers](./16_ModernPascalFeatures.md#3-class-helpers) for complete documentation
+
+### 11.8 Nested Classes
+
+**Status:** ✅ **FULLY IMPLEMENTED**
+
+Nested classes allow you to define classes inside other classes, providing better organization and encapsulation.
+
+**Syntax:**
+```pascal
+type
+  TOuter = class
+  public
+    type
+      TInner = class
+        // Inner class members
+      end;
+  end;
+```
+
+**Example:**
+```pascal
+type
+  TContainer = class
+  public
+    type
+      TItem = class
+      private
+        FValue: integer;
+      public
+        constructor Create(Value: integer);
+        property Value: integer read FValue;
+      end;
+  end;
+```
+
+**Properties:**
+- Nested classes can access outer class members (if accessible)
+- Outer class can access nested class members
+- Scoped to their outer class
+- Use `OuterClass.NestedClass` to reference from outside
+
+**See Also:**
+- [Modern Pascal Features - Nested Classes](./16_ModernPascalFeatures.md#4-nested-classes) for complete documentation
+
+### 11.9 Old-Style Objects
+
+**Status:** ✅ **FULLY IMPLEMENTED**
+
+Old-style objects are Turbo Pascal-style object types using the `object` keyword. They provide value semantics and stack allocation.
+
+**Syntax:**
+```pascal
+type
+  TMyObject = object
+    // Fields
+    // Methods
+  end;
+```
+
+**Example:**
+```pascal
+type
+  TPoint = object
+  private
+    FX, FY: integer;
+  public
+    procedure Init(X, Y: integer);
+    function GetX: integer;
+  end;
+  
+procedure TPoint.Init(X, Y: integer);
+begin
+  FX := X;
+  FY := Y;
+end;
+
+var
+  p: TPoint;
+begin
+  p.Init(10, 20);
+  WriteLn(p.GetX);  // 10
+end.
+```
+
+**Inheritance:**
+```pascal
+type
+  TBaseObject = object
+    // Base members
+  end;
+  
+  TDerivedObject = object(TBaseObject)
+    // Additional members
+  end;
+```
+
+**Properties:**
+- Value semantics (copied on assignment)
+- Stack allocation (not heap)
+- Can have inheritance
+- Limited virtual method support compared to classes
+
+**See Also:**
+- [Modern Pascal Features - Old-Style Objects](./16_ModernPascalFeatures.md#9-old-style-objects) for complete documentation
+
+### 11.10 Variant Type
+
+**Status:** ✅ **FULLY IMPLEMENTED**
+
+The `Variant` type is a dynamic type that can hold values of any type, with type checking performed at runtime.
+
+**Syntax:**
+```pascal
+var
+  v: Variant;
+```
+
+**Example:**
+```pascal
+var
+  v: Variant;
+begin
+  v := 42;           // Integer
+  v := 'Hello';      // String
+  v := true;         // Boolean
+end.
+```
+
+**Type Checking:**
+```pascal
+if v is integer then
+  WriteLn('Integer: ', v as integer)
+else if v is string then
+  WriteLn('String: ', v as string);
+```
+
+**Properties:**
+- Can hold any type
+- Type checked at runtime
+- Supports `is` and `as` operators
+- Runtime type information available
+
+**See Also:**
+- [Modern Pascal Features - Variant Type](./16_ModernPascalFeatures.md#10-variant-type) for complete documentation
+
+### 11.11 Reference-Counted Interfaces
+
+**Status:** ✅ **FULLY IMPLEMENTED**
+
+Reference-counted interfaces provide COM-style automatic memory management for interfaces, with thread-safe reference counting.
+
+**Syntax:**
+```pascal
+type
+  IMyInterface = interface
+    ['{GUID}']
+    procedure DoSomething;
+    function GetValue: integer;
+  end;
+```
+
+**Example:**
+```pascal
+type
+  ILogger = interface
+    ['{12345678-1234-1234-1234-123456789ABC}']
+    procedure Log(const Message: string);
+  end;
+  
+  TFileLogger = class(TInterfacedObject, ILogger)
+    procedure Log(const Message: string);
+  end;
+```
+
+**Reference Counting:**
+Interfaces are automatically reference-counted:
+- `interface_add_ref` - Increment reference count
+- `interface_release` - Decrement reference count (frees when zero)
+- `interface_assign` - Handle assignment with reference counting
+- Thread-safe using atomic operations
+
+**See Also:**
+- [Modern Pascal Features - Reference-Counted Interfaces](./16_ModernPascalFeatures.md#11-reference-counted-interfaces) for complete documentation
 
 ---
 

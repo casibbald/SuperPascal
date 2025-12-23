@@ -260,6 +260,120 @@ Test(f(), g());  // f() called before g()
 
 ---
 
+## 5.4 Procedural Type Semantics
+
+### 5.4.1 Assignment Compatibility
+
+Procedural types are assignment-compatible only if:
+- Both are procedures OR both are functions
+- Parameter types match exactly (in order and type)
+- Return types match (for functions)
+- Method pointer flags match (`of object`)
+
+**Example:**
+```pascal
+type
+  TFunc1 = function(x: integer): integer;
+  TFunc2 = function(y: integer): integer;  // ✅ Compatible (param names don't matter)
+  TFunc3 = function(x: boolean): integer; // ❌ Incompatible (param type differs)
+  
+var
+  f1: TFunc1;
+  f2: TFunc2;
+  f3: TFunc3;
+begin
+  f1 := Add;  // ✅ OK
+  f2 := Add;  // ✅ OK
+  // f3 := Add;  // ❌ ERROR: parameter type mismatch
+end.
+```
+
+### 5.4.2 Function Name Assignment
+
+When a function or procedure name is assigned to a procedural type variable:
+- The function/procedure signature is checked against the procedural type
+- If compatible, the function address is stored in the variable
+- The function name is resolved at compile time
+
+**Example:**
+```pascal
+function Add(a, b: integer): integer;
+begin
+  Result := a + b;
+end;
+
+var
+  MathOp: function(x, y: integer): integer;
+begin
+  MathOp := Add;  // ✅ Compile-time check: signature matches
+  WriteLn(MathOp(5, 3));  // Runtime: calls Add(5, 3)
+end.
+```
+
+### 5.4.3 Procedural Type Variable Calls
+
+When a procedural type variable is called:
+- The stored function address is used
+- Arguments are passed as specified by the procedural type signature
+- For functions, the return value is returned
+
+**Example:**
+```pascal
+var
+  Handler: procedure(x: integer);
+  Calc: function(x, y: integer): integer;
+begin
+  Handler := PrintNumber;
+  Handler(42);  // Calls PrintNumber(42)
+  
+  Calc := Add;
+  WriteLn(Calc(10, 20));  // Calls Add(10, 20) → 30
+end.
+```
+
+### 5.4.4 Method Pointers (`OF OBJECT`)
+
+Method pointers are used for object-oriented callbacks:
+- Store both object instance and method address
+- When called, method is invoked on the stored instance
+- Used for event handlers and callbacks in OOP code
+
+**Example:**
+```pascal
+type
+  TNotifyEvent = procedure(Sender: pointer) of object;
+  
+type
+  TButton = class
+  private
+    FOnClick: TNotifyEvent;
+  public
+    property OnClick: TNotifyEvent read FOnClick write FOnClick;
+  end;
+  
+procedure TForm.ButtonClick(Sender: pointer);
+begin
+  WriteLn('Button clicked!');
+end;
+
+var
+  Button: TButton;
+begin
+  Button := TButton.Create;
+  Button.OnClick := Self.ButtonClick;  // Assign method pointer
+  Button.OnClick(nil);  // Calls Self.ButtonClick(nil)
+end.
+```
+
+### 5.4.5 Type Safety
+
+Procedural types are **type-safe**:
+- Signature must match exactly (parameter types and return type)
+- Compile-time checking prevents incompatible assignments
+- Runtime calls use the stored function address (no dynamic dispatch)
+
+---
+
 ## 6. Method Dispatch
 
 ### 6.1 Non-Virtual Methods

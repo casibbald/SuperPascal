@@ -145,6 +145,22 @@ Language extensions beyond standard Pascal:
 - Mixed syntax support
 - Future planned extensions
 
+### [16_ModernPascalFeatures.md](./16_ModernPascalFeatures.md)
+Comprehensive documentation of all Modern Pascal features:
+- **Generics** - Type-safe code reuse with templates
+- **Anonymous Functions** - Inline function definitions with closure capture
+- **Class Helpers** - Extend types without modifying original definitions
+- **Nested Classes** - Classes defined inside other classes
+- **Dynamic Arrays** - Runtime-sized arrays
+- **Preprocessor Directives** - Conditional compilation, file inclusion
+- **Class Methods** - Methods belonging to the class itself
+- **Class Properties and Variables** - Shared class members
+- **Old-Style Objects** - Turbo Pascal-style value semantics objects
+- **Variant Type** - Dynamic typing with runtime type checking
+- **Reference-Counted Interfaces** - COM-style automatic memory management
+- **Procedural Types** - Function pointers and callbacks
+- **Status:** ✅ 100% Complete (50/50 features implemented)
+
 ### [12_MemoryAndIO.md](./12_MemoryAndIO.md)
 Direct memory and I/O port access:
 - Memory access functions (`Peek`, `PeekW`, `Poke`, `PokeW`)

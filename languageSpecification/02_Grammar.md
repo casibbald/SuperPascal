@@ -179,6 +179,7 @@ type-spec ::= simple-type
             | set-type
             | pointer-type
             | ospointer-type
+            | procedural-type
             | class-type
             | string-type
             | channel-type
@@ -546,7 +547,49 @@ type
 - Maximum length: 255 characters
 - Length stored in first byte (0-255)
 
-### 4.12 Channel Types
+### 4.12 Procedural Types
+
+```
+procedural-type ::= ("procedure" | "function") param-list? (":" return-type)? ("of" "object")?
+param-list ::= "(" param-decl ("," param-decl)* ")"
+param-decl ::= ident-list ":" type-spec
+return-type ::= type-spec
+```
+
+**Examples:**
+```pascal
+type
+  TProc = procedure(x: integer);
+  TFunc = function(x, y: integer): integer;
+  TMethod = procedure(Sender: pointer) of object;
+  TSimpleProc = procedure;
+  TSimpleFunc = function: integer;
+```
+
+**Rules:**
+- Procedure types have no return value
+- Function types must specify return type after `:`
+- `of object` creates a method pointer (for class methods)
+- Parameter names are optional in type declarations
+- Procedural types can be assigned function/procedure names
+- Procedural type variables can be called like procedures/functions
+
+**Assignment:**
+```pascal
+function Add(a, b: integer): integer;
+begin
+  Result := a + b;
+end;
+
+var
+  f: TFunc;
+begin
+  f := Add;  // Assign function name to procedural type variable
+  WriteLn(f(5, 3));  // Call procedural type variable
+end.
+```
+
+### 4.13 Channel Types
 
 ```
 channel-type ::= "channel" "[" type-list "]" buffer-size?
