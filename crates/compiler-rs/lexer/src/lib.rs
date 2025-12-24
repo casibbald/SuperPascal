@@ -16,6 +16,18 @@ pub enum LexerError {
     InvalidCharacter { ch: char, line: usize, column: usize },
     /// Invalid escape sequence
     InvalidEscape { seq: String, line: usize, column: usize },
+    /// Unterminated string interpolation: expected '}' before end of string
+    UnterminatedInterpolation { 
+        opening_brace_line: usize, 
+        opening_brace_column: usize,
+        line: usize, 
+        column: usize 
+    },
+    /// Unexpected '}' in string interpolation (extra closing brace)
+    UnexpectedInterpolationBrace { 
+        line: usize, 
+        column: usize 
+    },
 }
 
 impl std::fmt::Display for LexerError {
@@ -32,6 +44,16 @@ impl std::fmt::Display for LexerError {
             }
             LexerError::InvalidEscape { seq, line, column } => {
                 write!(f, "Invalid escape sequence '{}' at {}:{}", seq, line, column)
+            }
+            LexerError::UnterminatedInterpolation { opening_brace_line, opening_brace_column, line, column } => {
+                write!(
+                    f, 
+                    "Unterminated interpolation: expected '}}' before end of string (opening brace at {}:{}) at {}:{}", 
+                    opening_brace_line, opening_brace_column, line, column
+                )
+            }
+            LexerError::UnexpectedInterpolationBrace { line, column } => {
+                write!(f, "Unexpected '}}' in string interpolation at {}:{}", line, column)
             }
         }
     }
@@ -51,9 +73,10 @@ pub struct Lexer {
     column: usize,
     /// Lookahead buffer (for peek)
     lookahead: Option<Token>,
-    /// State for string interpolation: (quote_char, start_line, start_col, accumulated_string)
+    /// State for string interpolation: (quote_char, start_line, start_col, accumulated_string, brace_depth)
     /// When Some, we're continuing an interpolated string after an expression
-    string_continuation: Option<(char, usize, usize, String)>,
+    /// brace_depth tracks nested braces in the expression (starts at 1 for the opening {)
+    string_continuation: Option<(char, usize, usize, String, usize)>,
 }
 
 impl Lexer {
@@ -78,16 +101,11 @@ impl Lexer {
 
         self.skip_whitespace();
         
-        // Check if we're continuing an interpolated string after a RightBrace
-        // This happens AFTER the parser has consumed the RightBrace token
-        if self.string_continuation.is_some() {
-            // We're continuing a string after a } - scan the rest
-            let (quote_char, start_line, start_col, accumulated) = self.string_continuation.take().unwrap();
-            return self.continue_interpolated_string(quote_char, start_line, start_col, accumulated);
-        }
-        
         // Check for directives before comments
         let ch = if !self.is_at_end() { Some(self.current_char()) } else { None };
+        
+        // Skip comments BEFORE checking string continuation
+        // (Comments should not interfere with string interpolation)
         if ch == Some('{') && self.peek_char() == Some('$') {
             // Compiler directive: {$...}
             return self.scan_directive_curly();
@@ -101,6 +119,9 @@ impl Lexer {
         
         self.skip_comments()?;
 
+        // Skip whitespace again after comments (comments might leave us at whitespace)
+        self.skip_whitespace();
+
         // Check for EOF
         if self.is_at_end() {
             return Ok(Token::new(
@@ -109,19 +130,82 @@ impl Lexer {
             ));
         }
 
+        // IMPORTANT: If we're in string continuation mode, we need to track brace depth
+        // to correctly match the closing brace of the interpolation.
+        // This check happens AFTER skipping comments, so comments don't interfere.
+        // CRITICAL: Only process if string_continuation is actually set (we're in a string)
+        // If string_continuation is None, we're NOT in a string, so skip this check entirely
+        // and continue to normal tokenization.
+        let ch = if !self.is_at_end() { Some(self.current_char()) } else { None };
+        
+        // Only check string_continuation if we're actually in a string context
+        // This prevents interference with comments and other non-string contexts
+        if let Some((quote_char, start_line, start_col, accumulated, mut brace_depth)) = self.string_continuation.take() {
+            // Check if current character is { or }
+            if ch == Some('{') {
+                // Nested brace in expression - increment depth
+                brace_depth += 1;
+                self.string_continuation = Some((quote_char, start_line, start_col, accumulated, brace_depth));
+                // Continue normal tokenization (will return LeftBrace)
+            } else if ch == Some('}') {
+                // Closing brace - check if it closes the interpolation
+                brace_depth = brace_depth.saturating_sub(1); // Prevent underflow
+                if brace_depth == 0 {
+                    // This closes the interpolation - return RightBrace
+                    let brace_pos = self.position;
+                    let brace_line = self.line;
+                    let brace_col = self.column;
+                    self.advance(); // Skip the }
+                    let brace_span = Span::new(brace_pos, brace_pos + 1, brace_line, brace_col);
+                    // Set brace_depth to 0 to signal interpolation is closed
+                    // We'll continue the string on the next token call
+                    self.string_continuation = Some((quote_char, start_line, start_col, accumulated, 0));
+                    return Ok(Token::new(TokenKind::RightBrace, brace_span));
+                } else if brace_depth > 0 {
+                    // Nested brace in expression - decrement depth and continue
+                    self.string_continuation = Some((quote_char, start_line, start_col, accumulated, brace_depth));
+                    // Continue normal tokenization (will return RightBrace)
+                } else {
+                    // ERROR: Extra closing brace (depth went negative, now 0 after saturating_sub)
+                    // This means we had an extra '}' that doesn't match any opening '{'
+                    let brace_pos = self.position;
+                    let brace_line = self.line;
+                    let brace_col = self.column;
+                    // Clear string_continuation since we're in an error state
+                    self.string_continuation = None;
+                    return Err(LexerError::UnexpectedInterpolationBrace {
+                        line: brace_line,
+                        column: brace_col,
+                    });
+                }
+            } else {
+                // Not a brace - restore continuation state and continue normally
+                self.string_continuation = Some((quote_char, start_line, start_col, accumulated, brace_depth));
+            }
+        }
+        
+        // Check if we're continuing an interpolated string after a RightBrace
+        // This happens AFTER the parser has consumed the RightBrace token
+        if let Some((quote_char, start_line, start_col, accumulated, brace_depth)) = self.string_continuation.take() {
+            if brace_depth == 0 {
+                // We've closed the interpolation - continue the string
+                return self.continue_interpolated_string(quote_char, start_line, start_col, accumulated);
+            } else {
+                // Still in expression - restore state
+                self.string_continuation = Some((quote_char, start_line, start_col, accumulated, brace_depth));
+            }
+        }
+
         let start_pos = self.position;
         let start_line = self.line;
         let start_col = self.column;
 
         let ch = self.current_char();
 
-        // IMPORTANT: Check for string continuation BEFORE scanning } as an operator
-        // This must happen before the operator scanning to intercept } when in string mode
-        if ch == '}' && self.string_continuation.is_some() {
-            // We're continuing an interpolated string after an expression
-            let (quote_char, start_line, start_col, accumulated) = self.string_continuation.take().unwrap();
-            return self.continue_interpolated_string(quote_char, start_line, start_col, accumulated);
-        }
+        // IMPORTANT: We do NOT intercept } here for string continuation.
+        // The } should be returned as a RightBrace token first so the parser can consume it.
+        // String continuation happens on the NEXT token call after RightBrace is consumed.
+        // This is handled by checking string_continuation at the start of next_token().
 
         let kind = if ch.is_ascii_alphabetic() || ch == '_' {
             self.scan_identifier_or_keyword()
@@ -574,7 +658,8 @@ impl Lexer {
                 let span = Span::new(start_pos, end_pos, start_line, start_col);
                 
                 // Store continuation state (we'll continue after the expression)
-                self.string_continuation = Some(('"', start_line, start_col, string_part.clone()));
+                // brace_depth starts at 1 for the opening { we just encountered
+                self.string_continuation = Some(('"', start_line, start_col, string_part.clone(), 1));
                 
                 // Advance past the {
                 self.advance();
@@ -601,12 +686,29 @@ impl Lexer {
             }
         }
 
+        // Check for unterminated string
         if self.is_at_end() && self.source[self.position - 1] != '"' {
+            // Check if we have an unterminated interpolation
+            if let Some((_, opening_line, opening_col, _, brace_depth)) = &self.string_continuation {
+                if *brace_depth > 0 {
+                    // We have an unmatched opening brace in the interpolation
+                    return Err(LexerError::UnterminatedInterpolation {
+                        opening_brace_line: *opening_line,
+                        opening_brace_column: *opening_col,
+                        line: start_line,
+                        column: start_col,
+                    });
+                }
+            }
             return Err(LexerError::UnterminatedString {
                 line: start_line,
                 column: start_col,
             });
         }
+
+        // IMPORTANT: Clear string_continuation when string ends normally (no interpolation)
+        // This ensures state isolation - string_continuation is only set during interpolation
+        self.string_continuation = None;
 
         let end_pos = self.position;
         let span = Span::new(start_pos, end_pos, start_line, start_col);
@@ -681,8 +783,9 @@ impl Lexer {
                 let end_pos = self.position;
                 let span = Span::new(start_pos, end_pos, start_line, start_col);
                 
-                // Store continuation state
-                self.string_continuation = Some((quote_char, start_line, start_col, combined));
+                // Store continuation state (preserve brace_depth from current state)
+                let current_depth = self.string_continuation.as_ref().map(|(_, _, _, _, d)| *d).unwrap_or(1);
+                self.string_continuation = Some((quote_char, start_line, start_col, combined, current_depth));
                 
                 // Return the string part
                 return Ok(Token::new(TokenKind::StringLiteral(string_part), span));
@@ -709,18 +812,17 @@ impl Lexer {
             });
         }
 
-        // Combine accumulated string with current part
+        // Return only the NEW part of the string (after the })
+        // The accumulated part was already returned as the first StringLiteral
         let string_part: String = chars.iter().collect();
-        // Only combine if there's actually new content (string_part is not empty)
-        // If string_part is empty, we're at the end of the string, so return empty
-        let final_string = if string_part.is_empty() {
-            string_part // Return empty string
-        } else {
-            accumulated + &string_part // Combine accumulated with new part
-        };
+        
+        // IMPORTANT: Clear string_continuation when string ends (closing quote encountered)
+        // This ensures state isolation - string_continuation is only set during active interpolation
+        self.string_continuation = None;
+        
         let end_pos = self.position;
         let span = Span::new(start_pos, end_pos, start_line, start_col);
-        Ok(Token::new(TokenKind::StringLiteral(final_string), span))
+        Ok(Token::new(TokenKind::StringLiteral(string_part), span))
     }
 
     /// Scan operator or delimiter
@@ -823,6 +925,10 @@ impl Lexer {
             ('@', _) => {
                 self.advance();
                 TokenKind::At
+            }
+            ('}', _) => {
+                self.advance();
+                TokenKind::RightBrace
             }
             _ => {
                 return Err(LexerError::InvalidCharacter {
@@ -1268,17 +1374,20 @@ mod tests {
     fn test_comments_nested_curly() {
         // Note: Pascal doesn't support nested comments - first } closes the comment
         // So "{ Outer { Inner } } program" becomes: comment ends at first }, then " } program" is parsed
-        // This should result in an error or unexpected tokens
+        // After skipping the comment, we have " } program" remaining
+        // The lexer should return RightBrace for the extra }, then program on the next call
         let mut lexer = Lexer::new("{ Outer { Inner } } program");
-        // The comment ends at the first }, leaving " } program" which will cause an error
-        // Let's test that it handles this correctly
+        // The comment ends at the first }, leaving " } program"
+        // After skip_comments() and skip_whitespace(), we're at the second }
+        // Since string_continuation is None (we're not in a string), we should scan } as RightBrace
         let result = lexer.next_token();
-        // Should either succeed with program (if we skip the extra }) or error
-        // For now, let's just verify it doesn't crash
         match result {
             Ok(token) => {
-                // If it succeeds, should be program
-                assert_eq!(token.kind, TokenKind::KwProgram);
+                // The extra } should be scanned as RightBrace (it's a valid token, just unexpected)
+                assert_eq!(token.kind, TokenKind::RightBrace);
+                // Next token should be program
+                let next_token = lexer.next_token().unwrap();
+                assert_eq!(next_token.kind, TokenKind::KwProgram);
             }
             Err(_) => {
                 // Error is also acceptable for nested comments

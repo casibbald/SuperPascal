@@ -499,29 +499,36 @@ impl super::Parser {
             let expr = self.parse_expression()?;
             parts.push(ast::InterpolatedPart::Expression(Box::new(expr)));
             
-            // After parsing the expression, the lexer should have continued the string
-            // and returned the next string part (which may be empty if string ends after })
-            // So we check for StringLiteral instead of expecting }
-            if let Some(TokenKind::StringLiteral(next_part)) = self.current().map(|t| &t.kind) {
-                // The lexer has already consumed the } and continued the string
-                // Add the string part (even if empty - it represents the end of the string)
-                if !next_part.is_empty() {
-                    parts.push(ast::InterpolatedPart::String(next_part.clone()));
+            // After parsing the expression, we expect RightBrace
+            // The lexer will continue the string on the NEXT token call after RightBrace
+            self.consume(TokenKind::RightBrace, "}")?;
+            
+            // Now the lexer should have continued the string and returned the next string part
+            // (which may be empty if string ends after })
+            // Check what token we have next
+            match self.current().map(|t| &t.kind) {
+                Some(TokenKind::StringLiteral(next_part)) => {
+                    // The lexer has continued the string after the }
+                    // Only add non-empty string parts
+                    if !next_part.is_empty() {
+                        parts.push(ast::InterpolatedPart::String(next_part.clone()));
+                    }
+                    self.advance()?;
+                    
+                    // Check if there's another interpolation
+                    if !self.check(&TokenKind::LeftBrace) {
+                        // No more interpolations - we're done
+                        break;
+                    }
                 }
-                self.advance()?;
-                
-                // Check if there's another interpolation
-                if !self.check(&TokenKind::LeftBrace) {
-                    // No more interpolations - we're done
+                Some(TokenKind::Eof) | None => {
+                    // String ended right after the } - we're done
                     break;
                 }
-            } else {
-                // This shouldn't happen - the lexer should have continued the string
-                // But if it didn't, we need to consume the } manually
-                if self.check(&TokenKind::RightBrace) {
-                    self.advance()?;
+                _ => {
+                    // Unexpected token - string interpolation is complete
+                    break;
                 }
-                break;
             }
         }
         
@@ -1156,7 +1163,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix expression parsing within interpolated strings
     fn test_parse_interpolated_string_simple() {
         let source = r#""Hello {name}""#;
         let mut parser = Parser::new(source).unwrap();
