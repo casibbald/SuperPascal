@@ -697,6 +697,55 @@ impl IRBuilder {
                 }
                 result
             }
+            Node::SliceExpr(slice) => {
+                // Array slicing: array[start:end:step]
+                // This generates a call to array_slice runtime function
+                let array_val = self.build_expression(slice.array.as_ref());
+                
+                // Build start index (or -1 for None)
+                let start_val = if let Some(start) = &slice.start {
+                    self.build_expression(start)
+                } else {
+                    Value::Immediate(-1) // -1 indicates None
+                };
+                
+                // Build end index (or -1 for None)
+                let end_val = if let Some(end) = &slice.end {
+                    self.build_expression(end)
+                } else {
+                    Value::Immediate(-1) // -1 indicates None
+                };
+                
+                // Build step (or 0 for None, which means step of 1)
+                let step_val = if let Some(step) = &slice.step {
+                    self.build_expression(step)
+                } else {
+                    Value::Immediate(0) // 0 indicates None (default step of 1)
+                };
+                
+                // For now, we'll use placeholders for array_length and element_size
+                // In a full implementation, these would come from type information
+                let array_length = Value::Immediate(0); // Placeholder - would need type info
+                let element_size = Value::Immediate(4); // Placeholder - would need type info
+                
+                // Generate IR using the helper function
+                let (inst, result) = self.generate_array_slice(
+                    array_val,
+                    array_length,
+                    element_size,
+                    start_val,
+                    end_val,
+                    step_val,
+                );
+                
+                if let Some(func) = self.current_function_mut() {
+                    let entry_label = func.entry_block.clone();
+                    if let Some(entry) = func.get_block_mut(&entry_label) {
+                        entry.add_instruction(inst);
+                    }
+                }
+                result
+            }
             Node::FieldExpr(field) => {
                 // Field access: record.field
                 let record_val = self.build_expression(field.record.as_ref());
@@ -1260,6 +1309,38 @@ impl IRBuilder {
     /// Get the built program
     pub fn into_program(self) -> Program {
         self.program
+    }
+
+    // ===== Array Runtime Support =====
+    // These helper functions generate IR calls to Array runtime functions
+
+    /// Generate IR for array slicing: array_slice(array_ptr, array_length, element_size, start, end, step)
+    /// Returns a temporary value with the ArraySlice pointer result
+    pub fn generate_array_slice(
+        &mut self,
+        array_ptr: Value,
+        array_length: Value,
+        element_size: Value,
+        start: Value,
+        end: Value,
+        step: Value,
+    ) -> (Instruction, Value) {
+        let result_temp = self.new_temp();
+        // CALL array_slice, array_ptr, array_length, element_size, start, end, step -> result_temp
+        let inst = Instruction::new(
+            Opcode::Call,
+            vec![
+                Value::Label("array_slice".to_string()),
+                array_ptr,
+                array_length,
+                element_size,
+                start,
+                end,
+                step,
+                result_temp.clone(),
+            ],
+        );
+        (inst, result_temp)
     }
 
     // ===== Variant Runtime Support =====
@@ -3025,5 +3106,78 @@ mod tests {
             false,
         );
         assert!(!proc1.is_assignable_to(&proc3));
+    }
+
+    #[test]
+    fn test_generate_array_slice() {
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+        
+        let array_ptr = Value::Temp(1);
+        let array_length = Value::Immediate(10);
+        let element_size = Value::Immediate(4);
+        let start = Value::Immediate(1);
+        let end = Value::Immediate(5);
+        let step = Value::Immediate(1);
+        
+        let (inst, result) = builder.generate_array_slice(
+            array_ptr,
+            array_length,
+            element_size,
+            start,
+            end,
+            step,
+        );
+        
+        // Verify instruction
+        assert_eq!(inst.opcode, Opcode::Call);
+        if let Value::Label(label) = &inst.operands[0] {
+            assert_eq!(label, "array_slice");
+        } else {
+            panic!("Expected Label for function name");
+        }
+        
+        // Verify result is a temp
+        assert!(matches!(result, Value::Temp(_)));
+    }
+
+    #[test]
+    fn test_build_slice_expression() {
+        let mut builder = IRBuilder::new();
+        builder.start_function("test".to_string(), None);
+        
+        // Create a slice expression: arr[1:5]
+        let slice = Node::SliceExpr(ast::SliceExpr {
+            array: Box::new(Node::IdentExpr(ast::IdentExpr {
+                name: "arr".to_string(),
+                span: Span::new(0, 3, 1, 1),
+            })),
+            start: Some(Box::new(Node::LiteralExpr(ast::LiteralExpr {
+                value: ast::LiteralValue::Integer(1),
+                span: Span::new(5, 6, 1, 1),
+            }))),
+            end: Some(Box::new(Node::LiteralExpr(ast::LiteralExpr {
+                value: ast::LiteralValue::Integer(5),
+                span: Span::new(7, 8, 1, 1),
+            }))),
+            step: None,
+            span: Span::new(0, 8, 1, 1),
+        });
+        
+        let result = builder.build_expression(&slice);
+        
+        // Verify result is a temp
+        assert!(matches!(result, Value::Temp(_)));
+        
+        // Verify array_slice instruction was generated
+        if let Some(func) = builder.current_function_mut() {
+            let entry_label = func.entry_block.clone();
+            if let Some(entry) = func.get_block_mut(&entry_label) {
+                let slice_inst = entry.instructions.iter()
+                    .find(|inst| inst.opcode == Opcode::Call && 
+                          matches!(&inst.operands[0], Value::Label(label) if label == "array_slice"));
+                assert!(slice_inst.is_some(), "Should have array_slice instruction");
+            }
+        }
     }
 }

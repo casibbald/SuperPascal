@@ -7,9 +7,11 @@
 pub mod variant;
 pub mod closure;
 pub mod interface;
+pub mod array;
 
 /// Re-export modules for convenience
 pub use variant::*;
 pub use closure::*;
 pub use interface::*;
+pub use array::*;
 
