@@ -133,12 +133,14 @@ pub unsafe fn array_slice(
         // In a real implementation, this would use the runtime allocator
         // For now, we'll return a pointer to the original data (copy-on-write would be better)
         // This is a placeholder - actual implementation would allocate new memory
-        if step_size > 0 {
-            // Forward: start from start_idx
-            array_ptr.add(start_idx * element_size) as *mut u8
-        } else {
-            // Reverse: start from start_idx (will iterate backwards)
-            array_ptr.add(start_idx * element_size) as *mut u8
+        unsafe {
+            if step_size > 0 {
+                // Forward: start from start_idx
+                array_ptr.add(start_idx * element_size) as *mut u8
+            } else {
+                // Reverse: start from start_idx (will iterate backwards)
+                array_ptr.add(start_idx * element_size) as *mut u8
+            }
         }
     } else {
         core::ptr::null_mut()

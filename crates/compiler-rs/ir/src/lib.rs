@@ -2651,7 +2651,7 @@ mod tests {
 
     #[test]
     fn test_build_if_statement() {
-        use ast::{IfStmt, LiteralExpr, LiteralValue, Block};
+        use ast::{IfStmt, LiteralExpr, LiteralValue};
         use tokens::Span;
         
         let mut builder = IRBuilder::new();

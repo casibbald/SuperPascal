@@ -246,10 +246,9 @@ mod tests {
         }
         
         // Clean up
-        unsafe {
-            interface_release(source_ptr);
-            interface_release(source_ptr);
-        }
+        // interface_release is a safe function (handles unsafe internally)
+        interface_release(source_ptr);
+        interface_release(source_ptr);
     }
 
     #[test]
@@ -278,10 +277,9 @@ mod tests {
         }
         
         // Clean up
-        unsafe {
-            interface_release(new_ptr);
-            interface_release(new_ptr);
-        }
+        // interface_release is a safe function (handles unsafe internally)
+        interface_release(new_ptr);
+        interface_release(new_ptr);
     }
 
     #[test]
@@ -364,10 +362,9 @@ mod tests {
         }
         
         // Clean up
-        unsafe {
-            interface_release(ptr2);
-            interface_release(ptr2);
-        }
+        // interface_release is a safe function (handles unsafe internally)
+        interface_release(ptr2);
+        interface_release(ptr2);
     }
 }
 
