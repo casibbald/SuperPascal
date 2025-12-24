@@ -51,6 +51,9 @@ pub struct Lexer {
     column: usize,
     /// Lookahead buffer (for peek)
     lookahead: Option<Token>,
+    /// State for string interpolation: (quote_char, start_line, start_col, accumulated_string)
+    /// When Some, we're continuing an interpolated string after an expression
+    string_continuation: Option<(char, usize, usize, String)>,
 }
 
 impl Lexer {
@@ -62,6 +65,7 @@ impl Lexer {
             line: 1,
             column: 1,
             lookahead: None,
+            string_continuation: None,
         }
     }
 
@@ -73,6 +77,13 @@ impl Lexer {
         }
 
         self.skip_whitespace();
+        
+        // Check if we're continuing an interpolated string after an expression
+        // This check happens after whitespace skipping so we can handle } properly
+        if let Some((quote_char, start_line, start_col, accumulated)) = self.string_continuation.take() {
+            // We're continuing a string after a } - scan the rest
+            return self.continue_interpolated_string(quote_char, start_line, start_col, accumulated);
+        }
         
         // Check for directives before comments
         let ch = if !self.is_at_end() { Some(self.current_char()) } else { None };
@@ -113,7 +124,19 @@ impl Lexer {
         } else if ch == '\'' {
             self.scan_char_or_string()?
         } else if ch == '"' {
-            self.scan_string_double()?
+            // String interpolation may return Token directly
+            let token_result = self.scan_string_double();
+            match token_result {
+                Ok(token) => {
+                    // scan_string_double already handles storing LeftBrace in lookahead if { was found
+                    return Ok(token);
+                }
+                Err(e) => return Err(e),
+            }
+        } else if ch == '}' && self.string_continuation.is_some() {
+            // We're continuing an interpolated string after an expression
+            let (quote_char, start_line, start_col, accumulated) = self.string_continuation.take().unwrap();
+            return self.continue_interpolated_string(quote_char, start_line, start_col, accumulated);
         } else if ch == '{' {
             // Comment start - should have been skipped, but handle just in case
             self.skip_comment_curly()?;
@@ -513,7 +536,8 @@ impl Lexer {
     }
 
     /// Scan string literal (double quotes)
-    fn scan_string_double(&mut self) -> Result<TokenKind, LexerError> {
+    fn scan_string_double(&mut self) -> Result<Token, LexerError> {
+        let start_pos = self.position;
         let start_line = self.line;
         let start_col = self.column;
 
@@ -535,6 +559,27 @@ impl Lexer {
                     self.advance(); // Skip closing quote
                     break;
                 }
+            } else if ch == '{' {
+                // String interpolation: return string part and prepare for LeftBrace
+                let string_part: String = chars.iter().collect();
+                let brace_pos = self.position;
+                let brace_line = self.line;
+                let brace_col = self.column;
+                let end_pos = self.position;
+                let span = Span::new(start_pos, end_pos, start_line, start_col);
+                
+                // Store continuation state (we'll continue after the expression)
+                self.string_continuation = Some(('"', start_line, start_col, string_part.clone()));
+                
+                // Advance past the {
+                self.advance();
+                
+                // Store LeftBrace in lookahead and return the string part
+                let brace_span = Span::new(brace_pos, brace_pos + 1, brace_line, brace_col);
+                self.lookahead = Some(Token::new(TokenKind::LeftBrace, brace_span));
+                
+                // Return the string part
+                return Ok(Token::new(TokenKind::StringLiteral(string_part), span));
             } else if ch == '\\' {
                 // Escape sequence
                 self.advance(); // Skip backslash
@@ -558,7 +603,9 @@ impl Lexer {
             });
         }
 
-        Ok(TokenKind::StringLiteral(chars.iter().collect()))
+        let end_pos = self.position;
+        let span = Span::new(start_pos, end_pos, start_line, start_col);
+        Ok(Token::new(TokenKind::StringLiteral(chars.iter().collect()), span))
     }
 
     /// Scan escape sequence
@@ -592,6 +639,78 @@ impl Lexer {
                 column,
             }),
         }
+    }
+
+    /// Continue scanning an interpolated string after an expression
+    /// Called when we encounter } and we're in string continuation mode
+    fn continue_interpolated_string(&mut self, quote_char: char, start_line: usize, start_col: usize, accumulated: String) -> Result<Token, LexerError> {
+        let start_pos = self.position;
+        let mut chars = Vec::new();
+        
+        // We should be at a } token - skip it
+        if self.current_char() == '}' {
+            self.advance();
+        }
+
+        while !self.is_at_end() {
+            let ch = self.current_char();
+
+            if ch == quote_char {
+                // Check for escaped quote
+                if quote_char == '"' && self.peek_char() == Some('"') {
+                    chars.push('"');
+                    self.advance(); // Skip first quote
+                    self.advance(); // Skip second quote
+                } else if quote_char == '\'' && self.peek_char() == Some('\'') {
+                    chars.push('\'');
+                    self.advance(); // Skip first quote
+                    self.advance(); // Skip second quote
+                } else {
+                    // Closing quote - end of interpolated string
+                    self.advance(); // Skip closing quote
+                    break;
+                }
+            } else if ch == '{' {
+                // Another interpolation - save continuation and return current part
+                let string_part: String = chars.iter().collect();
+                let combined = accumulated + &string_part;
+                let end_pos = self.position;
+                let span = Span::new(start_pos, end_pos, start_line, start_col);
+                
+                // Store continuation state
+                self.string_continuation = Some((quote_char, start_line, start_col, combined));
+                
+                // Return the string part
+                return Ok(Token::new(TokenKind::StringLiteral(string_part), span));
+            } else if ch == '\\' {
+                // Escape sequence
+                self.advance(); // Skip backslash
+                let escaped = self.scan_escape_sequence(start_line, start_col)?;
+                chars.push(escaped);
+            } else if ch == '\n' || ch == '\r' {
+                return Err(LexerError::UnterminatedString {
+                    line: start_line,
+                    column: start_col,
+                });
+            } else {
+                chars.push(ch);
+                self.advance();
+            }
+        }
+
+        if self.is_at_end() && self.source[self.position - 1] != quote_char {
+            return Err(LexerError::UnterminatedString {
+                line: start_line,
+                column: start_col,
+            });
+        }
+
+        // Combine accumulated string with current part
+        let string_part: String = chars.iter().collect();
+        let final_string = accumulated + &string_part;
+        let end_pos = self.position;
+        let span = Span::new(start_pos, end_pos, start_line, start_col);
+        Ok(Token::new(TokenKind::StringLiteral(final_string), span))
     }
 
     /// Scan operator or delimiter
