@@ -22,9 +22,9 @@ pub struct ArraySlice {
 /// - `array_ptr`: Pointer to the source array
 /// - `array_length`: Length of the source array
 /// - `element_size`: Size of each element in bytes
-/// - `start`: Start index (0-based), None means from beginning
-/// - `end`: End index (exclusive), None means to end
-/// - `step`: Step size, None means step of 1
+/// - `start`: Start index (signed, negative means from end), None means from beginning
+/// - `end`: End index (signed, negative means from end), None means to end
+/// - `step`: Step size (signed, negative means reverse), None means step of 1
 /// 
 /// # Returns
 /// A new ArraySlice containing the sliced data
@@ -39,29 +39,86 @@ pub unsafe fn array_slice(
     array_ptr: *const u8,
     array_length: usize,
     element_size: usize,
-    start: Option<usize>,
-    end: Option<usize>,
-    step: Option<usize>,
+    start: Option<i32>,
+    end: Option<i32>,
+    step: Option<i32>,
 ) -> ArraySlice {
-    // Normalize indices
-    let start_idx = start.unwrap_or(0);
-    let end_idx = end.unwrap_or(array_length);
+    // Normalize indices (convert negative indices to positive)
+    let normalize_index = |idx: i32| -> usize {
+        if idx < 0 {
+            // Negative index: count from end
+            // e.g., -1 means array_length - 1, -2 means array_length - 2
+            let abs_idx = (-idx) as usize;
+            if abs_idx > array_length {
+                0
+            } else {
+                array_length - abs_idx
+            }
+        } else {
+            idx as usize
+        }
+    };
+    
     let step_size = step.unwrap_or(1);
     
-    // Handle negative indices (Python-style)
-    // For now, we'll handle this at the call site if needed
+    // Handle default start/end for reverse slicing
+    let (start_idx, end_idx) = if step_size < 0 {
+        // Reverse slicing: defaults are different
+        let default_start = start.map(normalize_index).unwrap_or(array_length.saturating_sub(1));
+        // For reverse, None end means "before index 0", which we represent as 0
+        // But we need to allow going past 0, so we use a special value
+        // Actually, for reverse slicing, end should be -1 (before first element)
+        // But since we normalize -1 to length-1, we need special handling
+        let default_end = end.map(|e| {
+            if e == -1 {
+                // Special case: -1 means "before first element" for reverse slicing
+                0
+            } else {
+                normalize_index(e)
+            }
+        }).unwrap_or(0);
+        (default_start, default_end)
+    } else {
+        // Forward slicing: normal defaults
+        (start.map(normalize_index).unwrap_or(0), end.map(normalize_index).unwrap_or(array_length))
+    };
     
     // Clamp indices to valid range
     let start_idx = start_idx.min(array_length);
     let end_idx = end_idx.min(array_length);
     
-    // Calculate slice length
-    // Note: step_size is usize, so we can't have negative steps here
-    // Negative steps would need to be handled at the call site by converting
-    // to a signed type first. For now, we only handle positive steps.
+    // Calculate slice length based on step direction
     let slice_length = if step_size > 0 {
+        // Forward slicing: start to end
         if start_idx < end_idx {
-            (end_idx - start_idx + step_size - 1) / step_size
+            (end_idx - start_idx + step_size as usize - 1) / step_size as usize
+        } else {
+            0
+        }
+    } else if step_size < 0 {
+        // Reverse slicing: start to end
+        // For reverse, we need start >= end
+        // When end is explicitly provided (not None), it's exclusive
+        // When end is None (default), we include index 0
+        if start_idx >= end_idx {
+            let step_abs = (-step_size) as usize;
+            // If end was explicitly provided, it's exclusive, so we stop before end_idx
+            // If end was None (default for reverse), we include index 0
+            if end.is_some() {
+                // Explicit end: exclusive, so we want (start_idx - end_idx) / step_abs
+                // But we need to ensure we don't include end_idx, so: (start_idx - (end_idx - 1)) / step_abs
+                // Actually, for exclusive end, we want: (start_idx - end_idx) / step_abs
+                // But that gives us one too many. Let's use: (start_idx - end_idx) / step_abs
+                // Wait, for [8:2:-1], we want 6 elements: 8,7,6,5,4,3 (exclusive of 2)
+                // (8 - 2) / 1 = 6, which is correct!
+                // But we're getting 7, which means we're including 2
+                // The issue is our formula includes both start and end
+                // For exclusive end: (start_idx - end_idx) / step_abs
+                (start_idx - end_idx) / step_abs
+            } else {
+                // Default end (0): inclusive, so include it
+                (start_idx - end_idx + step_abs) / step_abs
+            }
         } else {
             0
         }
@@ -76,7 +133,13 @@ pub unsafe fn array_slice(
         // In a real implementation, this would use the runtime allocator
         // For now, we'll return a pointer to the original data (copy-on-write would be better)
         // This is a placeholder - actual implementation would allocate new memory
-        array_ptr.add(start_idx * element_size) as *mut u8
+        if step_size > 0 {
+            // Forward: start from start_idx
+            array_ptr.add(start_idx * element_size) as *mut u8
+        } else {
+            // Reverse: start from start_idx (will iterate backwards)
+            array_ptr.add(start_idx * element_size) as *mut u8
+        }
     } else {
         core::ptr::null_mut()
     };
@@ -113,6 +176,78 @@ mod tests {
             let slice = array_slice(array_ptr, 10, 4, Some(1), Some(5), None);
             assert_eq!(slice.length, 4);
             assert_eq!(slice.element_size, 4);
+        }
+    }
+
+    #[test]
+    fn test_array_slice_negative_start() {
+        let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let array_ptr = array.as_ptr() as *const u8;
+        
+        unsafe {
+            // Slice [-3:] should give [7, 8, 9] (last 3 elements)
+            let slice = array_slice(array_ptr, 10, 4, Some(-3), None, None);
+            assert_eq!(slice.length, 3);
+        }
+    }
+
+    #[test]
+    fn test_array_slice_negative_end() {
+        let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let array_ptr = array.as_ptr() as *const u8;
+        
+        unsafe {
+            // Slice [:-3] should give [0, 1, 2, 3, 4, 5, 6] (all but last 3)
+            let slice = array_slice(array_ptr, 10, 4, None, Some(-3), None);
+            assert_eq!(slice.length, 7);
+        }
+    }
+
+    #[test]
+    fn test_array_slice_negative_both() {
+        let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let array_ptr = array.as_ptr() as *const u8;
+        
+        unsafe {
+            // Slice [-5:-2] should give [5, 6, 7] (from -5 to -2)
+            let slice = array_slice(array_ptr, 10, 4, Some(-5), Some(-2), None);
+            assert_eq!(slice.length, 3);
+        }
+    }
+
+    #[test]
+    fn test_array_slice_reverse_step() {
+        let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let array_ptr = array.as_ptr() as *const u8;
+        
+        unsafe {
+            // Slice [::-1] should reverse the entire array
+            let slice = array_slice(array_ptr, 10, 4, None, None, Some(-1));
+            assert_eq!(slice.length, 10);
+        }
+    }
+
+    #[test]
+    fn test_array_slice_reverse_with_bounds() {
+        let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let array_ptr = array.as_ptr() as *const u8;
+        
+        unsafe {
+            // Slice [8:2:-1] should give [8, 7, 6, 5, 4, 3] (reverse from 8 to 2, exclusive of 2)
+            let slice = array_slice(array_ptr, 10, 4, Some(8), Some(2), Some(-1));
+            assert_eq!(slice.length, 6);
+        }
+    }
+
+    #[test]
+    fn test_array_slice_negative_index_out_of_bounds() {
+        let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let array_ptr = array.as_ptr() as *const u8;
+        
+        unsafe {
+            // Slice [-20:] should clamp to start (negative index too large)
+            let slice = array_slice(array_ptr, 10, 4, Some(-20), None, None);
+            assert_eq!(slice.length, 10); // Should get entire array
         }
     }
 

@@ -234,31 +234,87 @@ impl SemanticAnalyzer {
                 match array_type {
                     Type::Array { element_type, .. } | Type::DynamicArray { element_type } => {
                         // Analyze start, end, and step expressions if present
+                        // These can be integers (positive or negative) or unary minus expressions
                         if let Some(start) = &slice.start {
                             let start_type = self.analyze_expression(start);
+                            // Allow integer or unary minus of integer (for negative indices)
                             if !start_type.is_assignable_to(&Type::integer()) {
-                                self.core.add_error(
-                                    "Slice start index must be an integer".to_string(),
-                                    start.span(),
-                                );
+                                // Check if it's a unary minus expression
+                                if let Node::UnaryExpr(unary) = start.as_ref() {
+                                    if unary.op == ast::UnaryOp::Minus {
+                                        let inner_type = self.analyze_expression(unary.expr.as_ref());
+                                        if !inner_type.is_assignable_to(&Type::integer()) {
+                                            self.core.add_error(
+                                                "Slice start index must be an integer".to_string(),
+                                                start.span(),
+                                            );
+                                        }
+                                    } else {
+                                        self.core.add_error(
+                                            "Slice start index must be an integer".to_string(),
+                                            start.span(),
+                                        );
+                                    }
+                                } else {
+                                    self.core.add_error(
+                                        "Slice start index must be an integer".to_string(),
+                                        start.span(),
+                                    );
+                                }
                             }
                         }
                         if let Some(end) = &slice.end {
                             let end_type = self.analyze_expression(end);
                             if !end_type.is_assignable_to(&Type::integer()) {
-                                self.core.add_error(
-                                    "Slice end index must be an integer".to_string(),
-                                    end.span(),
-                                );
+                                // Check if it's a unary minus expression
+                                if let Node::UnaryExpr(unary) = end.as_ref() {
+                                    if unary.op == ast::UnaryOp::Minus {
+                                        let inner_type = self.analyze_expression(unary.expr.as_ref());
+                                        if !inner_type.is_assignable_to(&Type::integer()) {
+                                            self.core.add_error(
+                                                "Slice end index must be an integer".to_string(),
+                                                end.span(),
+                                            );
+                                        }
+                                    } else {
+                                        self.core.add_error(
+                                            "Slice end index must be an integer".to_string(),
+                                            end.span(),
+                                        );
+                                    }
+                                } else {
+                                    self.core.add_error(
+                                        "Slice end index must be an integer".to_string(),
+                                        end.span(),
+                                    );
+                                }
                             }
                         }
                         if let Some(step) = &slice.step {
                             let step_type = self.analyze_expression(step);
                             if !step_type.is_assignable_to(&Type::integer()) {
-                                self.core.add_error(
-                                    "Slice step must be an integer".to_string(),
-                                    step.span(),
-                                );
+                                // Check if it's a unary minus expression (for negative step)
+                                if let Node::UnaryExpr(unary) = step.as_ref() {
+                                    if unary.op == ast::UnaryOp::Minus {
+                                        let inner_type = self.analyze_expression(unary.expr.as_ref());
+                                        if !inner_type.is_assignable_to(&Type::integer()) {
+                                            self.core.add_error(
+                                                "Slice step must be an integer".to_string(),
+                                                step.span(),
+                                            );
+                                        }
+                                    } else {
+                                        self.core.add_error(
+                                            "Slice step must be an integer".to_string(),
+                                            step.span(),
+                                        );
+                                    }
+                                } else {
+                                    self.core.add_error(
+                                        "Slice step must be an integer".to_string(),
+                                        step.span(),
+                                    );
+                                }
                             }
                         }
                         // Slice returns an array of the same element type
