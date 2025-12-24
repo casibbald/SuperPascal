@@ -491,7 +491,14 @@ impl super::Parser {
         }
         
         // Parse the pattern: { Expression } StringLiteral { Expression } ... StringLiteral
-        while self.check(&TokenKind::LeftBrace) {
+        // Continue while we have LeftBrace (either in current or peek, since lexer uses lookahead)
+        loop {
+            // Check if we have a LeftBrace (either in current or peek)
+            if !self.check(&TokenKind::LeftBrace) && !self.check_peek(&TokenKind::LeftBrace) {
+                // No more interpolations - we're done
+                break;
+            }
+            
             // Consume {
             self.advance()?;
             
@@ -515,11 +522,9 @@ impl super::Parser {
                     }
                     self.advance()?;
                     
-                    // Check if there's another interpolation
-                    if !self.check(&TokenKind::LeftBrace) {
-                        // No more interpolations - we're done
-                        break;
-                    }
+                    // After advancing, the next token should be LeftBrace (if there's another interpolation)
+                    // or the string closing quote (if we're done)
+                    // The loop will check for LeftBrace and continue if found
                 }
                 Some(TokenKind::Eof) | None => {
                     // String ended right after the } - we're done
@@ -1190,7 +1195,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix expression parsing within interpolated strings
+    #[test]
     fn test_parse_interpolated_string_multiple() {
         let source = r#""Hello {name}, you are {age} years old""#;
         let mut parser = Parser::new(source).unwrap();
@@ -1210,7 +1215,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix expression parsing within interpolated strings
     fn test_parse_interpolated_string_expression_only() {
         let source = r#""{value}""#;
         let mut parser = Parser::new(source).unwrap();
