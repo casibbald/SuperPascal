@@ -51,6 +51,7 @@ pub enum Node {
     CallExpr(CallExpr),
     IndexExpr(IndexExpr),
     SliceExpr(SliceExpr),  // Array slicing: arr[start:end:step]
+    InterpolatedString(InterpolatedString),  // String interpolation: 'Text {expr} more text'
     FieldExpr(FieldExpr),
     DerefExpr(DerefExpr),
     InheritedExpr(InheritedExpr),
@@ -535,6 +536,21 @@ pub struct SliceExpr {
     pub span: Span,
 }
 
+/// Interpolated string expression ('Text {expr} more text')
+/// Parts alternate between string literals and expressions
+#[derive(Debug, Clone, PartialEq)]
+pub struct InterpolatedString {
+    pub parts: Vec<InterpolatedPart>,  // Alternating string literals and expressions
+    pub span: Span,
+}
+
+/// Part of an interpolated string (either a string literal or an expression)
+#[derive(Debug, Clone, PartialEq)]
+pub enum InterpolatedPart {
+    String(String),      // String literal part
+    Expression(Box<Node>), // Expression to interpolate
+}
+
 /// Field expression (record field access)
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldExpr {
@@ -833,6 +849,7 @@ impl Node {
             Node::CallExpr(c) => c.span,
             Node::IndexExpr(i) => i.span,
             Node::SliceExpr(s) => s.span,
+            Node::InterpolatedString(i) => i.span,
             Node::FieldExpr(f) => f.span,
             Node::DerefExpr(d) => d.span,
             Node::InheritedExpr(i) => i.span,

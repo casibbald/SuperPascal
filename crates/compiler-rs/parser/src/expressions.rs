@@ -70,10 +70,18 @@ impl super::Parser {
                 let token = self.current().unwrap().clone();
                 let value_clone = value.clone();
                 self.advance()?;
-                Ok(Node::LiteralExpr(ast::LiteralExpr {
-                    value: ast::LiteralValue::String(value_clone),
-                    span: token.span,
-                }))
+                
+                // Check if this string contains interpolation markers
+                if value_clone.contains('{') {
+                    // Parse as interpolated string
+                    self.parse_interpolated_string(&value_clone, token.span)
+                } else {
+                    // Regular string literal
+                    Ok(Node::LiteralExpr(ast::LiteralExpr {
+                        value: ast::LiteralValue::String(value_clone),
+                        span: token.span,
+                    }))
+                }
             }
             Some(TokenKind::BooleanLiteral(value)) => {
                 let token = self.current().unwrap().clone();
@@ -468,6 +476,20 @@ impl super::Parser {
             // Multiplicative operators (highest precedence)
             ast::BinaryOp::Multiply | ast::BinaryOp::Divide | ast::BinaryOp::Div | ast::BinaryOp::Mod => 5,
         }
+    }
+
+    /// Parse interpolated string: 'Text {expr} more text'
+    /// This is called when a string literal contains '{' characters
+    /// The lexer should have already split the string into parts
+    fn parse_interpolated_string(&mut self, raw_string: &str, start_span: Span) -> ParserResult<Node> {
+        // For now, if the string contains '{', we'll need to parse it differently
+        // The lexer should have already handled splitting, but for now we'll
+        // just return an error indicating this needs lexer support
+        // TODO: Implement full lexer support for string interpolation
+        Err(ParserError::InvalidSyntax {
+            message: format!("String interpolation not yet fully implemented. Found '{{' in string: {}", raw_string),
+            span: start_span,
+        })
     }
 
     /// Parse argument list: ( expression { , expression } )
