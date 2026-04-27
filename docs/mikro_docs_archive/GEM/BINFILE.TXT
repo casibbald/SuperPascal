@@ -1,0 +1,137 @@
+Date: 9 Aug 88 18:17:14 GMT
+Comment:  Extracted from Info-Atari16 (INFO-A16) digest number 88-347
+From: mcvax!hp4nl!philmds!leo@uunet.uu.net  (Leo de Wit)
+Subject: The different parts of an ST binary file. (Tutorial)
+To: info-atari16@score.stanford.edu
+
+In article <8136@watdragon.waterloo.edu> rfpfeifle@violet.waterloo.edu (Ron
+ Pfeifle) writes:
+>I'm curious about the way binaries are stored prior to being loaded for
+>execution, and about what the loader does to the program being loaded.
+>
+>I understand that a binary contains three sections--a text section,
+>a data section, and a bss section.   The text section and the data section
+>I think are pretty clear; the text is the program, the data is, well, data.
+
+It can contain a symbol table and relocation information as well.
+
+>But what is the bss section for?  And what does the loader do to addresses
+>in all three sections?
+>
+>Additionally, what is the exact format that these three sections are arranged
+>in.
+>
+>
+>Thanks,
+>Ron
+
+This is what I could come up with; if Allan Pratt is reading this he can
+both take note of the bugs in Pexec (if they are not already fixed) and
+correct me if I'm wrong:
+
+   Note that I'm mostly talking about the binary, i.e. the program file,
+   not the in-core process image (unless stated otherwise). By loader I
+   mean that part (subroutine) of the Pexec code that actually loads /
+   relocates / clears the image from the program file. This is what I
+   could make of it after consulting the ROM (rumors only manual 8-);
+   any comments / corrections happily accepted:
+
+   The binary starts off with a header of 0x1c bytes. First I will give
+   a short explanation of each item in the header, then some details.
+   The first two bytes (0x0-0x1) must be 0x601a.
+   The bytes 0x2-0x5 give the text (=code) length. The text starts immediately
+   after the header, at address 0x1c. It contains all executable statements
+   in a relocatable format.
+   The bytes 0x6-0x9 give the data length. The data segment starts immediately
+   after the text segment. In this segment all initialized static and global
+   data is stored (relocatable).
+   The bytes 0xa-0xd give the bss length. The bss segment contains all
+   uninitialized data and as such DOES NOT OCCUPY ANY SPACE in the binary.
+   The bytes 0xe-0x11 give the symbol table length. For most programs this
+   will be zero; the GST linker creates a symbol table if you link with the
+   -debug option. This table is typically used by debuggers, not by the
+   loader (skipped).
+   The bytes 0x12-0x19 are currently not used, as far as I can see (reserved
+   for future use?).
+   The bytes 0x1a-0x1b constitute a flag; if it is non-zero, no relocation is
+   done.
+
+   Details:
+   If the first two bytes are not 0x601a, the Pexec fails
+   with an error code of -66. There is a problem with this failure
+   because the file opened by the loader is not closed. This can run a
+   program (e.g. a shell) out of file descriptors. A workaround for this
+   bug is to first open the program as a file and then close it (giving
+   you the 'next' file descriptor); when the immediately following Pexec
+   fails with error -66 Fclose should be called with this descriptor. In
+   some other cases as well Pexec erroneously does not close the program
+   file after an error in the load function. Probably the safest for shell
+   programs, makes etc. is to explicitly close the program file when Pexec
+   returns an error (and also after running a file that had the relocation
+   flag set, see below).
+   The loader puts the starts and lengths of text, data and bss on the
+   basepage. The text segment starts 0x100 bytes after the start of the
+   basepage. If we consider the basepage as consisting of an array of
+   longs (for simplicity's sake):
+      the 0th is the start address of the basepage
+      the 1th is the end of the program ('one past')
+      the 2th is the start address of text
+      the 3th is the length of text
+      the 4th is the start address of data
+      the 5th is the length of data
+      the 6th is the start address of bss
+      the 7th is the length of bss.
+   The loader copies the text and data segments into the process image
+   from the program file.
+   The loader fills the bss with zeroes in the image, and in fact all
+   space occupied by the program except for the text and data segments; this
+   has been a topic for discussion in this newsgroup which I will not go
+   into now.
+   If text size + data size + bss size > the allocation for the program
+   the load aborts with error -39 (out of memory?). Also in this case the
+   program file remains open (bug).
+   If the flag at 0x1a-0x1b of the program file IS 0, relocation is done as
+   follows: the long just after the symbol table is interpreted as an offset
+   from the text start pointer to start relocation with; if it is < 0 or
+   > text length + data length the loader aborts with error -66. The rest
+   of the bytes (after the long) are relocation information, were 0
+   indicates 'done' and 1 indicates 'skip 0xfe bytes'; every other value
+   means: add this value to the current relocation pointer and relocate
+   the long at that new address by adding the start of text to the value
+   already at that address (an ST binary is relocated relative to the start
+   of text). So generally speaking 1 byte suffices to point out a value to
+   be relocated.
+   The null filling is done after the image has been relocated; if the
+   no-relocation flag is set (0x1a-0x1b), null filling is NOT DONE!
+   (how's that for settled expectations, Allan? 8-).
+   Isn't that nice to hear for all those performance freaks??! Note
+   that this means that also the bss is not cleared (incorrect, at least for
+   C programs), and again in this case the program file is not closed.
+   About the symbol table: the following declarations should explain the
+   layout; the table is in fact a 'naminfo array':
+
+   #define UNDEF  0x2000
+   #define ABSOL  0xA000
+   #define GLOBAL 0xA200
+
+   typedef struct naminfo {
+      char d_name[8];   /* name of symbol */
+      short d_type;     /* type of symbol: see above for values */
+      long d_address;   /* address (relative to start of text) */
+   } naminfo;
+
+   About the layout of the header of the program file and the basepage
+   of the image: of course you should use a neat struct that clarifies the
+   layout of the stuff (some compilers have it already in header files); I
+   didn't care to do so in this particular case.
+
+   Besides loading the program file Pexec does some other stuff as well,
+   before it actually switches to the new process. If you're interested
+   I could tell you in a follow-up (this one being long enough already).
+
+   This was about what you were looking for? Enjoy.
+
+
+                             Leo.
+
+

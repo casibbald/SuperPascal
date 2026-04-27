@@ -1,0 +1,217 @@
+<html>
+
+<head>
+<title>Hidden Surface Removal</title>
+</head>
+
+<body BGCOLOR="#000000" TEXT="0088FF" LINK="#00FFFF" VLINK="#008080" ALINK="#000080">
+
+<h1>Hidden Surface Removal</h1>
+
+<h2>Fifth part of <a href="http://pages.infinit.net/jstlouis/3dbhole"><i>The 3D Coding
+Blackhole</i></a> tutorial series</h2>
+
+<ul>
+  <li><a HREF="#Dilemna">The Dilemna</a> </li>
+  <li><a HREF="#Backface">Backfaces removal</a> </li>
+  <li><a HREF="#Z-Buffering">Z-Buffering</a> </li>
+</ul>
+<a NAME="Dilemna">
+
+<h1><font color="#FFFFFF">The Dilemna</font></h1>
+</a>
+
+<p>The heart of a 3D engine is its HSR system... So you must think twice about which one
+to chose... I'll point right now the pros and cons of the most popular ones: 
+
+<dl>
+  <h2>Painter's algorithm</h2>
+  <dd><ul type="square">
+      <li>Required time increase faster </li>
+      <li>Hard to implement (especially overlapping tests) </li>
+      <li>Unable to sort correctly complex scenes</li>
+    </ul>
+  </dd>
+  <h2><br>
+  BinarySpacePartitioning trees</h2>
+  <dd><ul type="square">
+      <li>Extremely fast </li>
+      <li>Hard to implement </li>
+      <li>Can only sort static polygons </li>
+      <li>Need stored trees </li>
+    </ul>
+  </dd>
+  <h2><br>
+  Z-Buffering</h2>
+  <dd><ul type="square">
+      <li>Required time increasing linearly with the number of polygons </li>
+      <li>Faster than the Painter's above 5000 polygons </li>
+      <li>Able to render any scene perfectly, even logically incorrect ones </li>
+      <li>Extremely easy to implement </li>
+      <li>Straightforward </li>
+      <li>Requires a lot of memory </li>
+      <li>Usually slow </li>
+    </ul>
+  </dd>
+</dl>
+
+<p>My own choice is Z-Buffering. I will only talk about it, so if you want some reference
+for the other algorithms, take a look at my list in the last chapters. <a NAME="Backface"></p>
+
+<h1><font color="#FFFFFF">Backfaces removal</font></h1>
+</a>
+
+<p>In addition to these methods, we can easily remove back facing polygons to save a lot
+of computing time. We will start by defining some useful function to compute our plane and
+normals and all that stuff. Later, we will add texture and shading computaions to this
+function. These numbers will be kept in global variables: </p>
+
+<pre WRAP>
+float A,B,C,D;
+BOOL backface;
+</pre>
+
+<p>And our function's beginning will look like this. We start by extracting every
+coordinate in float variables: </p>
+
+<pre WRAP>
+void ENG3D_SetPlane(Polygon_t *Polygon,Object_t *Object)
+{
+   float x1=Vert(0).Aligned.x;
+   float x2=Vert(1).Aligned.x;
+   float x3=Vert(2).Aligned.x;
+   float y1=Vert(0).Aligned.y;
+   float y2=Vert(1).Aligned.y;
+   float y3=Vert(2).Aligned.y;
+   float z1=Vert(0).Aligned.z;
+   float z2=Vert(1).Aligned.z;
+   float z3=Vert(2).Aligned.z;
+
+</pre>
+
+<p>Then we compute every member of the plane equation: </p>
+
+<pre WRAP>
+   A=y1*(z2-z3)+y2*(z3-z1)+y3*(z1-z2);
+   B=z1*(x2-x3)+z2*(x3-x1)+z3*(x1-x2);
+   C=x1*(y2-y3)+x2*(y3-y1)+x3*(y1-y2);
+   D=-x1*(y2*z3-y3*z2)-x2*(y3*z1-y1*z3)-x3*(y1*z2-y2*z1);
+</pre>
+
+<p>Then we check if it's facing us or not: </p>
+
+<pre WRAP>
+   backface=D&lt;0;
+}
+</pre>
+<a NAME="Z-Buffering">
+
+<h1><font color="#FFFFFF">Z-Buffering</font></h1>
+</a>
+
+<p>Z-Buffering consists in keeping the z coordinate of every point we put on the screen in
+a huge array, and when we come to put another at the same place, we check if it is closer
+to the viewer or if it behind. We only draw it in the first case. As you can see, the only
+thing we have to do is to compute the <b><i>z</i></b> value for every point. But first of
+all, we declare a global array and allocate space for it (MEMORYSIZE is the product of the
+vertical and horizontal resolutions): </p>
+
+<pre WRAP>
+typedef long ZBUFTYPE;
+ZBUFTYPE *zbuffer;
+zbuffer=(ZBUFTYPE *)malloc(sizeof(ZBUFTYPE)*MEMORYSIZE);
+</pre>
+
+<p>We use a long as the z-buffer type, because we're gonna use fixed points. And you must
+not forget to set every <b><i>z</i></b> coordinate to the farthest value possible: </p>
+
+<pre WRAP>
+   int c;
+   for(c=0; c&lt;MEMORYSIZE; c++)
+      zbuffer[c]=-32767;
+</pre>
+
+<p align="left">And now come more maths. How do you find the <b><i>z</i></b> coordinate?
+We only have them for the defined vertices, not for EVERY point of the polygon. Actually,
+what you need is to do is the inverse of projection. And our projection equations were:</p>
+
+<p align="center"><font SIZE="+1"><i><b>u = f · x / z</b></i></font></p>
+
+<p align="center">and</p>
+
+<p align="center"><font SIZE="+1"><i><b>v = f · y / z</b></i></font></p>
+
+<p align="left">where <b><i>u</i></b> is the <b><i>x</i></b> coordinate on the screen,
+minus XOrigin, and <b><i>v</i></b> is the <b><i>y</i></b> coordinate on the screen, minus
+YOrigin. The plane equation is:</p>
+
+<p align="center"><font SIZE="+1"><i><b>Ax + By + Cz + D = 0</b></i></font></p>
+
+<p align="left">And once we've isolated <b><i>x</i></b> and <b><i>y</i></b> we get:</p>
+
+<p align="center"><font SIZE="+1"><i><b>x = uz / f</b></i></font></p>
+
+<p align="center">and</p>
+
+<p align="center"><font SIZE="+1"><i><b>y = vz / f</b></i></font></p>
+
+<p align="left">If we replace the variables in the plane equation, it becomes:</p>
+
+<p align="center"><font SIZE="+1"><i><b>A(uz / f) + B(vz / f) + Cz = -D </b></i></font></p>
+
+<p align="left">and we can extract the z component:</p>
+
+<p align="center"><font SIZE="+1"><i><b>z(A(u / f) + B(v / f) + C) = -D</b></i></font></p>
+
+<p>So to find what we're looking for:</p>
+
+<p align="center"><font SIZE="+1"><i><b>z = -D / (A(u / f) + B(v / f) + C)</b></i></font></p>
+
+<p align="left">But since we would need to execute all this divides for each pixel, it's
+much faster to compute the <b><i>1/z</i></b> value instead:</p>
+
+<p align="center"><font SIZE="+1"><i><b>1 / z = -(A(u / f) + B(v / f) +C) / D</b></i></font><br>
+<font SIZE="+1"><i><b>1 / z = -(A / (fD))u - (B / (fD))v - C / D</b></i></font></p>
+
+<p align="left">So at the beginning of a run of pixels:</p>
+
+<p align="center"><font SIZE="+1"><i><b>1 / z = -(A / (fD))u<sub>1</sub> - (B / (fD))v - C
+/ D</b></i></font></p>
+
+<p align="left">And for each pixels, it increments of:</p>
+
+<p align="center"><font SIZE="+1"><i><b>-(A / (fD))</b></i></font></p>
+
+<p align="left">What will the code look like? </p>
+
+<pre WRAP>   #define FIXMUL (1&lt;&lt;20)
+
+   int offset=y*MODEINFO.XResolution+x1;
+   int i=x1-Origin.x, j=y-Origin.y;
+   float z_,dz_;
+   ZBUFTYPE z,dz;
+
+   //Initialize 1/z value (z: 1/z)
+   dz_=((A/(float)Focal_Distance)/-D);
+   z_=((dz_*i)+( (B*j/(float)Focal_Distance) + C) /-D);
+   dz=dz_*FIXMUL;
+   z=z_*FIXMUL;
+</pre>
+
+<p>Then for each pixel, we simply do a: </p>
+
+<pre WRAP>
+   if(z&gt;ZBuffer[offset])
+   {
+      zbuffer[offset]=z;
+      SCREENBUFFER[offset]=color;
+   }
+   z+=dz;</pre>
+
+<p>And we got it!</p>
+
+<p><em>Copyright © 1996-1998 Jerome St-Louis</em></p>
+
+<p><a href="MAILTO:jerstlouis@videotron.ca">jerstlouis@videotron.ca</a></p>
+</body>
+</html>

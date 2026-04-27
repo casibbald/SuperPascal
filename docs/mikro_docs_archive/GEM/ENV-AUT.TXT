@@ -1,0 +1,91 @@
+Date: 10 Dec 88 05:30:51 GMT
+Comment:  Extracted from Info-Atari16 (INFO-A16) digest number 88-???
+From: portal!cup.portal.com!Thomas_E_Zerucha@uunet.uu.net
+Subject: Re: Setting default environment from auto folder
+To: info-atari16@score.stanford.edu
+
+I managed to do it - it was fairly simple, but what you have to do is find
+the pointer in the environment of the parent of the process from the auto
+folder (or the parent of the parent - the one that the desktop gets).
+
+A short assembly program follows (the one I use)
+
+---cut here---
+    .text
+*housekeeping
+    move.l    a7,a5
+    move.l    4(a5),a5    ;compute size for TSR call
+    move.l    $c(a5),d6    ;text
+    add.l    $14(a5),d6    ;data
+    add.l    $1c(a5),d6    ;bss
+    add.l    #$100,d6    ;basepage
+    add.l    #$40,d6        ;saftey
+* alter vector
+    move.l    #doit,-(sp)    ;point to the vector changer code
+    move.w    #38,-(sp)    ;we want to do it in supervisor mode!
+    trap    #14        ;execute it!
+    addq.l    #6,sp
+* tell everyone we are here
+    pea    msg1
+    move.w    #9,-(sp)
+    trap    #1
+    addq.l    #6,sp
+* TSR
+    clr    -(sp)        ;exit but stay
+    move.l    d6,-(sp)
+    move    #$31,-(sp)
+    trap    #1
+
+bexit:    move    #0,-(sp)
+    trap    #1
+* set env upon startup
+movenv:
+    move.l    a7,a5
+    move.l    4(a5),a5
+    move.l    a5,a4
+linkup:
+    move.l    $24(a4),a4
+    movea.l    $2c(a4),a3
+    cmp.w    #0,(a3)
+    beq.s    setwork
+    move.l    a4,a5
+    bra.s    linkup
+setwork:
+
+    move.l    #workar,$2c(a5)
+    move.l    shlsav,a5
+    jmp    (a5)
+***
+* install (in super) vector
+doit:    move.l    $4fe,shlsav    ;move
+    move.l    #movenv,$4fe    ;move
+    rts                     ;and return
+***
+*************************
+    .data
+msg1:        dc.b    'GEM Resource Path Set\r\n',0
+shlsav:        dc.l    0
+workar:    dc.b    'PATH=;D:\\RESOURCE;D:\\;D:\\BIN'
+    dc.b    ';d:\\LANG;D:\\SCRIPTS;D:\\USRBIN;.',0
+    dc.b    'TEMP=c:\\tmp\\',0
+    dc.b    'INCLUDE=d:\\include\\',0
+    dc.b    'SYMB=d:\\lang\\',0
+    dc.b    'LIB=d:\\lib\\',0
+    dc.b    'STARTUP=d:\\lib\\gemstart',0
+    dc.b    'RUNTIME=d:\\lib\\gemlib',0
+    dc.b    'SUFF=,.prg,.ttp,.tos',0
+    dc.b    'LIBPATH=d:\\mwlib,d:\\lang,.',0
+    dc.b    'INCDIR=d:\\mwinc\\',0
+    dc.b    'TMPDIR=c:\\tmp\\',0
+    dc.b    'TIMEZONE=EST:0:EDT',0
+    dc.b    'M2SBM=d:\\modlibs',0
+    dc.b    'M2OBM=d:\\modlibs',0
+    dc.b    'EDITOR=stedt.ttp',0
+        dc.b    'SEDT=d:\\include\\',0
+    dc.b    'SHELL=csh.tos',0
+    dc.b    0,0
+
+    .end
+
+------------------------------
+

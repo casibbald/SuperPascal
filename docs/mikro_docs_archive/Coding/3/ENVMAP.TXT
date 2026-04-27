@@ -1,0 +1,82 @@
+
+                         
+                          Enviroment Mapping Tutorial
+                              by Frenzy / TeSkO
+ ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Hiya reader. This is a small tutorial to help people understand how simple
+ enviroment mapping really is :) I'm assuming you have expirence with 3d
+ graphics and have done Gouraud shading and texture mapping. Also, I'm
+ assuming you have knowledge of or have used fixed point maths namly 8.8
+ fixed point. If your answer is yes to all the above then this doc should
+ tell you what you need to know, otherwise I'd suggest you leech some other
+ tutors from ftp.cdrom.com or othersuch site..
+
+ THE ENVIROMENT MAP:
+ ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ First things first, the enviroment map. This is just a texture map. It
+ can be any size but for simplicity I'm going to assume a 256x256 texture
+ map. This enviroment map can be anything you like. However, depending on
+ how your enviroment map looks depends on how your env mapping will look.
+ What I'm trying to say is this. If you have a good map your objects will
+ look a lot kewler. You can also simulate phong using env mapping just by
+ making an appropiate enviroment map. A sample enviroment map is given
+ called 'PHONG.PCX'. Its just a simple map that will make your objects
+ phong shaded. Once you have seen this you should get the basic idea on
+ what an enviroment map should look like. There is also one called
+ 'METAL.PCX' which will make your objects look metalic/chrome. Looks very
+ nice. I got this from somewhere, dunno where. But it looks good and it
+ demonstrates what the enviroment maps should look like. BTW, this METAL.PCX
+ looks rather like a face.. How bizarre, I really would like to know where
+ it came from :-) 
+
+ HOW TO ENVIROMENT MAP:
+ ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Well, you've read the above and seen the .PCX files and you are still with
+ me. Good, here comes actual env mapping technique. 
+
+ You have vertex normals for each vertex in your object right? Just like
+ in gouraud. Well, the way we use them is a bit different. In gouraud you
+ took the dot product of the light vector with each vertex normal. Well, in
+ env mapping you have to calculate the U,V coordinates so you can texture
+ map with them. Remember, env mapping is a straight texture map. The only
+ difference is the way you get your U,V coordinates. What you do is this:-
+
+ You must have your vertex normals in 8.8 fixed point!!!
+
+ For every vertex normal in your object compute its U,V coordinate by taking
+ the X and Y components and dividing by 2. This gets them in the range of
+ -128..128, then add 128 to that. That then gives you them in the range of
+ 0..256 which just so happens to be the dimensions of your texture map :)
+ So, you have this:-
+
+ U = (x / 2) + 128;
+ V = (y / 2) + 128;
+
+ Now, once you have done that you can simply texture map as normal using
+ these U,V coordinates... Simple eh? Why, did you expect it to be hard??
+
+ OPTIMIZATIONS:
+ ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Of course, make your texture mapper fast. Also, you don't need to rotate
+ the vertex normals. This saves a lot of time. I won't go into this as you
+ might already know. If not then just ask. There is also another way to
+ find your U,V coordinates using spherical coordinates. However, this is
+ not necessary. 
+
+ FINAL WORDS:
+ ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Well, thats that done. A good 5mins read? if it didn't help then sorry
+ but it works for me.. If ya have any other questions then just ask. Your
+ surely have some.
+
+ Oh yes, I threw together a small example called 'DEMO.EXE' to show you
+ what it should look like. Its crude but its only an example. Don't know
+ how fast it will be on your machine but on a dx4 120 it runs at 51 fps.
+ My env mapping is not fully optimised at the moment :(
+ 
+ Byeeee
+
+ Signed,
+ Paul aka Frenzy
+ EMAIL: p.adams@wlv.ac.uk
+

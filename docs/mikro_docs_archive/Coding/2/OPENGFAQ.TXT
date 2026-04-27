@@ -1,0 +1,1209 @@
+Newsgroups: comp.answers,comp.graphics.opengl,news.answers
+Path: senator-bedfellow.mit.edu!bloom-beacon.mit.edu!hookup!olivea!charnel.ecst.csuchico.edu!waldorf.csc.calpoly.edu!decwrl!enews.sgi.com!sgi!kicksave.asd.sgi.com!woo
+From: woo@kicksave.asd.sgi.com (Mason Woo)
+Subject: comp.graphics.opengl Frequently Asked Questions (FAQ) [1/1]
+Version: 1.35
+Message-ID: <D72GxJ.828@sgi.sgi.com>
+Followup-To: poster
+Last-Modified: 1995 April 11
+Summary: This contains a list of Frequently Asked Questions about OpenGL (R)
+Keywords: FAQ
+Supersedes: header
+Sender: woo@kicksave.asd.sgi.com
+Reply-To: woo@kicksave.asd.sgi.com
+Organization: Silicon Graphics Inc.
+Date: Sat, 15 Apr 1995 08:00:55 GMT
+Approved: mailnews@sgi.sgi.com
+Archive-Name: graphics/opengl-faq
+Expires: Mon, 15 May 1995 00:00:00 GMT
+Lines: 1188
+Xref: senator-bedfellow.mit.edu comp.answers:11270 comp.graphics.opengl:4345 news.answers:42008
+
+* marks recently modified answers or new questions
+
+Q1:  What is OpenGL?
+Q2:  Where are World Wide Web sites for OpenGL?
+Q3:  What is the relationship between IRIS GL and OpenGL?
+Is OpenGL source code or binary code compatible with IRIS GL?
+Q4:  What does the .gl or .GL file format have to do with OpenGL?
+Q5:  What documentation is available for OpenGL?  (A bibliography of
+OpenGL documents is listed here.)  Where can I get the OpenGL specification?  
+Q6:  Where can I find OpenGL source code examples?  For
+instance, where can I find the GLUT toolkit or examples which 
+mix OpenGL with Motif and use the Motif widget?
+Q7:  Which vendors are supporting OpenGL?
+* Q8:  What OpenGL implementations are available?
+Q9:  How do I contribute OpenGL code examples to a publicly
+accessible archive?
+Q10:  Why should I port my IRIS GL application to OpenGL?
+Q11:  How much work is it to convert an IRIS GL program to OpenGL?
+What are the major differences between them?
+Q12:  Who needs to license OpenGL?  Who doesn't?  How is a
+commercial license acquired?
+Q13:  How does a university or research institution acquire access to
+OpenGL source code?
+Q14:  What are the conformance tests?
+Q15:  What is Silicon Graphics policy on "free" implementations
+of the OpenGL API?  What is Mesa 3D and where can I get it?
+Q16:  How is the OpenGL governed?  Who decides what changes can be
+made?
+Q17:  Who are the current ARB members?
+Q18:  What is the philosophy behind the structure of the ARB?
+Q19:  How does the OpenGL ARB operate logistically?  When does the
+ARB have meetings?
+Q20:  How do additional members join the OpenGL ARB?
+Q21:  So if I'm not a member of the ARB, am I shut out of the decision 
+making process?
+Q22:  Are ARB meetings open to observers?
+Q23:  What is the OpenGL Advisory Forum?
+Q24:  When using Xlib, how do I create a borderless window?
+Q25:  How do I switch between single buffer and double buffer mode?
+Q26:  On my machine, it appears that glXChooseVisual
+is only able to match double-buffered visuals.  I want to have more
+bits of color resolution, so how do I render in single buffer mode?
+Q27:  I've got a 24-bit machine, but my OpenGL windows
+are not using the full color resolution.  What's wrong?  My
+program looks fine on one machine, but the depth buffer doesn't work
+on another.  What's wrong?
+* Q28:  What information is available about OpenGL extensions?
+* Q29:  How do I make shadows in OpenGL?
+
+------
+Subject:  Q1:  What is OpenGL?
+
+A:  OpenGL(R) is the software interface for graphics hardware that allows
+graphics programmers to produce high-quality color images of 3D
+objects.  OpenGL is a rendering only, vendor neutral API providing 2D
+and 3D graphics functions, including modelling, transformations,
+color, lighting, smooth shading, as well as advanced features like
+texture mapping, NURBS, fog, alpha blending and motion blur.  OpenGL
+works in both immediate and retained (display list) graphics modes.
+OpenGL is window system and operating system independent.  OpenGL has 
+been integrated with Windows NT and with the X Window System under
+UNIX.  Also, OpenGL is network transparent.  A defined common extension
+to the X Window System allows an OpenGL client on one vendor's platform
+to run across a network to another vendor's OpenGL server. 
+
+------
+Subject:  Q2:  Where are World Wide Web sites for OpenGL?
+
+A:  OpenGL--The Integration of Windowing and 3D Graphics
+WWW URL http://hertz.eng.ohio-state.edu/~hts/opengl/article.html
+Maintained by Harry Shamansky.  
+
+OpenGL WWW Center
+WWW URL http://www.sgi.com/Technology/openGL/
+Maintained by Mason Woo.
+
+IBM WWW Center for OpenGL
+WWW URL http://www.austin.ibm.com/software/OpenGL
+
+Template Graphics Software WWW Center for OpenGL
+WWW URL http://www.sd.tgs.com/~template/Products/opengl.html
+
+Microsoft Developer Network OffRamp Web Server
+WWW URL http://www.microsoft.com
+
+------
+Subject:  Q3:  What is the relationship between IRIS GL and OpenGL?
+Is OpenGL source code or binary code compatible with IRIS GL?
+
+A:  IRIS GL is the predecessor to OpenGL.  After other implementors
+had experience trying to port the IRIS GL to their own machines, it
+was learned that the IRIS GL was too tied to a specific window system
+or hardware.  Based upon consultations with several implementors,
+OpenGL is much more platform independent.
+
+IRIS GL is being maintained and bugs will be fixed, but SGI will no
+longer add enhancements.  OpenGL is now the strategic interface for
+3-D computer graphics.
+
+OpenGL code is neither binary nor source code compatible with IRIS
+GL code.  It was decided to bite the bullet at this time to make
+OpenGL incompatible with IRIS GL and fix EVERYTHING that made IRIS GL
+difficult to port or use.  For example, the gl prefix has been added
+to every command:  glVertex(), glColor(), etc.
+
+------
+Subject:  Q4:  What does the .gl or .GL file format have to do with OpenGL?
+
+A:  .gl files have nothing to do with OpenGL.  It's a file format for
+images, which has no relationship to IRIS GL or OpenGL.
+
+------
+Subject:  Q5:  What documentation is available for OpenGL?  (A
+bibliography of OpenGL documents is listed here.)  Where can I
+get the OpenGL specification?
+
+A:  A 2 volume set, The OpenGL Technical Library (The OpenGL
+Programming Guide and The OpenGL Reference Manual) is published
+by Addison-Wesley.  The ISBN numbers for both English and
+Japanese versions are listed below.  You can purchase the books
+in extremely large volume by calling Addison-Wesley (+1-617-944-3700).
+
+The man pages for the OpenGL API, its Utility Library (GLU), and
+the X server extension API (GLX) and a PostScript version of the
+OpenGL specification are available via anonymous, public ftp, on
+the machine sgigate.sgi.com in ~ftp/pub/opengl/doc.  The OpenGL,
+OpenGL Utility Library, X extensions and GLX protocol
+specifications are all in the file, specs.tar.Z, which has been
+tar'd and compressed.  Please read the accompanying README file,
+which explains the copyright and trademark rules for usage of the
+specification.  Possession of the OpenGL Specification does not
+grant the right to reproduce, create derivative works based on or
+distribute or manufacture, use or sell anything that embodies the
+specification without an OpenGL license from SGI.
+
+What follows is a bibliography of articles, books, and papers written
+about OpenGL.
+
+Books (in English)
+------------------
+Neider, Jackie, Tom Davis, and Mason Woo, OpenGL Programming
+Guide:  The Official Guide to Learning OpenGL, Release 1,
+Addison-Wesley, Reading, Massachusetts, 1993 (ISBN 0-201-63274-8).
+
+OpenGL Architecture Review Board, OpenGL Reference Manual:  The
+Official Reference Document for OpenGL, Release 1,
+Addison-Wesley, Reading, Massachusetts, 1992 (ISBN 0-201-63276-4).
+
+Magazine articles
+-----------------
+Bruno, Lee.  "Graphics Users Debate Three Hot Topics," Open Systems Today,
+December 12, 1994, p. HP3, HP8.
+
+Bruno, Lee.  "Sun Continues to Resist OpenGL Tide," Open Systems Today,
+November 28, 1994, p. SF1, SF5-6.
+
+Davis, Tom.  "Moving to OpenGL," IRIS Universe, Number 25,
+Summer, 1993.
+
+Deffeyes, Suzy and John Spitzer.  "OpenGL on OS/2," OS/2 Developer Magazine,
+Nov/Dec 94, pages 34-45.
+
+Glazier, Bill.  "The 'Best Principle':  Why OpenGL is emerging as the 3D
+graphics standard," Computer Graphics World, April, 1992.
+
+"Industry group pushing 3-D graphics standard," Computer Design,
+July, 1994, p. 50, 52.
+
+Karlton, Phil.  "Integrating the GL into the X environment:  a
+high performance rendering extension working with and not against
+X,"  The X Resource:  Proceeding of the 6th Annual X Technical
+Conference, O'Reilly Associates, Issue 1, Winter, 1992.
+
+Kilgard, Mark, Simon Hui, Allen Leinwand, and Dave Spalding. ``X
+Server Multi-rendering for OpenGL and PEX,'' The X Resource
+Proceedings of the 8th Annual X Technical Conference, O'Reily
+and Associates, Sebastopol, California, January 1994.
+
+Kilgard, Mark J.  "OpenGL & X:  An Introduction,"  The X Journal.
+November-December, 1993, page 36-51.
+
+Kilgard, Mark J.  "Using OpenGL with Xlib,"  The X Journal.
+January-February, 1994, page 46-65.
+
+Kilgard, Mark J.  "Using OpenGL with Motif,"  The X Journal.
+July-August, 1994.
+
+"OpenGL Programs a New Horizon for Sun," SunWorld, January, 1994,
+page 15-17.
+
+Prosise, Jeff.  "Advanced 3-D Graphics for Windows NT 3.5:
+Introducing the OpenGL Interface, Part I," Microsoft Systems Journal,
+October, 1994, Vol. 9, Number 10, pages 15-29.
+
+Prosise, Jeff.  "Advanced 3-D Graphics for Windows NT 3.5: 
+Introducing the OpenGL Interface, Part II,"  Microsoft Systems Journal,
+November, 1994, Vol. 9, Number 11.
+
+Prosise, Jeff.  "Understanding Modelview Transformations in
+OpenGL for Windows NT," Microsoft Systems Journal,
+February, 1995, Vol. 10, Number 2.
+
+
+Japanese language magazine articles and books
+---------------------------------------------
+
+"Interview with Masamichi Tachi about OpenGL_Japan," 
+Nikkei Computer Graphics, 3/1995, p. 56-57.
+
+Matsumoto, Masayuki, PIXEL, "OpenGL, A 3D Graphics Standard",
+10/1994, p. 138-145.
+
+Matsumoto, Masayuki, Toragi Computer, 
+"A introduction to OpenGL for PC users", 11/1994, p. 147-150.
+
+Neider, Jackie, Tom Davis, and Mason Woo, OpenGL Programming
+Guide:  The Official Guide to Learning OpenGL, Release 1,
+Addison-Wesley Publishers Japan, Tokyo, 1993 (ISBN 4-7952-9645-6).
+
+Nikkei Electronics, No. 616, Sept. 5, 1994, p. 99-105.
+
+OpenGL Architecture Review Board, OpenGL Reference Manual:  The
+Official Reference Document for OpenGL, Release 1,
+Addison-Wesley Publishers Japan, Tokyo, 1992 (ISBN 4-7952-9644-8).
+
+"OpenGL," Nikkei Computer Graphics, 1/1995, p. 203-209.
+
+PIXEL, No. 143, 8/94, p. 65 ("From the Editor's Desk"), 
+p. 117-121 ("3D API, OpenGL").
+
+Sasaki, Akiko and Masayuki Matsumoto, Software Design, "Chapter 3:  OpenGL",
+November 11, 1994, ISSN 0916-6297, p. 26-48.
+
+"Windows NT and OpenGL," Nikkei Computer Graphics, 3/1995, p. 156-161.
+
+Woo, Mason, "OpenGL," Nikkei Computer Graphics, 11/1994,
+p. 142.
+
+"X Windows and OpenGL," Nikkei Computer Graphics, 2/1995, p. 155-160.
+
+Technical reports
+-----------------
+Segal, Mark and Kurt Akeley.  The OpenGL Graphics System:  A
+Specification.  Technical report, Silicon Graphics Computer
+Systems, Mountain View, California, 1992, revised 1993.
+
+Segal, Mark and Kurt Akeley.  The OpenGL Graphics Interface.
+Technical paper, Silicon Graphics Computer Systems, Mountain
+View, California, 1993.
+
+------
+Subject:  Q6:  Where can I find OpenGL source code examples?  For
+instance, where can I find the GLUT toolkit or examples which 
+mix OpenGL with Motif and use the Motif widget?
+
+You can get the source code examples which are found in the
+OpenGL Programming Guide via anonymous, public ftp on
+sgigate.sgi.com in the file ~ftp/pub/opengl/opengl.tar.Z
+
+Mark Kilgard has created an ftp site for source code, which is
+part of his articles in the X Journal magazine.  This includes
+the GLUT toolkit (version 2.0) and OpenGL with Motif examples.
+The directory is:
+
+sgigate.sgi.com:~ftp/pub/opengl/xjournal
+
+The specification, source code (including FORTRAN bindings), 
+and articles for GLUT (Graphics Library Utility Toolkit) is in:
+sgigate.sgi.com:~ftp/pub/opengl/xjournal/GLUT
+( URL ftp://sgigate.sgi.com/pub/opengl/xjournal/GLUT/ )
+
+This distribution of GLUT should compile on:
+  o  DEC Alpha workstation running OSF/1 with Open3D layered product
+  o  IBM RS/6000 workstations running AIX with OpenGL support
+  o  SGI workstation running IRIX 5.2 or higher supporting OpenGL
+  o  Template Graphics Software's OpenGL for Sun workstations
+  o  Mesa 1.1 for Unix workstations.
+
+GLUT version 2.0 is ready.  It has:
+  o  window functions, including multiple windows for OpenGL rendering
+  o  callback driven event processing
+  o  sophisticated input devices, including dials and buttons box, 
+     tablet, Spaceball(TM)
+  o  idle routines and timers
+  o  a simple cascading pop-up menu facility
+  o  routines to generate wire and solid objects
+  o  bitmap and stroke fonts
+  o  request and queries for multisample and stereo windows
+  o  OpenGL extension query support
+
+The version 2 functionality is fully backward compatible
+with the version 1 functionality.
+
+------
+Subject:  Q7:  Which vendors are supporting OpenGL?
+
+A:  OpenGL is supported by many hardware and software vendors.
+As of March, 1995, OpenGL has been licensed to:
+
+AccelGraphics, AT&T, Cirrus Logic, Cray Research, Daikin, Digital
+Equipment, Division, 3Dlabs, Evans & Sutherland, Harris Computer, Hitachi,
+IBM, the Institute for Information Industry, Intel, Intergraph,
+Japan Radio Co., Kendall Square Research, Media Vision,
+Microsoft, miro, NCD, NEC, NeTpower, Peritek, Portable Graphics, RasterOps,
+SPEA, Samsung, Sony, Template Graphics Software, and Univel.
+
+------
+Subject:  Q8:  What OpenGL implementations are available?
+
+A:  
+
+AccelGraphics
+-------------
+AccelGraphics, Inc. is currently shipping the AG300, a high-performance
+PCI-based OpenGL(R) graphics board for the PC.  AccelGraphics, Inc. is an
+OpenGL licensee and provides full support of OpenGL via client-loadable
+library on Windows NT(R) 3.5.  
+
+Running on a standard Pentium(TM), Alpha(TM), or MIPS(TM) PC with a PCI bus,
+the AG300 graphics accelerator card lets you manipulate larger and more
+complex 3D models and assemblies dynamically.  True color and full 3D
+acceleration, with a 16-bit Z-buffer and smooth double-buffered display at
+full screen (1280x1024) resolution, combine to provide high-performance
+dynamic viewing and rendering.
+
+Hardware Support
+       Scalable architecture efficiently leverages the system CPU
+       7.5 MB of total RAM
+           5 MB of VRAM for 32 plane frame-buffer
+           2.5 MB of DRAM for 16-bit Z-buffer
+       Rectangle clipping, Alpha blending, Logic Operations, Bilinear
+       Interpolation, and Dithering
+
+Supported Drivers and Applications
+
+       Microsoft Windows NT 3.5 or higher with OpenGL
+       Microsoft Windows 3.1
+       Windows 95(R) with OpenGL (late 1995)
+       Pro/ENGINEER(TM) and Pro/JR.(TM) from Parametric Technology Corporation
+       AutoCAD(TM) from Autodesk
+       MicroStation(TM) from Bentley Systems
+       Virtually any 3D application that utilizes OpenGL
+
+Supported Hardware Platforms
+
+       Any Intel Pentium system with 1 free PCI slot
+       Digital's Alpha based PC's
+       MIPS based PC's
+
+Supported Operating Systems
+
+       DOS, Windows 3.1, Windows NT
+
+       AccelGraphics, Inc. is headquartered in San Jose, CA
+       with regional offices in Atlanta, Orlando, Los Angeles,
+       Cincinnati and London, England.
+
+       For more information on the AG300, please call 
+       AccelGraphics, Inc. at 1-800-441-5699.
+
+       AutoCAD is a registered trademark of Autodesk.  Microstation
+       is a registered trademark of Bentley Systems.  Pentium is a
+       trademark of Intel Corporation.  AG300, ActionGraphics and 
+       AccelGraphics are trademarks of AccelGraphics, Inc.  Windows,        
+       Windows NT and Windows 95 are registered trademarks of Microsoft
+       Corporation.  OpenGL is a registered trademark of Silicon Graphics. 
+       Pro/ENGINEER and Pro/JR. are trademarks of Parametric Technology
+       Corporation.  All other trademarks are the property of the 
+       companies that issued them.
+
+
+Digital (DEC)
+------- -----
+Digital Equipment Corporation offers OpenGL to its customers as part of the
+the DEC Open3D layered product. DEC Open3D is available for DEC OSF/1 AXP and
+DEC OpenVMS AXP workstations. Supported graphics devices include:
+	PXG (all devices in the PXG family with z-buffers)
+	ZLX-M1
+	ZLX-M2
+	ZLX-E1
+	ZLX-E2
+At this time, Digital Equipment Corporation has no plans to offer
+Open3D on either VAXstations or DECstations.
+
+Digital Equipment Corporation (DEC) is shipping accelerated OpenGL for Windows
+NT on our AlphaStation models 200 and 400 using the ZLXp-E1, ZLXp-E2, and
+ZLXp-E3 graphics options.
+
+Now you can unleash the industry-leading speed and power of Digital's Alpha
+AXP technology with low-cost high-performance graphics accelerators that will
+change the way you view your work.
+
+The ZLXp-E1 provides leading 2D performance inexpensively. And breakthrough
+dithering technology lets the ZLXp-E1 display 3D smooth shaded images in 8
+planes with outstanding quality. Coupled with the ZLXp-E1's excellent
+performance, Digital's patented dithering capability provides an ideal
+solution for professionals in CASE, ECAD, and mechanical product design.
+
+The ZLXp-E2 delivers the high-performance and 24 plane, true color capability
+needed for image processing, medical imaging, desktop publishing, graphics
+arts, and multimedia. The ZLXp-E2 can be configured to run 8 bits double
+buffered with a 16 bit Z buffer, providing full dedicated hardware support for
+3D applications.
+
+The ZLXp-E3, featuring true color capability and a full 24 bit Z buffer for
+even more complex solid model rendering, is ideal for mechanical CAD and
+computer-aided molecular design.
+
+For further information contact your Digital Equipment sales representative.
+
+IBM
+---
+IBM offers OpenGL 1.0 at several different price and performance points,
+on most configurations of it's RS/6000 workstation line.  Hardware
+accelerated OpenGL is available through two recently announced products:
+the mid-range POWERgraphics GXT1000 and the high-end Freedom Series /6000.
+Both platforms provide h/w support for texture mapping, accumulation, 
+stencil and alpha buffers, as well as a h/w accelerated lighting and 
+geometry transformation pipeline. The Freedom Series is based on an
+architecture developed by Evans and Sutherland.
+
+OpenGL is supported on most other RS/6000 configurations, including 
+the GXT100 and GXT150 graphics adapters for the PowerPC-based /6000's 
+as well as on the CGDA, the Gt1 family, the Gt3 family, and the Gt4 
+family of graphics adapters.  This support is provided through 
+SoftGraphics, a highly-tuned, highly-optimized pure software 
+implementation of OpenGL.  (Because of the lack of support for an 
+RGB X11 TrueColor visual on the 3D-HP-CGP and GTO adapters, OpenGL 
+is not offered on these machines. This is the only exception to 
+OpenGL support on the RS/6000 line. Sorry). OpenGL requires AIX 3.2.5 
+or later.
+
+At the Fall '93 Comdex, IBM exhibited a software technology
+that allowed OpenGL to run under OS/2.  The interface that 
+integrates OpenGL with OS/2 was presented to the OpenGL ARB for 
+review. Beta versions of that interface will be available in the 
+first half of 1994, through the OS/2 Developer CD-ROM distribution.
+
+To purchase these products, contact your local IBM sales office.
+
+Intergraph
+----------
+Intergraph Computer Systems is currently shipping high-performance, PCI-based,
+OpenGL accelerators on its TD series of Personal Workstations.  Using state of
+the art dedicated hardware, the GLZ and GLI graphics products dramatically
+accelerate OpenGL and offer the high performance and features traditionally
+found only on much more expensive workstations.  These accelerators are
+available on Intergraph's TD-4 and TD-5 dual-Pentium Personal Workstations
+running Windows NT.
+
+GLZ and GLI offer advanced features such as:
+
+     - 24-bit, double buffered image planes at all display resolutions up to 
+       2 Mpixels
+     - 24-bit (GLZ) or 32-bit (GLI) Z-Buffer
+     - Full hardware support for Gouraud shading
+     - Full hardware support for texture processing (GLI only) with 8 
+       MTexels of texture storage
+     - Industry-standard PCI bus interface with DMA engine
+     - Support for multi-sync monitors up to 2 Mpixels at 76Hz vertical 
+       refresh
+     - Stereo ready
+     - Multiple color palette support
+     - 10-bit gamma correction
+
+For additional information call 1 (800) 763-0242 or browse Intergraph's WWW 
+pages at http://www.intergraph.com.
+
+Microsoft
+---------
+OpenGL is offered as a standard feature of Microsoft Windows NT 
+Workstation version 3.5.   The Microsoft implementation of OpenGL runs 
+with any computer and video hardware that is compatible with Windows NT 
+3.5.  Microsoft also provides documentation, sample source code, and 
+development tools to help build OpenGL applications in the Win32 
+Software Development Kit.   The Win32 SDK is available via Microsoft's 
+Developer Network.  
+
+For more information on the Win32 SDK, please call:
+	US at 1-800-759-5474
+	International at +1-402-691-0173
+
+Portable Graphics, Inc.
+----------------------------------------------------------
+3D Graphics Development and Porting Tools
+
+Portable Graphics, a subsidiary of Evans & Sutherland Computer Corporation,
+provides GL-based development and porting tools for a variety of workstation
+platforms.  Products for PCs (Windows NT, OS/2, Windows 95) will be
+available in 1995.  
+
+OpenGL for Sun:
+
+Portable Graphics' implementation of OpenGL for Sun is optimized for the
+SPARC/Solaris environment and passes the ARB conformance tests, including
+GLX server requirements for interoperability. Interoperability ensures
+consistent client-server communications between any OpenGL implementation
+across an X11 network. Native OpenGL on Freedom Series will be available
+from Evans & Sutherland in 1st Quarter 1995. OpenGL can coexist with PHIGS,
+PEX, or NPGL (IRIS GL 4.0-compatible) applications on the same device.
+Portable Graphics supplies the GLU library, and widget sets for both Motif
+and OPEN LOOK. Portable Graphics is an SMCC Catalyst Strategic Developer.
+
+OpenGL for HP:  
+
+Hewlett-Packard has choosen Evans & Sutherland (E&S) as its OpenGL supplier.
+OpenGL For Hewlett-Packard from E&S is now shipping for the HP Freedom
+Series accelerators. For your convenience, development licenses can be
+purchased directly from Hewlett-Packard or from Portable Graphics. Portable
+Graphics offers volume and educational discounts. OpenGL for the entire HP
+graphics accelerator product line is in development at E&S for release in
+Summer 1995. Developers who wish to develop OpenGL and Open Inventor
+applications for HP workstations with CRX or HCRX accelerators or the Model
+712, can get started now using NPGL and IRIS Inventor.  These applications
+can then be converted to OpenGL and Open Inventor when these products
+support the entire Series 700 product line. 
+
+Custom OpenGL Ports:
+
+Portable Graphics offers custom OpenGL ports for PC and workstation graphics
+accelerator manufacturers, and consulting services to hardware manufacturers
+and software developers.
+
+Open Inventor - 3D Developer's Toolkit:
+
+Portable Graphics also licenses Open Inventor from Silicon Graphics.  Open
+Inventor is currently available on the IBM RISC System/6000, Sun
+SPARCstation systems and HP Series 700 workstations with Freedom Series
+graphics accelerators. Portable Graphics will also provide Open Inventor for
+HP Series 700 workstations, Windows NT, Windows 95 and OS/2.  Portable
+Graphics offers IRIS Inventor for HP and Sun workstations.
+
+EDISON - Extensions to Open Inventor:
+
+Portable Graphics is currently developing extensions to Open Inventor. The
+product, which is called EDISON, will provide the framework to seamlessly
+link other software modules to Open Inventor.  The first extension released
+under EDISON will be the SHAPES Geometric Modeling System from XOX
+Corporation (Minneapolis, MN). By combining SHAPES and Open Inventor via
+EDISON, developers will obtain a powerful geometric computing system based
+on mathematical standards that also features an easy-to-use, interactive
+user interface and graphics rendering capabilities. The EDISON extensions to
+Open Inventor will be available in mid-1995 for Silicon Graphics
+workstations, followed by support for Sun, IBM, and HP workstations, and
+Windows NT, Windows 95 and OS/2. 
+ 
+Portable Graphics products are sold direct from the U.S. headquarters and
+the U.K. office. Authorized distributors are located in Australia, France,
+Germany, Japan and Taiwan.
+
+For more information about OpenGL, Open Inventor, EDISON extensions to Open
+Inventor, IRIS Inventor, or NPGL, contact:
+
+Portable Graphics, Inc.
+"An Evans & Sutherland Company"
+One Technology Center
+2201 Donley Drive, Suite 365
+Austin, TX 78758
+
+E-mail: glware@portable.com
+Voice:  (512) 719-8000
+Fax:  (512) 832-0752
+
+Silicon Graphics
+---
+Starting with IRIX 5.2, OpenGL is supported for the following graphics
+workstations:
+
+    Indy - Indy XL 8 or 24 bits, XZ (XZ, as of IRIX 5.3)
+    Indigo - Entry Level, XS, XS24, XZ, Elan
+    Indigo2 - XL, XZ, Extreme
+    Crimson - Entry Level, XS, XS24, Elan, Extreme, RealityEngine
+    Onyx - VTX, RealityEngine, RealityEngine2
+    4D30/35 - Elan
+
+With IRIX 5.3, OpenGL is supported for these workstations:
+
+    Personal IRIS Graphics: 8-bit, G, TG (except GR1.1)
+    VGX, VGXT, Skywriter
+
+This leaves the following graphics families with no OpenGL implementation:
+
+    IRIS 1000, 2000, and 3000 series
+    IRIS 4D/G, GT, GTX
+    Personal IRIS GR1.1 (suggest purchasing graphics board upgrade to GR1.2)
+
+Sony
+----
+Sony offers OpenGL on the complete range of its RISC based NEWS
+workstations.  Sony OpenGL requires NEWS OS 6.0.1 and later.
+This is a pure software implementation.  
+
+Starting in September 1994, Sony have hardware support for OpenGL
+on its 3D graphics workstations:  on the NWS-5000G and the 3D
+graphics acceleration card NWB-1501 for NWS-5000 series
+workstations.
+
+Template Graphics Software, Inc. (TGS)
+--------------------------------------
+The Standard in Graphics Tools
+
+* OpenGL - Accelerated to Hardware (Sun, Apple, Microsoft Windows 3.1)
+ 
+TGS is providing OpenGL direct to Sun SPARC Solaris 2.x acceleration
+hardware.  This differs from other software-only products in that it
+avoids the additional XGL software layer.  The result is a fast 
+performing and fully functional OpenGL for Sun workstations and 
+clone systems.  (OpenGL for Solaris from TGS was recently selected by
+Aries Research as the OpenGL to be sold with their SPARC systems.)
+ 
+	* In final beta now, available via ftp
+	* 100% functional today
+	* Direct acceleration for Sun ZX, Turbo ZX
+	* Direct support for GX, TGX, SX  board sets
+	* X11 network rendering to X terminals, PC-X servers, etc.
+	* PostScript hardcopy (on final release)
+	* GLX server extension for Solaris (on final)
+	* Does not require XGL for rendering
+ 
+TGS will also be providing OpenGL for Apple Power Macintosh in early 1995,
+with a software-rendering and graphics acceleration version.  TGS is 
+working with 3D chip/board vendors to deliver accelerated OpenGL for
+the Power Mac platform.
+
+TGS will also be providing OpenGL for Windows 3.1, direct to GDI, to ISV and
+and OEM customers.  OpenGL for Windows 3.1 is fully portable with the
+OpenGL for Windows NT 3.5 provided by Microsoft, including the WGL
+component.  
+
+* Open Inventor - C++ 3D Graphics Toolkit
+
+TGS will be a single-stop solution for Open Inventor 2.0 on UNIX and
+PC systems, outside of SGI of course!
+
+	* Open Inventor for Solaris - shipping (beta)
+	* Open Inventor for IBM AIX - shipping (beta)
+	* Open Inventor for Windows NT 3.5 - in alpha
+	* Open Inventor for Windows 3.1 -  2Q95
+	* Open Inventor for Windows 95 - TBA
+	* Open Inventor for DEC OSF/1 - 2Q95
+	* Open Inventor for HP - 2Q95
+	* Open Inventor for Apple - 3Q95
+	* Open Inventor for OS/2 - TBA
+
+ Note:   All of our Open Inventor products are tightly integrated
+         into the OpenGL on each system, including support for 3rd
+         party acceleration boards from Evans & Sutherland, GLINT,
+	 and others.  TGS is unique in our support for a direct
+	 to hardware OpenGL for Solaris, Apple and is the only
+	 vendor to support OpenGL for Win32s (Windows 3.1).
+
+* TGS Power Tools (tm) for Open Inventor
+
+TGS is also developing TGS Power Tools(tm) for Open Inventor which will
+include:
+
+        * Power Filters (tm) - Import/Export of 3D metafiles
+        * Power Viewers (tm) - 3D Desktop Utilties
+        * Web3D (tm) - 3D Internet tools
+
+Additional information on TGS Power Tools will be provided on request.
+
+* Sales and Support
+
+TGS has supported ISV's and professional graphics software developers since
+1982 from our San Diego headquarters.  TGS has regional sales offices in
+San Jose, Houston, Atlanta and Boston.  We also have distribution partners 
+in Europe and Asia.
+
+For additional information on TGS graphics software:
+
+        Template Graphics Software
+        9920 Pacific Heights Blvd. #200
+        San Diego, CA 92121
+
+	WWW = http://www.sd.tgs.com/~template
+	info@tgs.com
+
+        Robert J. Weideman, V.P. Marketing
+        (619)457-5359 x229
+        (619)452-2547 (fax)
+        robert@tgs.com
+
+3Dlabs
+------
+3Dlabs is currently shipping the GLINT 300SX, a high performance graphics
+processor providing workstation class 3D graphics acceleration in a single
+chip.  Designed to accelerate OpenGL, the GLINT 300SX implements in hardware 3D
+rendering operations such as Gouraud shading, depth buffering, anti-aliasing
+and alpha blending.
+
+Implemented around a scalable memory architecture, the GLINT 300SX reduces the
+cost and complexity of delivering high performance 3D graphics - making it
+ideal for a wide range of graphics products from PC boards to high-end
+workstation accelerators.  GLINT based products are already shipping from
+several companies with other developments in progress.
+
+Key features of the GLINT 300SX are:
+
+    - Full hardware support for Gourard shading, depth buffering, alpha
+      blending, anti-aliasing and dithering;
+    - 8, 16 or 32-bits per pixel RGBA and 4 or 8-bit color indexed;
+    - Screen resolutions up to 2560x2048;
+    - 16, 24 or 32-bit Z buffer;
+    - 4 or 8-bit stencil buffer
+    - Double buffering, stereo and overlay support ;
+    - PCI-bus Rev 2.0 interface with on-chip DMA;
+    - 112-bit memory interface.
+
+Since hardware is worthless without software, 3Dlabs have developed a highly
+optimized OpenGL driver for the GLINT 300SX.  This OpenGL driver is currently
+available under Windows NT 3.5 and will be ported to other operating systems
+such as Windows 95.  With GLINT 300SX and 3Dlabs' OpenGL GLINT driver,
+applications have achieved up to a 3,000 percent 3D display performance
+increase.
+
+To find out more:
+
+  3Dlabs Inc
+  2010 North First Street, Suite 403
+  San Jose, CA 95131,
+  Tel: (408) 436 3455
+  Fax: (408) 436 3458
+  Email: info@3Dlabs.com
+------------
+SGI does not speak for any other company.  However, this space is
+available for any company who wishes to state status reports or
+release dates for their OpenGL implementation.  Please send e-mail
+to opengl-secretary@sgi.com to add to this section.
+
+------
+Subject:  Q9:  How do I contribute OpenGL code examples to a publicly
+accessible archive?
+
+A:  To contribute to the public OpenGL archive, send mail to
+opengl-contrib@sgi.com.  Your mail should contain:
+
+    The material to be archived, or instructions for obtaining it.
+
+    An announcement suitable for posting to comp.graphics.opengl.
+
+SGI will place the material in the OpenGL/contrib directory on
+sgigate.sgi.com and post the announcement to this newsgroup.
+
+To retrieve something from the archive, use anonymous ftp to
+sgigate.sgi.com.  Once connected, cd to the directory OpenGL.
+(Case is significant.)  Currently there are two subdirectories:
+
+    doc
+	Manual pages for OpenGL and related libraries.
+
+    contrib
+	Contributions from the public.  
+
+Note that all contributions are distributed as-is; neither SGI nor the
+other companies on the OpenGL Architecture Review Board make any
+legally valid claims about the robustness or usefulness of this software.
+
+If you do not have access to anonymous ftp, consider using an
+"ftp-by-mail" server.  For information on one such server, send mail
+to ftpmail@decwrl.dec.com with a message body containing only the word
+"help".
+
+------
+Subject:  Q10:  Why should I port my IRIS GL application to OpenGL?
+
+SGI will be maintaining the old IRIS GL, but not enhancing it.  
+OpenGL is the API of choice on all new SGI machines.
+
+OpenGL has no subsets.  You can use the same functionality
+on all machines from SGI or from other vendors.
+
+OpenGL is better integrated with the X Window System than
+the old IRIS GL.  For example, you can mix OpenGL and X
+or Display PostScript drawing operations in the same window.
+
+The OpenGL naming scheme, argument list conventions, and
+rendering semantics are cleaner than those of IRIS GL.  This
+should make OpenGL code easier to understand and maintain.
+
+------
+Subject:  Q11: How much work is it to convert an IRIS GL program to OpenGL?
+What are the major differences between them?
+
+There is a fair amount of work, most of which is in substituting
+for window management or input handling routines, for which the 
+equivalents are not OpenGL, but the local window system, such as
+the X Windows System or Windows NT.  And all routine names have changed,
+at least, minimally; for example:  ortho() is now glOrtho(). 
+
+To help ease the way, port to "mixed model" right away, mixing the
+X Window System calls to open and manage windows, cursors, and color
+maps and read events of the window system, mouse and keyboard.  
+You can do that now with IRIS GL, if you are running IRIX 4.0.  
+
+In the X Window System, display mode choices (such as single or 
+double buffering, color index or RGBA mode) must be declared before 
+the window is initially opened.  You may also substitute for other
+IRIS GL routines, such as using a OSF/Motif menu system, in place of
+the IRIS GL pop-up menus.  You should use glXUseXFont(), whenever 
+you were using the font manager with IRIS GL.
+
+Tables for states such as lighting or line and polygon stipples will 
+be gone.  Instead of using a def/set or def/bind sequence to load a
+table, you turn on the state with glEnable() and also declare the
+current values for that state.
+
+Colors are best stored as floating point values, scaled from 0.0 to
+1.0 (0% to 100%).  Alpha is fully integrated in the RGBA mode and
+at least source alpha will be available on all OpenGL implementations.
+OpenGL will not arbitrarily limit the number of bits per color to 8.
+Clearing the contents of buffers no longer uses the current color, but
+a special "clearing" color for each buffer (color, depth, stencil, and
+accumulation).
+
+The transformation matrix has changed.  In OpenGL, there is no
+single matrix mode.  Matrices are now column-major and are post-multiplied,
+although that does NOT change the calling order of these routines from
+IRIS GL to OpenGL.  OpenGL's glRotate*() now allows for a rotation
+around an arbitrary axis, not just the x, y, and z axes.  lookat() 
+of IRIS GL is now gluLookAt(), which takes an up vector value, not
+merely a twist.  There is no polarview() in OpenGL, but a series
+of glRotate*()s and glTranslate*()s can do the same thing.
+
+There are no separate depth cueing routines in OpenGL.  Use linear fog.
+
+Feedback and selection (picking) return values, which are different
+from those found on any IRIS GL implementation.  For selection and
+picking, depth values will be returned for each hit.  In OpenGL, feedback 
+and selection will now be standardized on all hardware platforms.
+
+------
+Subject:  Q12:  Who needs to license OpenGL?  Who doesn't?  How is a
+commercial license acquired?
+
+A:  Companies which will be creating or selling binaries of the
+OpenGL library will need to license OpenGL.  Typical examples of
+licensees include hardware vendors, such as Digital Equipment,
+and IBM who would distribute OpenGL with the system software on 
+their workstations or PCs.  Also, some software vendors, such as 
+Portable Graphics and Template Graphics, have a business in creating 
+and distributing versions of OpenGL, and they need to license OpenGL.
+
+Applications developers do NOT need to license OpenGL.  If a
+developer wants to use OpenGL, that developer needs to obtain
+copies of a linkable OpenGL library for a particular machine.
+Those OpenGL libraries may be bundled in with the development
+and/or run-time options or may be purchased from a third-party
+software vendor, without licensing the source code or use of the
+OpenGL(R) trademark.
+
+Since many implementations will be a shared library on a hardware
+platform, the royalty sometimes will be charged for each hardware
+platform.  In those cases, it would not be charged for each
+application which used OpenGL.
+
+In general, licensing a source code implementation of OpenGL
+would not be useful for an application developer, because the
+binary created from that implementation would not be accelerated
+and optimized to run on the graphics hardware of a machine.
+
+If you need a license or would like more information, call Mason
+Woo at (415) 390-4205 or e-mail him at woo@sgi.com.  There are
+licenses available restricted to site (local) usage, or
+permitting redistribution of binary code.  The limited source
+license provides a sample implementation of OpenGL for $50,000.
+The license for commerical redistribution of OpenGL binaries has
+two most commonly chosen levels.  Level 1 costs $25,000.  Level 2
+costs $100,000, and includes the sample implementation of OpenGL.
+Both levels require a $5 royalty for every copy of the OpenGL
+binary, which is redistributed.
+
+------
+Subject:  Q13:  How does a university or research institution
+acquire access to OpenGL source code?
+
+A:  There is a university/research institution licensing program.  A
+university license entitles the institution to generate binaries and
+copy them anywhere, so long as nothing leaves the institution.  The
+OpenGL source and derived binaries can only be used for non-commercial
+purposes on-campus.  
+
+A university license costs $500 US.  This license provides source
+code for a sample implementation of OpenGL.  This source code is
+best designed for porting onto a system which supports the X
+Window System.  You can drop this into the X Consortium's X11
+server source tree and build a server with the OpenGL extension.
+To do this properly, you should have the MIT source for an X
+Server and some experience modifying it.
+
+Note that this gets you a software renderer only.  If your
+machine includes a graphics accelerator, the sample
+implementation is not designed to take any advantage of it.
+
+To obtain a university license, contact Mason Woo, OpenGL
+Licensing Manager at Silicon Graphics (woo@sgi.com).  Please
+provide a mailing address, telephone and fax number.
+
+Universities may also be interested in Mesa 3D.  See Q15.
+
+------
+Subject:  Q14:  What are the conformance tests?
+
+A:  The conformance tests are a suite of programs which judge the
+success of an OpenGL implementation.  Each implementor is required
+to run these tests and pass them in order to call their implementation 
+with the trademark OpenGL.  Passing the conformance tests ensures 
+source code compatibility of applications across all OpenGL 
+implementations.
+
+------
+Subject:  Q15:  What is Silicon Graphics policy on "free"
+implementations of the OpenGL API?  What is Mesa 3D and where can
+I get it?
+
+A:  From woo@sgi.com (Mason Woo)
+
+Silicon Graphics, as licensor of the OpenGL(R) trademark, does not
+permit non-licensed use of the OpenGL trademark, nor does it permit
+non-licensed use of the OpenGL conformance tests.  Silicon Graphics
+provides a source code sample implementation of OpenGL, but only to
+companies and organizations which agree to the terms and conditions of
+an OpenGL license.
+
+Silicon Graphics does give permission to others to create and distribute
+their own implementations of the OpenGL API, provided they do not
+state nor imply they have the right to use the OpenGL(R) trademark to
+name their product, nor make claims to conformance based upon the ARB
+controlled OpenGL conformance tests.  Silicon Graphics agrees to allow
+others to copy the OpenGL header files, as much as is necessary, for
+the creation of other implementations of the OpenGL API.
+
+Silicon Graphics is in no way associated nor endorsing anyone's
+unlicensed implementation of the OpenGL API.  Silicon Graphics does
+not make any claims or guarantees as to the quality, performance, nor
+completeness of anyone's unlicensed implementation.
+
+From brianp@ssec.wisc.edu (Brian Paul)
+
+The "Mesa 3-D graphics library" (or just Mesa) is a free implementation
+of the OpenGL API.  It has been compiled and tested on most major Unix/X
+systems.  All you should need is an ANSI C compiler and X.
+
+There is a WWW page at http://www.ssec.wisc.edu/~brianp/Mesa.html
+
+You can get Mesa by anonymous ftp from iris.ssec.wisc.edu in the pub/misc/
+directory.
+
+Mesa is currently in beta release.  Some features are not yet implemented
+and you may find new bugs.  See the WWW page for updated information.
+
+------
+Subject:  Q16:  How is the OpenGL governed?  Who decides what changes can be
+made?
+
+A:  OpenGL is controlled by an independent board, the Architecture
+Review Board (ARB).  Each member of the ARB has one vote.  The
+permanent members of the ARB are Digital Equipment, IBM, Intel,
+Microsoft, and Silicon Graphics.  Additional members will be added
+over time.  The ARB governs the future of OpenGL, proposing and
+approving changes to the specification, new releases, and conformance
+testing.
+
+------
+Subject:  Q17:  Who are the current ARB members?
+
+A:  In alphabetical order:  Digital Equipment, Evans & Sutherland,
+IBM, Intel, Intergraph, Microsoft, and Silicon Graphics.
+
+------
+Subject:  Q18:  What is the philosophy behind the structure of the ARB?
+
+A:  The ARB is intended to be able to respond quickly and flexibly to
+evolutionary changes in computer graphics technology.  The ARB is
+currently "lean and mean" to encourage speedy communication and
+decision-making.  Its members are highly motivated in ensuring the
+success of OpenGL.
+
+------
+Subject:  Q19:  How does the OpenGL ARB operate logistically?  
+When does the ARB have meetings?
+
+A:  ARB meetings are held about once a quarter.  The meetings rotate
+among sites hosted by the ARB members.  To learn the date and place of
+the next OpenGL ARB meeting, watch the news group comp.graphics.opengl
+for posting announcing the next "OpenGL Advisory Forum/OpenGL ARB
+meetings" or e-mail opengl-secretary@sgi.com and ask for the
+information.
+
+Meetings are run by a set of by-laws, which are currently being
+approved.  When they are approved, the by-laws will be publicly
+available for inspection.
+
+Minutes to the ARB meeting are posted to comp.graphics.opengl
+and are available via ftp://sgigate.sgi.com/pub/opengl/arb/
+
+------
+Subject:  Q20:  How do additional members join the OpenGL ARB?
+
+A:  The intention is that additional members may be added on a 
+permanent basis or for a one-year term.  The one-year term members 
+would be voting members, added on a rotating basis, so that
+different viewpoints (such as ISV's) could be incorporated into new
+releases.  Under the by-laws, SGI formally nominates new members.
+
+------
+Subject:  Q21:  So if I'm not a member of the ARB, am I shut out of
+the decision making process?
+
+A:  There are many methods by which you can influence the evolution of
+OpenGL.
+
+1) Contribute to the comp.graphics.opengl news group.  Most members of
+the ARB read the news group religiously.
+2) Contact any member of the ARB and convince that member that your
+proposal is worth their advocacy.  Any ARB member may present a
+proposal, and all ARB members have equal say.
+3) Come to OpenGL ARB and speak directly to ARB.
+
+------
+Subject:  Q22:  Are ARB meetings open to observers?
+
+A:  The ARB meeting will be open to observers, but we want to keep the
+meeting small.  Currently, up to five non-voting representatives 
+who inform the ARB secretary in advance, can observe and participate in
+the ARB meeting.  At any time, the ARB reserves the right to change 
+the number of observers.
+
+------
+Subject:  Q23:  What is the OpenGL Advisory Forum?
+
+A:  The Advisory Forum is intended to start as an informal, self-governing
+group of people, highly interested in OpenGL.  Corporations, 
+universities, or individuals can be members of the Advisory Forum.
+
+OpenGL Advisory Forum meetings will be scheduled sporadically,
+usually to coincide with trade shows or other popular gatherings
+where people would be interested in programming with OpenGL.
+
+------
+Subject:  Q24:  When using Xlib, how do I create a borderless window?
+
+A:  <from blythe@sgi.com (David Blythe)>
+
+Essentially you can create the window with override-redirect 
+(see man xcreatewindow) which is the sledgehammer approach or 
+you can change the _MOTIF_WM_HINTS property to tell the window 
+manager to leave your windows undecorated.
+
+<from alex@eagle.hd.hac.com (Alex Madarasz)>
+
+Also of note is that the window manager decorations of any client can be
+turned off by putting something like the following in the .Xdefaults
+file in your home directory - assuming you aren't overriding them in
+your app:
+
+4Dwm*ClientAppOrClassName*clientDecoration: none
+
+( see the 4Dwm / mwm man pages for a full description of this resource )
+
+( you must restart the window manager or logout/login for 4Dwm resources
+to take effect )
+
+"none" will remove all of the window manager decorations - border, title
+bar etc.
+
+------
+Subject:  Q25:  How do I switch between single buffer and double buffer mode?
+
+A:  <from mjk@sgi.com (Mark Kilgard) 
+	and blythe@sgi.com (David Blythe)>
+
+When using OpenGL with X, switching between a double buffered and 
+single buffered window can be accomplished by creating a "container" 
+X window and creating two subwindows, one with a double buffer visual, 
+the other with a single buffer visual.  Make sure the subwindows are each
+the full size of their parent window.
+
+You can then use XRaiseWindow or XLowerWindow to change the stacking
+order of the two subwindows to switch between double buffering and
+single buffering.
+
+You will need to create a separate context for each of the
+two windows since they have different visual types.  You will need
+to make the appropriate window/context pair current when you switch
+modes.
+
+IRIS GL made it easy to switch between double buffering and single
+buffering.  But essentially, IRIS GL implemented the above process
+internally.
+
+------
+Subject:  Q26:  On my machine, it appears that glXChooseVisual
+is only able to match double-buffered visuals.  I want to have more
+bits of color resolution, so how do I render in single buffer mode?
+
+A:  <from mjk@sgi.com (Mark Kilgard)>
+
+On mid- to low-end machines with double buffer hardware, you'll
+probably find you get twice as much color resolution using a single
+buffer visual.  But if there is no hardware double buffering support,
+the double buffered and single buffered visuals are generally the
+same depth (the back buffer is "carved" out of software).
+
+Search again for a double buffered visual.  If you find one,
+use it instead.  Call glDrawBuffer(GL_FRONT) though to make sure
+you are drawing to the front buffer (the default for a double
+buffered visual is to draw into the back buffer).
+
+------
+Subject:  Q27:  I've got a 24-bit machine, but my OpenGL windows
+are not using the full color resolution.  What's wrong?  My
+program looks fine on one machine, but the depth buffer doesn't work
+on another.  What's wrong?
+
+A:  <from mjk@sgi.com (Mark Kilgard) and woo@sgi.com (Mason Woo)> 
+
+An unfortunate (but documented) semantic of glXChooseVisual is
+that if you don't request GLX_RED_SIZE, GLX_GREEN_SIZE, or
+GLX_BLUE_SIZE, glXChooseVisual assumes zero for these parameters
+which means pick the visual with the _smallest_ amount of red,
+green, and blue that matches the other visual attributes.  Make
+sure you ask for at least 1 bit of GLX_RED_SIZE, GLX_GREEN_SIZE,
+and GLX_BLUE_SIZE.  If these configuration parameters are
+non-zero, it matches the visual with the _largest_ amount of red,
+green, and blue with at least 1 bit of each (probably what you
+want).
+
+Similarly, if you don't request GLX_DEPTH_SIZE, you may get a
+visual with zero bits of depth buffer.  Some systems may have few
+visuals available, and those visuals all have at least 1 bit of
+depth buffer.  On other systems, there may be dozens of visuals
+available, some with zero bits for the depth buffer.  In short,
+if hidden surface removal appears to fail, check to see if you
+have explicitly specified any bits of depth buffer you have requested.
+Also check to see what visual you have received.
+
+------
+Subject:  Q28:  What information is available about OpenGL extensions?
+
+A:  Examples of extensions include vertex arrays (calling several vertexes
+or related data, such as normals or colors, with a single function call),
+blending of constant colors, polygon offset (multiple coplanar polygons 
+can be rendered without interaction), 
+
+Procedure names and tokens for OpenGL extensions are either suffixed
+with EXT or a vendor-specific acronym:  such as SGI for Silicon Graphics
+machines, or INGR for Intergraph.  Also note that Silicon Graphics 
+extensions to OpenGL are suffixed to indicate whether they will be 
+available on all machines (SGI), on just a subset of machines (SGIS), 
+or are very experimental and may become unavailable or completely
+changed (SGIX).  
+
+Vendors are encouraged to add extension information to their 
+documentation.  For Silicon Graphics, extension information is 
+summarized on the glIntro man page.  
+
+------
+Subject:  Q29:  How do I make shadows in OpenGL?
+
+A:  There are no individual routines to control shadows nor
+an OpenGL state for shadows.  However, code can be written
+to render shadows.
+
+<from woo@sgi.com (Mason Woo)> 
+
+To project a shadow onto a flat plane (such as in the insect
+demo), draw the stippled object, flattened using matrix transformations.
+The easiest way to flatten an object is to use the scale function.
+For example, use glScalef(1., 0., 1.) to create from an infinite light
+shining straight down the y axis.  A transformation matrix 
+can be used to cast a shadow from an infinite or local light source
+in an arbitrary direction.  See the article:
+
+	Thant Tessman, "Casting Shadows on Flat Surfaces,"
+	IRIS Universe, Winter, 1989.
+
+<from shreiner@sgi.com (Dave Shreiner)>
+
+Check out the fast shadow and projective texture multi-pass
+algorithms for producing realistic shadows using texture mapping.
+See the SIGGRAPH paper:
+
+	Mark Segal, Carl Korobkin, et al.
+	"Fast Shadows and Lighting Effects using Texture Mapping"
+	1992 SIGGRAPH Proceedings
+
+

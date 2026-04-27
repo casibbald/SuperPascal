@@ -1,0 +1,65 @@
+DO						DON'T					NOTE
+--------------------------------------------------------------------------
+MOVEQ #n,Dx		(4,2)	= MOVE.L #n,Dx	(12,6)	n is between -128 & 127
+
+ADD.W Dx,Dx		(4,2)	= LSL.W #1,Dx	(8,2)
+
+ADD.W Dx,Dx
+ADD.W Dx,Dx		(8,4)	= LSL.W #2,Dx	(10,2)	each shift takes 2 cycles!
+
+ADD.L Dx,Dx		(8,2)	= LSL.L #1,Dx	(10,2)	each shift takes 2 cycles!
+   
+MOVEQ #0,Dx		(4,2)	= CLR.L Dx		(6,2)
+						= CLR.W Dx		(4,2)	Only clears a word!
+
+LEA n(Ax),Ax	(8,4)	= ADD.W #n,Ax	(12,4)	n is between -32767 & 32768
+						= ADD.L #n,Ax	(16,6)	Use ADDQ.L when n bet. 1 & 8!
+
+SUB.L Ax,Ax		(8,2)	= MOVE.L #0,Ax	(12,6)	Can't use CLR with A regs!
+
+OR.W #$4000,Dx	(8,4)	= BSET #14,Dx	(12,4)
+
+AND.W #$EF,Dx	(8,4)	= BCLR #4,Dx	(14,4)	BCLR is slower?!
+
+EOR.W #$800,Dx	(8,4)	= BCHG #11,Dx	(12,4) 
+
+MOVEQ #1,Dx
+SWAP  Dx		(8,4)	= MOVE.L #$10000,Dx	(12,6)
+
+MOVE.W n(PC),Dx	(12,4)	= MOVE.W n,Dx	(16,6)	Add 4 cycles for .L
+
+MOVE.B Dx,-(A7)
+MOVE.W (A7)+,Dx	(16,4)	= LSL.W #8,Dx	(22,2)	Only works with A7!
+
+MOVE.B n(PC),-(A7)		  MOVE.B n(PC),Dx		General usage is even faster
+MOVE.W (A7)+,Dx (24,4)	= LSL.W #8,Dx	(34,6)	as you can see!
+
+BRA n			(10,4)	  BSR n					This is a common mistake done
+						= RTS			(34,6)	at the end of a routine.
+
+MOVE.L (A7)+,D1
+MOVE.L (A7)+,D2	(24,4)	= MOVEM.L (A7)+,D1-D2	(28,4)
+
+MOVEQ #15,D1			  MOVE.W D0,D1			A common situation in bob
+AND.W D0,D1		(8,4)	= AND.W #15,D1	(12,6)	routines!
+
+LSR.W #4,D0				  LSR.W #3,D0			Another common situation in
+ADD.W D0,D0		(18,4)	= AND.B #$FE,D0 (20,6)	bob rutines!
+
+ROR.W #4,D0		(14,2)	  MOVEQ #12,D1			Shift instructions can only
+						= LSL.W D1,D0	(34,4)	shift from 1 to 8 times
+						or		                when used in immediate
+						  LSL.W #8,D0			mode hence the convoluted
+                          LSL.W #4,D0   (36,4)	methods here.
+
+ MOVEQ #0,D0			= MOVE.W #$100-1,d1		CLR is an inefficient
+ MOVE.W #$100-1,d1		loop:					instruction when used with
+loop:					  CLR.L (A0)+			memory! For some strange
+ MOVE.L D0,(A0)+		  DBF   D1,loop			reason it actually reads
+ DBF   D1,loop	(7180,10)			(5648,12)	the destination operand
+												before it clears it?!?!
+
+ MOVE.W #$100-1,D1								so this is why you shouldn't
+loop:											use CLR with I/O devices
+ MOVE.L #0,(A0)+								that may be affected by the
+ DBF D1,loop 	(7692,14)						read

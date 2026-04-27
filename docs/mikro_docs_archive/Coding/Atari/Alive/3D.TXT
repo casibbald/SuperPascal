@@ -1,0 +1,195 @@
+
+/////////////////////////////////////////////////////////////////////// 
+                        INTRODUCING 3D GRAPHICS 
+///////////////////////////////////////////////////////////////////////
+
+                 PART ONE : TWO DIMENSIONAL TRANSFORMS
+
+This  is  a preview version of something much better that  Mr  Pink  is 
+working on, which should appear in a future issue of Alive! - CiH
+
+In the beginning there was the pixel.  And the pixel begat the line and 
+the  sprite,  and  in turn these begat the polygon and  texture  mapped 
+polygon. Whilst all you needed to create 2D games and demos was a basic 
+grasp  of algebra,  3D requires a greater knowledge base - trigonmetry, 
+vectors,  matrix maths. All of this can appear somewhat daunting to the 
+beginner.
+
+The  basic  building  blocks  of 3D graphics  are  vectors.  These  are 
+manipulated with matrices. It is by combining matrices and vectors that 
+3D  scenes  are  made,  and  to be a good 3D coder  you  have  to  very 
+comfortable maniuplating these elements.
+
+To  familarise yourself with vectors and matrices,  I will present them 
+in  an environment you should be more familiar with - the world  of  2D 
+graphics.
+
+VECTOR
+
+A vector is a array of elements that can be used to represent points or 
+the distance between points.  For our 2D examples,  the vector consists 
+of just two elements, X and Y.
+
+MATRIX
+
+The matrix is used to manipulate vectors. For 2D graphics, a 3x2 matrix 
+is used  that is a matrix with 3 rows of two elements:
+
+[ 00 ][ 01 ] 
+[ 10 ][ 11 ] 
+[ 20 ][ 21 ]
+
+In  this  matrix,  the  first  two  rows  form  the  rotational/scaling 
+component and the bottom row is the translation component. 
+
+The first column contains all the values that will affect the X element 
+of  the vector,  and the second column has the values that will  affect 
+the Y component of the vector.
+
+
+IDENTITY MATRIX
+
+The identity matrix has the unique property that transforming a  vector 
+by  it  causes  the original vector to be  returned.  Multiply  another 
+matrix by the identity matrix causes the original matrix to be returned 
+- that is, transforming vectors and matrices by the identity matrix has 
+no effect on their values.  It is equivalent to multiplying a number by 
+1.
+
+
+TRANSLATION MATRIX
+
+A  translation matrix translates a vector - that is it moves it  around 
+without altering its shape or scale. 
+
+To  create  a  translation matrix,  we just need to supply an x  and  y 
+translation value.
+
+
+SCALING MATRIX
+
+A scaling matrix scales a vector. The scaling in the x and y dimensions 
+can be specified seperately and are totally independent.
+
+
+ROTATION MATRIX
+
+A rotation matrix rotates points around an axis. 
+
+We have created 3 different rotation matrices - one for each of the x,y 
+and  z  axis.  If we want to rotate an object using all three axis,  we 
+need to combine these 3 rotation matrices by multiplying them together.
+
+========================================================================= 
+APPENDIX A - DATA TYPES 
+=========================================================================
+
+typedef unsigned char   U8; 
+typedef signed char     S8; 
+typedef unsigned int    U16; 
+typedef signed int      S16; 
+typedef unsigned long   U32; 
+typedef signed long     S32; 
+typedef float           F32;
+
+
+========================================================================= 
+APPENDIX B - DATA STRUCTURES 
+=========================================================================
+
+typedef struct 
+{
+    F32 x;
+    F32 y; 
+} sVector2D;
+
+
+typedef struct 
+{
+    F32 m[3][2]; 
+} sMatrix2D
+
+
+========================================================================= 
+APPENDIX C - FUNCTIONS 
+=========================================================================
+
+void    Matrix2D_TransformVector(sVector2D * apDest, sVector2D * apSrc, sMatrix2
+{ 
+        apDest->x = (apSrc->x * aMat->m[0][0]) 
+                                        + (apSrc->y * aMat->m[1][0]) 
+                                        + aMat->m[2][0]; 
+        apDest->y = (apSrc->x * aMat->m[0][1]) 
+                                        + (apSrc->y * aMat->m[1][1]) 
+                                        + aMat->m[2][1]; 
+}
+
+
+void    Matrix2D_Mul( sMatrix2D * apDst, sMatrix2D * apSrc0, sMatrix2D * apSrc1 
+{ 
+        U16     i,j;
+
+        for(i=0;i<2;i++) 
+        { 
+                for(j=0;j<2;j++) 
+                { 
+                        apDst->m[i][j] = apSrc0->m[0][j] * apSrc1->m[i][0] 
+                                        + apSrc0->m[1][j] * apSrc1->m[i][1] 
+                } 
+        } 
+        for(i=0;i<2;i++) 
+        { 
+                M[2][i] = apSrc0->m[0][i] * apSrc1->m[2][0] 
+                                + apSrc0->m[1][i] * apSrc1->m[2][1] 
+                                + apSrc0->m[2][i] * apSrc1->m[2][2] 
+                                + apSrc0->m[3][i]; 
+        }        
+}
+
+void    Matrix2D_CreateIdentity( sMatrix2D * apMat ) 
+{ 
+apMat->m[ 0 ][ 0 ] = 1; 
+apMat->m[ 0 ][ 1 ] = 0; 
+apMat->m[ 1 ][ 0 ] = 0; 
+apMat->m[ 1 ][ 1 ] = 1; 
+apMat->m[ 2 ][ 0 ] = 0; 
+apMat->m[ 2 ][ 1 ] = 0; 
+}
+
+void    Matrix2D_CreateTranslation( sMatrix2D * apMat, F32 aX, F32 aY ) 
+{ 
+apMat->m[ 0 ][ 0 ] = 1; 
+apMat->m[ 0 ][ 1 ] = 0; 
+apMat->m[ 1 ][ 0 ] = 0; 
+apMat->m[ 1 ][ 1 ] = 1; 
+apMat->m[ 2 ][ 0 ] = aX; 
+apMat->m[ 2 ][ 1 ] = aY; 
+}
+
+void    Matrix2D_CreateScale( sMatrix2D * apMat, F32 aX, F32 aY ) 
+{ 
+apMat->m[ 0 ][ 0 ] = aX; 
+apMat->m[ 0 ][ 1 ] = 0; 
+apMat->m[ 1 ][ 0 ] = 0; 
+apMat->m[ 1 ][ 1 ] = aY; 
+apMat->m[ 2 ][ 0 ] = 0; 
+apMat->m[ 2 ][ 1 ] = 0; 
+}
+
+void    Matrix2D_CreateRotX( sMatrix2D * apMat, F32 aAngle ) 
+{ 
+apMat->m[ 0 ][ 0 ] = 1; 
+apMat->m[ 0 ][ 1 ] = 0; 
+apMat->m[ 1 ][ 0 ] = 0; 
+apMat->m[ 1 ][ 1 ] = 1; 
+apMat->m[ 2 ][ 0 ] = aX; 
+apMat->m[ 2 ][ 1 ] = aY; 
+}
+
+/////////////////////////////////////////////////////////////////////// 
+MrPink / RG 
+///////////////////////////////////////////////////////////////////////
+
+
+
+

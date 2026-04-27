@@ -1,0 +1,772 @@
+<HTML><HEAD><TITLE>myStiC bYTeS - atari fALcoN demoCREW</TITLE>
+<META http-equiv=content-type content=text/html;charset=ISO-8859-2>
+<STYLE>
+A {
+COLOR: #001f6f; TEXT-DECORATION: none
+}
+</STYLE>
+</HEAD>
+<BODY bgColor=FFEFD5 align=center>
+<br clear=all>
+<TABLE cellSpacing=0 cellPadding=0 width=640 height=100% valign=middle rules=none align=center border=0 frame=void>
+<tbody>
+<tr>
+<td bgColor=FFEFD5 align=justify><font size="3" face=Courier color=black><pre>
+<center>-- -- ---------------------------------------
+<h2>Videl in practice</h2>
+-------------------------------------- - - --<center>
+
+Maybe you're wondering 'why another Videl guide'? There's a good Videl overview
+by Chris/Aura, there's the english  translation  by Tat/Avena, there's software
+called Screenpain where you can set any  resolution you want... And still a lot
+of ppl don't know how to set any  resolution  'by hand' I was very surprised by
+an answer on dhs board in the style of 'we are using Screenpain, why waste time
+in studying Videl regs'... Just for fun and the  good feeling you know a little
+bit more than yesterday! =) Second reason to write may be the fact in BOTH docs
+I've got were  some  typing  errors   (esp.  in  Tat's  one  -  global using of
+copy&paste isn't very good practise :-) and a  last reason - it's always a good
+exercise for an author to write any  tutorial  :-)  (I'm not joking - you can't
+imagine  how  much  I  learned   while   typing   that  ST  RAM  timing  guide)
+...3...2...1...go!
+
+Raster line
+===========
+
+x---------------------------------------------------x
+|      1st halfline             2nd halfline        |
+|<-----------------------><------------------------>|
+|                                                   |
+|---------------------------------------------------|
+|    |           |                   |       |  |   |
+|    |           | gfx display area  |       |  |   |
+|    |           |<----------------->|       |  |<->|
+|    |                                       | hsync|
+|    |                                       |      |
+|<-->|<------------------------------------->|<---->|
+left             visible screen area          right
+border                                        border
+
+We see every  raster  line  (including  top/bottom  border)  is  divided into 2
+halflines. Duration of left/right  border,  hsync  impulse  and position of gfx
+display can be defined by user. Every  raster line consists of a certain number
+[(HHT+2)*2] of CYCLES, not pixels. You can tell Videl how many cycles should be
+used for 1 pixel. Videl operates with  every  halfline, not raster line. If you
+keep some cycles between left/right borders and  gfx display area, you will see
+border with colour taken from $ffff9800  register.  I think these halflines are
+here becoz of TV construction (TV screen  consists of 625 halflines) and on VGA
+are lines divided 'manually'. But who knows, I'm not a hardware freak..
+
+Screen
+======
+
+x--------------------------------
+|       |                       ^
+|       |                       |
+|       |                       | top border
+|       |                       |
+|       |                       v
+|       |------------------------
+|       |                       ^
+|       |                       |
+|       |                       |
+|       |                       |
+|       |---------------        |
+|       |              ^        |
+|       |       gfx    |        |
+|       |       display|        | visible screen area
+|       |       area   |        |
+|       |              |        |
+|       |              v        |
+|       |---------------        |
+|       |                       |
+|       |                       |
+|       |                       |
+|       |                       v
+|       |------------------------
+|       |                       ^
+|       |----------------       |
+|       |               ^       | bottom border
+|       |               |vsync  |
+|       |               v       v
+x--------------------------------
+
+From the horizontal point of view, the  screen  is divided into a certain [VFT]
+number of halflines. The number of  'real'  (raster)  lines is [VFT]/2. A TV is
+able to do 625 halflines, so we can  use 312.5 raster lines. Again, if you keep
+some halflines between top/bottom border and gfx area, you will see border with
+colour taken from $ffff9800 register.
+
+Basic stuff
+===========
+
+Hz frequency
+~~~~~~~~~~~~
+Number of lines that can be  drawn  in  one  SECOND. Imagine you have a monitor
+capable of displaying  31500  lines,  you've  got  screen  of  31500 lines with
+refreshing rate of one second. But  we  don't want refreshing every second, but
+every 1/60 of second (for VGA 60  Hz)  ->  31500/60 = 525 lines. That means our
+screen will 'wrap' after 525 lines  and  during  VBL  the ray will come back to
+upper corner of the screen.
+
+V frequency
+~~~~~~~~~~~
+Is that 60 number of example above. It  says number of VBLs per second. So, for
+TV for example, we are able to draw max 312.5 lines, right?
+15625/312.5 = 50 Hz. We can see that
+
+                         Hz frequency
+number of raster lines = ------------
+                         V frequency
+
+We also can see  if  we  increase  number  of  VBLs  per  second (for less eye-
+stressing picture), we have  to  decrease  number  of  lines  (for  VGA 100 Hz:
+31500/100 = 315 raster lines  instead  of  525);  if  we don't want to decrease
+number of lines, we have to increase hz frequency; if we increase hz frequency,
+our lines will be 'bigger', so you  have  to  decrease cycles per pixel; if you
+can't decrease cycles per pixel, you  have to decrease cycle-time by increasing
+Videl clock... shit, what magic! :o)
+
+Back to hz freq: the  number  31500  also  means  the  line  has to be drawn in
+1/31500 = 0.031 ms (vga) and 1/15625 = 0.064 ms (rgb)
+
+one 25.175 MHz Videl cycle = 1/25175000 = 0.040 us
+one 32.000 MHz Videl cycle = 1/32000000 = 0.031 us
+
+rgb uses 2 32 MHz cycles per pixel for 640xYYY resolution
+vga uses 1 25.175 MHz cycle per pixel for 640xYYY resolution
+(for more info about cycles/pixel see below)
+
+time for drawing one pixel:
+rgb: 2 cycles * 0.031 us = 0.062 us
+vga: 1 cycle * 0.040 us = 0.040 us
+
+time for drawing 640 pixels:
+0.062 us * 640 pixels = 0.040 ms (rgb)
+0.040 us * 640 pixels = 0.026 ms (vga)
+
+remaining time in one line:
+rgb: 0.064 - 0.040 = 0.024 ms for borders
+vga: 0.031 - 0.026 = 0.005 ms for borders
+
+We see there's a lot of space on  rgb  screen; in compare to vga&25 MHz, rgb&32
+MHz screen don't fit perfectly. Exactly the  same numbers you'll get in 320xYYY
+modes, since by 320 pixels/line Videl  uses  4  cycles (rgb) and 2 cycles (vga)
+per pixel, which is 2 times  more.  And  320  is  two times smaller than 640 =>
+differences are eliminated.
+
+From these formulas you see  there  isn't  any information about color-depth of
+one pixel. The reason why we can't set  640x480xtc on vga for example is a slow
+data bus. Really, if  you  have  Nemesis/Phantom  [24/25  MHz  bus], there's no
+problem to set this resolution. If you switch accelerator off, you will see how
+Videl isn't able to catch next 17  longs  of video data, nice thing, really ;-)
+So why is it possible to set it on tv/rgb?
+
+If you want visible 640xYYY pixels  on  screen,  you  have  to set 2 (rgb) or 1
+(vga) cycles per pixel.  And  here  is  that  problem  -  1  cycle per pixel is
+unrealisable on 16 MHz databus, simply,  there's  a  need to transfer data from
+st-ram two times faster than on rgb. For  BP modes it's enough, but in TC Videl
+needs probably more time to catch  one  pixel from st-ram. Maybe you're asking,
+why we need 1 cycle per  pixel.  We  don't  need  it :-) It's "cosmetic need" -
+really, if you set 2 cycles/pixel, 32  MHz (pixels are smaller), you're free to
+set around 440x480xtc without ANY problem. 440 pixels are visible maximum on my
+monitor with 30 kHz/60  Hz  frequencies.  I  think  there's  no  problem to set
+640x480xtc on 50 MHz Videl WITHOUT bursting  the databus to >16 MHz (decreasing
+of CPU performance is another thing) Some additional info about cycles/pixel is
+with divider table some pages below.
+
+When we're talking about frequencies, why don't  take  a look at VGA 100 Hz. An
+advantage of this mode is in decreasing some kind of "wait states". In standard
+VGA/60 Hz XXXx240 modes the screen is drawn like this:
+
+1st line: Videl takes data from st-ram and draws it on screen (CPU waits)
+2nd line: Videl copies data from 1st line and CPU is still waiting
+3rd line: Videl takes data from st-ram and draws it on screen (CPU waits)
+4th line: Videl copies data from 3rd line and CPU is still waiting
+:
+:
+etc. This isn't 100% correct, but  it  shows  us the problem: every second line
+CPU don't do  anything,  data  bus  is  free  and  we're  wasting time. Logical
+solution is switching off the double line, right? OK, click-click, done :-) But
+hey, our vga screen isn't a screen, but some kind of tube! (???) Hm, hm, hm, we
+have to do  something  with  this  small  screen.  Do  you  remember meaning of
+vertical frequency? It's the time  after  which  the  screen is wrapped, right?
+With single lines, our screen looks like this:
+
+top border
+clear area
+:
+:
+320 single lines
+clear area
+:
+:
+:
+bottom border
+
+You can play with moving display up and  down,  but in 60 Hz you have still 50%
+of screen filled with nothing. So let's move display up. Done? Now you have:
+
+top border
+320 single lines
+clear area
+:
+:
+:
+:
+:
+bottom border
+
+Now you probably know, what will be the next  step - we don't need 320 lines of
+nothing, so we say to Videl that  screen  can be wrapped 320 lines earlier. How
+to get the exact frequency?
+
+31500/525 = 60 Hz
+We know that our resolution has 480 lines:  525-480 = 45 lines for borders. Now
+we want only 240 lines: 240+45 = 285 lines at all.
+31500/285 = 110.5 Hz
+
+110.5 Hz? That isn't 100 Hz!  With  110.5  Hz you'll get perfect screen without
+any borders. Why to use 100  Hz  screen  with  stupid white borders? (I know, I
+know, clr.l $ffff9800.w isn't a problem in TC, but what about bitplanes ?) Only
+reason in my mind is the same picture size as in rgb/50 Hz modes. If your fx is
+able to run in 110 fps and you  decrease  vertical frequency to 100 Hz, your fx
+WILL run slower. But how many fxes are able to do so? Very few I guess. And, if
+you have any fx slower than  1  vbl, vertical frequency isn't important anymore
+since you will use triplebuffer and  triplebuffer  isn't depend on VBL (ok, ok,
+screens are swapped in VBL, but I  think  the  difference between 100 and 60 hz
+with 34 fps fx can be ignored)
+
+It's true 60 Hz double-line mode takes  SOME time against single-line mode, but
+I really doubt it's more than catching 320*240 words from st-ram with two times
+bigger frequency (than rgb/50). Remember  320x240/tc/vga/60  takes about 16% of
+CPU time and vga/100 takes 26% !!!  I compared 320x240xtc mode with and without
+double-lines, speed difference is  maybe  2%-3%  (Videl  don't  read same lines
+again from st-ram but from  its  buffer).  For  future: if you're coding slower
+fxes, lower value of vertical frequency is  always better since more VBLs means
+more loading screens by Videl = more bus halting.
+
+OK, I think I could stop to bore you with this theory, the name of this article
+is "Videl in PRACTISE", isn't it? :)
+
+Let's look over some standard values for rgb/tv and vga:
+
+                                rgb/tv          vga
+--------------------------------------------------------
+Hz frequency:                   15625 Hz        31467 Hz
+Duration of HSync impulse:      4.7 us          3.81 us
+Duration of right border:       6.2 us          4.45 us
+Duration of left border:        5.145 us        1.91 us
+
+V frequency:                    50 Hz           59.58 Hz
+Duration of VSync impulse:      0.192 ms        0.064 ms
+Duration of top border:         1.504 ms        1.008 ms
+Duration of bottom border:      0.384 ms        0.416 ms
+
+As Chris has written, these values aren't hard and fast. But they're good start
+values at least :-)
+
+Before we start with making our own  resolution, a little overview of important
+Registers is in order:
+
+-------------------------------------------------------------------------------
+$FFFF820E [R/W] W _______876543210  Line Offset
+
+How many words are added to the  end  of  display line, i.e. how many words are
+'behind' the display.
+
+-------------------------------------------------------------------------------
+$FFFF8210 [R/W] W ______9876543210 Line Width (VWRAP)
+
+Length of display line again in words.  Or,  how  many words should be added to
+vram counter  after  every  display  line.  Maybe  you're  asking  what  is the
+difference between these registers.
+
+length of logical line = width + offset
+
+So if you want virtual screen of 512 pixels width in 320x240xTC:
+
+$ffff820e = 512 - 320 = 192
+$ffff8210 = 320
+
+A little help about calculating word values:
+
+line width = (hz resolution/16) * bitplanes
+
+Colours Bitplanes
+-----------------
+2       1
+4       2
+16      4
+256     8
+65536   16
+
+-------------------------------------------------------------------------------
+$FFFF8260 [R/W] B         ______10  ST Shift Mode
+                                ||
+                                ||
+                                ||
+                                ||                           others   vga
+                                ||                  $FF8210 $FF82C2 $FF82C2
+                                00--4BP/320 Pixels=> $0050   $0000   $0005
+                                01--2BP/640 Pixels=> $0050   $0004   $0009
+                                10--1BP/640 Pixels=> $0028   $0006   $0008
+                                11--???/320 Pixels=> $0050   $0000   $0000
+
+Writing to this register does the following things:
+- activate STE palette
+- sets line width ($8210)
+- sets paramaters in $82c2 (double lines/interlace & cycles/pixel)
+
+Before writing to $8260 you have to:
+- set correct values (hdb, vdb, ...) for 320x200 or 640x200 or 640x400
+- clear $8266 register = setting Falcon 16 color mode; if you don't do it,
+  you will get strange resolutions
+
+-------------------------------------------------------------------------------
+$FFFF8266 [R/W] W _____A98_6543210  Falcon Shift Mode (SPSHIFT)
+                       ||| |||||||
+                       ||| |||++++- 0..15: Colourbank setting in 8BP
+                       ||| ||+----- 0: 8 Bitplanes (256 Colors) off
+                       ||| ||+----- 1: 8 Bitplanes (256 Colors) on
+                       ||| |+------ 0: internal Vertical Sync
+                       ||| |        1: external Vertical Sync
+                       ||| +------- 0: internal Horizontal Sync
+                       |||          1: external Horizontal Sync
+                       ||+--------- 0: True-Color-Mode off
+                       ||           1: True-Color-Mode on
+                       |+---------- 0: Overlay-Mode off
+                       |            1: Overlay-Mode on
+                       +----------- 0: 2-Color-Mode off
+                                    1: 2-Color-Mode on
+
+Writing to this register does the following things:
+- activate Falcon palette
+- if you set Bits A/8/4 == 0, it selects 16-Color-Falcon-Mode (NOT the
+  same as ST LOW since Falcon palette is used!)
+- $8260 register is ignored, you don't need to write here anything
+
+Note: as you can see, 4-Color-Mode isn't realisable with Falcon palette.
+
+-------------------------------------------------------------------------------
+$FFFF8280 [R/-] W ______9876543210 Horizontal Hold Counter (HHC)
+
+It's set after writing to HHT, it  counts cycles since HHC reaches HHT+1 value.
+Then is 1st halfline finished and  HHC  starts  to count 2nd halfline (again to
+HHT+1)
+
+-------------------------------------------------------------------------------
+$FFFF8282 [R/W] W ______9876543210 Horizontal Hold Timer (HHT)
+
+Number of cycles minus 2 per halfline  (not gfx line!). Both halflines use this
+value.
+
+         |  video base clock       |
+HHT = int|--------------------- - 2|
+         |Hz freq * divider * 2    |
+
+-------------------------------------------------------------------------------
+$FFFF8284 [R/W] W ______9876543210 Horizontal Border Begin (HBB)
+
+On which cycle in SECOND  halfline  should  start  right  border  to the end of
+raster line. If HBB > HHT+1, no border is present.
+
+                   |right border dur in us * video base clock|
+HBB = HHT + 1 - int|-----------------------------------------|
+                   |                  divider                |
+
+-------------------------------------------------------------------------------
+$FFFF8286 [R/W] W ______9876543210 Horizontal Border End (HBE)
+
+On which cycle in FIRST  halfline  should  end  left  border  from the start of
+raster line. If HBE > HHT+1, border over whole raster line is present.
+
+         |left border dur in us * video base clock|
+HBE = int|----------------------------------------|
+         |                 divider                |
+
+-------------------------------------------------------------------------------
+$FFFF8288 [R/W] W ______9876543210  Horizontal Display Begin (HDB)
+                        |
+                        +---------- Display will start in:
+                                    0: 1. halfline
+                                    1: 2. halfline
+
+On which cycle in FIRST OR SECOND halfline should start gfx display.
+
+This value took 90% of the time of  my Videl studying... There's a need of some
+detailed explanation. Falcon's screen is created in this way:
+
+1. We define in which halfline Videl should start the raster line
+2. Videl waits in this halfline until HHC reaches HDB value.
+3. Wait state goes here (hdb offset)
+4. Videl is drawing until HHC reaches HDE value
+5. Wait state goes here (hde offset)
+
+If you draw it on paper:
+
+       hdb-off                            hde-off
+------+-------+-------------*------------+-------+-------
+      hbe=hdb  ...active display area... hde     hbb
+
+"*" means begining of 2nd halfline. Now you calculate HDB offset:
+
+                 |     |8 words*16 pixels         |               |
+                 |64 + |----------------- + 16 + 2| * Cycles/pixel|
+                 |     |  No. of planes           |               |
+HDB offset = int |------------------------------------------------| + 1
+in F030 BP mode  |                     divider                    |
+
+                 |      |8 words*16 pixels    |               |
+                 |128 + |----------------- + 2| * Cycles/pixel|
+                 |      |  No. of planes      |               |
+HDB offset = int |--------------------------------------------| + 1
+in STE BP mode   |                 divider                    |
+
+                 |64 + 16 pixels * Cycles/pixel|
+HDB offset = int |-----------------------------| + 1
+in TC mode       |            divider          |
+
+The question for me was the relationship  between the HDB and HDB offset. After
+two months I finally scored a goal, yeah !!! :-) I didn't understand one thing:
+how can HDB be nearly the same as  HDE, that isn't logical! But imagine we will
+create a line in system listed above:  after  border end we will wait some (hdb
+offset) cycles and then drawing  can  begin.  But  hey!  We reached border end,
+we're in visible area  already!  To  avoid  a  next  "border"  we  have to move
+backward in line with horizontal display  begin;  in  some cases we'll get into
+negative values (HBE - HDB offset <  0).  But  this  is no problem since we can
+define 2nd halfline for HDB, too! Drawing  our  line will begin in 2nd halfline
+and after hdb-offset will start  EXACTLY  at  horizontal  border end. Cool, eh?
+Once again, formula for calculating HDB:
+
+HDB = HBE - HDB offset; if you get negative value:
+HDB = HBE - HDB offset + HHT+2 and set bit 9 of HDB register
+
+-------------------------------------------------------------------------------
+$FFFF828A [R/W] W ______9876543210  Horizontal Display End (HDE)
+
+On which cycle in SECOND halfline should end gfx display.
+
+                 ||8 words*16 pixels    |               |
+                 ||----------------- + 2| * Cycles/pixel|
+                 ||  No. of planes      |               |
+HDE offset = int |--------------------------------------|
+in F030/STE BP   |               divider                |
+mode
+
+HDE offset = 0
+in TC mode
+
+HBB = HDE + HDE offset => HDE = HBB - HDE offset
+
+When calculating the HDB  and  HDE  it  should  be  noted,  that  the number of
+horizontal pixels cannot be defined arbitrarily,  except in Truecolour mode. We
+can arrive at the allowed pixel multiple using the following formula:
+
+                             8 Words * 16 Pixels
+Horizontal pixel multiple =  -------------------
+                                No. of planes
+
+In truecolour mode a fine definition of 1 pixel is possible.
+
+-------------------------------------------------------------------------------
+$FFFF828C [R/W] W ______9876543210  Horizontal Sync Start (HSS)
+
+On which cycle in SECOND  halfline  should  start  hsync  impulse to the end of
+raster line. If HSS > HHT+1, no vsync impulse is present.
+
+                   |hsync impulse dur in us * video base clock|
+HSS = HHT + 1 - int|------------------------------------------|
+                   |                   divider                |
+
+-------------------------------------------------------------------------------
+$FFFF82A0 [R/-] W _____A9876543210  Vertical Frequency Counter (VFC)
+
+It's set after writing to VFT, it counts halflines since VFC reaches VFT value.
+VFC is increased if HHC = HHT+1
+
+-------------------------------------------------------------------------------
+$FFFF82A2 [R/W] W _____A9876543210  Vertical Frequency Timer (VFT)
+
+Number of halflines per screen.
+
+         |Hz freq|
+VFT = int|-------| * 2 (+1)
+         |V freq |      ^
+                        \_when not interlaced
+
+-------------------------------------------------------------------------------
+$FFFF82A4 [R/W] W _____A9876543210  Vertical Border Begin (VBB)
+
+On which halfline should start bottom border to the end of screen.
+
+VBB = VFT - int|bottom border dur in ms * Hz freq * 2|
+
+-------------------------------------------------------------------------------
+$FFFF82A6 [R/W] W _____A9876543210  VBlankOff / Vertical Border End (VBE)
+
+On which halfline should end top border from the start of screen.
+
+VBE = int|top border dur in ms * Hz freq * 2| + 1
+
+-------------------------------------------------------------------------------
+$FFFF82A8 [R/W] W _____A9876543210  Vertical Display Begin (VDB)
+
+On which halfline should  begin  gfx  display.  If  VDB  >  VFT,  no display is
+present. If VDB > VDE, display is present from VDB to VFT.
+
+-------------------------------------------------------------------------------
+$FFFF82AA [R/W] W _____A9876543210  Vertical Display End (VDE)
+
+On which halfline should end gfx display. If  VDE < VFT, no display is present.
+If VDE < VDB, display is present from VDE to VFT.
+
+-------------------------------------------------------------------------------
+$FFFF82AC [R/W] W _____A9876543210  Vertical Sync Start (VSS)
+
+On which halfline should start  vsync  impulse  to  the  end of screen. Impulse
+starts from VSS+1.
+
+VSS = VFT - int|vsync dur in ms * Hz freq * 2|
+
+-------------------------------------------------------------------------------
+$FFFF82C0 [R/W] W _______8765_3210  Video Control (VCO)
+                         |||| ||||
+                         |||| ||++-  same as bit 7&6 in $ffff0006
+                         |||| |+---  0: Video base clock 32 MHz
+                         |||| |      1: Video base clock 25.175 MHz
+                         |||| +----  0: No Half-line-HSyncs
+                         ||||        1: 15 Half-line-HSyncs from start of
+                         ||||           bottom border
+                         |||+------  0: negative VSync-Impulse (5V > 0V)
+                         |||         1: positive VSync-Impulse (0V > 5V)
+                         ||+-------  0: negative HSync-Impulse (5V > 0V)
+                         ||          1: positive HSync-Impulse (0V > 5V)
+                         |+--------  0: 16 Bit-Videobus
+                         |           1: 32 Bit-Videobus (Falcon)
+                         +---------  Hz base offset
+                                     0: 128 cycles (ST Low/Mid on RGB and
+                                                    ST Hi on SM124)
+                                     1:  64 cycles (all the others)
+
+Bits 1 and 0 are set same as bits 7 and 6 in $ffff8006:
+
+00 Monochrome
+01 RGB - Colormonitor
+10 VGA - Colormonitor
+11 TV
+
+-------------------------------------------------------------------------------
+$FFFF82C2 [R/W] W ____________3210  Video Mode
+                              ||||
+                              |||+- 0: Double lines off
+                              |||   1: Double lines on
+                              ||+-- 0: Interlace off
+                              ||    1: Interlace on
+                              ++--- 00: 4 cycles/pixel
+                                    01: 2 cycles/pixel
+                                    10: 1 cycle/pixel
+                                    11: n/a
+
+-------------------------------------------------------------------------------
+Phew, finally we  reached  the  end  !  :-)  I  tried  to  write  it  in a more
+efficient/clear way than Chris/Tat did.
+
+There are some constants in formulas above:
+
+Video base clock
+~~~~~~~~~~~~~~~~
+25.175 MHz or 32 MHz (I recommend to  do some experiments with Screenpain - you
+will see the difference)
+
+Divider
+~~~~~~~
+Hmm.. Chris used a very strange (in my eyes) way how to explain it - he defined
+some variables called VT and VT_ST  and  divider  =  VT*VT_ST. But this is bad,
+since YOU define how many cycles you  want  per  pixel  ! VT and VT_ST, this is
+only thing that implies from your  settings!  So,  a  correct way: if you start
+making a resolution, you have to think  about  the number of pixels per line. A
+good example is the famous 'hardware pixel doubler'  on VGA. All you need is to
+change the pixel width, right? And pixel  width, that is in other words, number
+of cycles per pixel. Normally, 320x240xTC  screen  has  a width of 2 cycles per
+pixel. If we want bigger pixels, we  have  to increase the number of cycles per
+pixel. Take a  look  at  $82c2  register  -  you  have  the  choice  of  only 4
+cycles/pixel since this is max value for pixel width.
+
+We set %0001 (4 cycles/pixel,  interlace off,  double lines on). And what about 
+divider? Take a look at this table:
+
+cycles          divider for :
+per pixel       vga     others  ste
+-----------------------------------
+4               4       4       16
+2               2       2       16
+1               2       1       16
+
+Standard Atari settings:
+
+                        rgb     vga
+--------------------------------------
+clock                   32      25.175
+cycles/pixel for 320    4       2
+cycles/pixel for 640    2       1
+
+RGB/TV isn't able to use 1 cycle  per  pixel except 4 color modes. Interesting.
+And VGA isn't able to use 1  cycle  per  pixel  in TC with bigger hz resolution
+than 90 pixels. Again interesting.
+
+So divider is in direct dependency of cycles/pixel. It's logical :-)
+
+Back to hardware doubler: it's  logical  if  you  increased the pixel width two
+times, your resolution has to be  two  times  smaller -> 160 pixels are maximum
+with the same hz/v frequency.  And  what  about doubling in vertical direction?
+Take a look at our discussion about vga  100 Hz - we switched doubling of lines
+off and 100 Hz gives us semi-fullscreen pictures. In case of 4 cycles/pixel our
+pixels aren't still squares. What about  switching  double lines again on? Wow!
+Perfect squares! But two times  smaller  resolution in vertical direction, too!
+=) And 100 Hz is a  reason,  why  'square-modes'  can't be used on tv/rgb... or
+you've got 150 Hz TV? :)
+
+Now, we know everything, it's  time  for  tekkno!  erm,  sorry, for a practical
+example :-) My first idea was to  put here some resolution like 768x512/vga and
+show you step by step how to  set  it.  But  it  isn't  so simple - you have to
+always experiment what value  fits  perfectly  on  your  monitor  (I  mean hz /
+vfrequency and position of gfx  area).  In  this way, Screenpain is unbeatable,
+you can change position of display  only  with cursor keys. And Screenpain uses
+similar starting values listed in  introduction,  too.  So you start with 31467
+Hz, then set all the others  and  look  at  result  :-) Probably there's a more
+efficient way, but I was too lazy to find that mathematical formula. (I think a
+good idea is to  calculate  the  time  for  a   line  of  640 pixels/25.175 MHz
+[perfect picture] and try to find  the  same  value for 768/32 MHz for example,
+but this didn't work for 100%,  something  I'm  still  missing) So I decided to
+take some resolution from Chris' guide  and  show  you how he got these values,
+ok? I think 640x400xTC on rgb is always nice example :-)
+
+Cycles/pixel = 2 => divider = 2
+rgb => TOS uses 32 MHz video base clock
+"-> value" is taken from Chris' doc
+
+$ffff8210 -> $0280
+------------------
+I think this is clear, $280 = 640, in TC 1 pixel = 1 word.
+
+$ffff8260 -> $xxxx
+------------------
+We don't use ST compatible resolutions, we don't need to write here
+anything.
+
+$ffff8266 -> $0100
+------------------
+Truecolor ON.
+
+$ffff8282 -> $01fe
+------------------
+hht = int (32000000/(15625*2*2)-2) = 510 = $1fe
+
+$ffff8284 -> $0199
+------------------
+hbb = 510 + 1 - int (6.2*32/2) = 412 = $19c
+
+$ffff8286 -> $0050
+------------------
+hbe = int (5.145*32/2) = 82 = $52
+
+$ffff8288 -> $0071
+------------------
+hdb-off for tc = int ((64+16*2)/2) + 1 = 49
+hdb = 82 - 49 = 33 = $21,  but  this is min value, display can start after this
+value, too. In this case is gfx display begin equate to visible screen start.
+
+$ffff828a -> $0122
+------------------
+hde-off for tc = 0
+hde = 412 - 0 = 412 = $19c, but this is the max value, display can end earlier,
+in this case is gfx display end equate to visible screen end.
+
+Here come some experiments - you can  move  your display area left and right to
+get it into centre of screen  for  example.  But  keep  in mind your gfx line +
+offsets consists of ((HHT+2) - HBE) +  HBB  cycles and your hz resolution can't
+be bigger than (gfx line with offsets  in cycles * divider)/(cycles per pixel),
+in our case (841 * 2)/2 = 841 pixels including (!!!) wait states. Our situation
+looks like this:
+
+                          visible area
+     --------------------------------------------------
+     ^                                                ^
+     | clear area                                     |
+     | /--------\                                     |
+     |/   hdb off\    gfx display area      clear area|
+-----+---+-------+--------*----------------+----------+-----
+     hbe hdb                               hde        hbb
+0    82  113     162                       290        412
+
+
+I used hdb/hde values from Chris' doc. From  this example we see gfx display is
+(510+2-162+290)*2/2 = 640 pixels.
+
+$ffff828c -> $01b2
+------------------
+hss = 510 + 1 - int (4.7*32/2) = 436 = $1b4
+
+$ffff82a2 -> $0270
+------------------
+vft = int (15625/50)*2 = 624 = $270
+
+$ffff82a4 -> $0265
+------------------
+vbb = 624 - int (0.000384*15625*2) = 612 = $264
+
+$ffff82a6 -> $002f
+------------------
+vbe = int (0.001504*15625*2) + 1 = 48 = $30
+
+$ffff82a8 -> $007e
+------------------
+This is freely definable. Min start  value  is  vbe. If you choose exact raster
+line:
+vdb = raster line * 2 [+1 if you aren't in interlace]
+
+$ffff82aa -> $020e
+------------------
+Again freely definable. Max end value is vbb. If you choose exact raster line:
+vde = raster line * 2 [+1 if you aren't in interlace]
+
+Note that vde - vdb = number of  raster  lines  per screen, in our case: $20e -
+$7e = $190 = 400 raster lines.
+
+$ffff82ac -> $026b
+------------------
+vss = 624 - int (0.000192*15625*2) = 618 = $26a
+
+$ffff82c0 -> $0181
+------------------
+- 64 cycles base offset
+- 32 bit video bus
+- negative hsync impulse
+- negative vsync impulse
+- no 15 halfline hsyncs
+- video base clock 32 MHz
+- %01 = rgb
+
+$ffff82c2 -> $0006
+------------------
+- 2 cycles per pixel
+- interlace ON
+- double lines OFF
+
+And here you are, it wasn't so hard!  You certainly know you can't write values
+to registers in this  order,  take  a  look  in  DHS'  demosystem  or output of
+Screenpain (save as asm code). 
+
+                                                    Happy Videl hacking!
+
+
+<b>-------------------------------------------------------------------------------
+   MiKRO              XE/XL/MegaSTE/Falcon/CT60              <a href=http://mikro.atari.org>mikro.atari.org</a>
+-------------------------------------------------------------------------------</b>
+</pre> 
+</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

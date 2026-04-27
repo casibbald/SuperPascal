@@ -1,0 +1,187 @@
+               Reflections on Flat-Shading vs. Texture-Mappig
+                   or I Can Live with Flat-Shaded Polygons
+
+Just before Christmas, I rented two Sega Saturn games, Virtua Racing and
+Sega Rally Championship, in order to compare the two. Santa was only going
+to bring me one, so I had to choose: VR was my favorite in the arcades for a
+very long time, and I had heard just wonderful things about Rally. So I sat
+down and played both for few hours each, on separate occasions. I fell in
+love with Rally, but did not much care for the translation of VR -- it was
+missing the arcade feel. (though, since Santa also brought me an Arcade
+Racer steering wheel accessory, I happen to really like VR -- perhaps as
+much as Rally. The steering wheel makes all the difference in the world with
+this game... Ill be buying it when I recover from Xmas.)
+
+Anyway, a strange thought crossed my mind after playing VR for a while: Why
+is texture mapping such the rage these days?
+
+I was totally caught up in tex-map fever myself. It seems that everyone else
+is too, including the press and a lot of consumers, like the guy in
+rec.video.games.sega that recommended getting Rally over VR because it was
+newer technology (read tex-maps), even though they were both released within
+months of each other. Lately, most games have been judged by many -- most
+Saturn owners excluded -- on the quality of texture mapping and special
+effects only, with game play a secondary consideration. My personal opinion
+is that the original Saturn Virtua Fighter has better game play than
+Toshenden on the Playstation and was the more enjoyable game for me. I love
+TSDs graphics, but Im a long time VF arcade fan, so I bought the game I
+wanted to play. But oh MAN, did I want VF Remix! Bring on that
+texture-mapping!
+
+Then it hit me. VR really doesnt look half bad (even though at the time, I
+thought the control sucked using the standard controller, and had not yet
+tried it with the AR.) I even kind of liked the clean flat shaded look in
+this game. It really shows that the Saturn can render over twice as many
+flat-shaded polygons per second than it can texture-mapped ones. You can see
+quite far down the track, and get a really broad view in certain VR-modes.
+The environment is well populated with 3D scenery, like trees, statues, etc.
+And the frame rate is really good. Some of the objects do things when you
+crash into them, like noses breaking off of statues, coconuts falling out of
+palm trees, a snow man that can be punted down the track, and signs that can
+be knocked over (um... yah, Im all over the track and crash a lot, thats
+how I know about these things).
+
+As a professional software engineer dabbling with 3D graphics in my spare
+time, I realize that a lot of horse power is freed up when displaying only
+flat shaded polygons and that texture and bit maps consume a lot of memory.
+That extra CPU time and RAM could be used to make the game much more
+interesting and animated, as well as use more polygons for greater detail,
+or provide a wider world view. Oh, sure, you need fewer polys to make an
+object look good with texture mapping. But take the palm trees in VR. They
+look really good from every angle. The animated pit-crew is pretty neat. In
+Rally the trees and people are just card-board cut-outs that always show the
+same face to the camera. The only animation Ive seen in Rally is two zebras
+that wag their tails and lift their heads, an elephant that walks, and a
+flock of birds. Fewer polys sometimes means less realism if it means motion
+is ignored. And it seems that everyone is concentrating on improving visual
+representation to improve realism, but only paying lip-service to animation
+as another very good technique. Instead of using (precious) memory to store
+tex-maps, realism can be added by including animated and intelligent
+behavior. Time spent improving the visual realism of objects could instead
+be used to improve motion-realism.
+
+I could like a game that uses very few or no texture mapped polygons if the
+freed up resources were used to:
+
+   * Display more polygons to provide a wider or more distant view
+   * Include more and more solid-looking 3D objects
+   * Animate the objects to convey realism
+   * Add interesting behavior and intelligence to the objects
+   * Add more interaction
+   * Better simulate physics
+
+I don't think Rally is a good candidate for this, because it would be hard
+to simulate what Rally does with only flat shaded polygons: mud, sand, paved
+roads, etc. would be difficult to represent and are a very central theme in
+the game. However, VR could, perhaps, have been done even better assuming
+the Saturn's second CPU is underutilized (and more time was available to
+bring it to market). For example, the palm trees could have swayed in the
+wind and branches blown off and down the track, weather added to vary track
+conditions, animated bystanders and animals could be done, wind blowing bits
+of paper down the track. All of these would add realism using motion vs.
+textures.
+
+Where this could really shine though is in a game designed from the ground
+up to take advantage of the points I mentioned above. Where the world is
+artistically built to leverage a flat shaded look, and animated objects
+combined with detailed physics are central to the game theme and used
+extensively to add realism.
+
+If the same amount of time (OK, perhaps more time) were spent on modeling
+object behavior than is normally spent on visual representation, the objects
+could come to life more thoroughly and believably. There could be many more
+things to interact with, that could be picked up and moved, made to do
+something interesting, or that act on their own accord.
+
+So, I want to tell you developers, and especially you producers, that I
+could like a game that relies heavily on simple flat-shaded polygons and
+only slightly, if at all, on tex-mapping -- if the points above are taken
+into consideration and assuming I like the game itself. If marketed
+effectively, with due attention put on the fact that the game stresses
+motion realism over visual realism, it could, perhaps, even successfully
+overcome this fixed notion that texture mapping is the only way to go. I,
+for one, would certainly give it a fair chance.
+
+IDEA FOR A NEW GAME GENRE
+
+This brings me to an idea for a class of game that melds several genres.
+This class combines RPGs, fighting games, driving games, etc. into a single
+seamless game. Instead of striving to be the best at any one genera, the
+game employs diversity and dynamic behavior to make the game interesting and
+enjoyable. The memory and CPU time freed up by not employing texture-mapping
+are used to increase the complexity, size, and freedoms of the playing
+field, and the dynamic behavior of objects that populate it.
+
+As an example, in one of the Bruce Lee movies, the hero had to fight his way
+up seven levels in a house, confronting more dangerous adversaries at each
+level. This could be done rather easily with today's fighting-game paradigm.
+But that is only the climax of the movie! As I recall, the reason Bruce was
+after the bad guy was that the dude had messed up his sister. Bruce spent a
+lot of time first finding out who was responsible, fighting some minor bad
+guys, and chasing them around town on a motorcycle. Lets visualize how this
+whole process could be put into a game. It starts out with the main
+character helping his sister with something, like some guy trouble she is
+having. There is enough conversation and interaction for the player to get
+the idea he should like his sister and feels some attachment to her; wants
+to protect her. The player can also be gradually introduced to the play
+mechanics; gradually get a feel for the game. Enter the bad guys, who
+restrain the character while they mess up the sister and kidnap her, then
+they knock the character out. They leave some clues behind. The player must
+use these and other clues to find the badies, RPG style. He drives around
+town, VR style, perhaps optionally using the Arcade Racer. He finds himself
+in a warehouse, where he must combat some minor bad dudes, using VF style
+fighting and stick control, but with freedom to move around the warehouse.
+Multiple simultaneous attackers would be a nice added touch. Or perhaps
+allow them to be shot Virtua Cop style, with the gun controller. He then
+hops on a motorcycle and variously chases the bad dudes or runs from them,
+or whatever. He has a few other minor conflicts with the bad guys, must
+solve some more RPG style puzzles. He then stakes-out an office he
+discovered, and follows a bad guy to head quarters, on the bike or on foot.
+He fights his way up to the top using different fighting styles, beats the
+bad guy, and recovers his sister. In the final scene, they both watch the
+sun go down while sitting on the beach -- The End. Multiple paths to the
+ending could be employed. For example, if the player does not discover the
+motorcycle, he could get everywhere on foot, or in a cab -- the game
+adjusting to lead the player thru the story based on available character
+inventory and player choices.
+
+As another example, I think it would be neat to combine VF style stick
+control with an RPG. Mages, thieves, fighters, and priests must deliver
+spells, attacks, and defenses using stick-and-button motions in real-time.
+Instead of using a fixed arena, the ability to render a lot of polygons is
+leveraged to allow the character freedom of movement; fighting takes place
+on the normal playing field, instead of in a different combat mode. As the
+character moves up in levels, more spells and moves are added, with either
+the player left to discover how to deliver them, or given training and
+hints. The environment could be simple visually, but use lots of motion to
+add realism. Trees and branches that sway in the wind, that rustle when
+someone is moving thru them. Non-player animals that hop and move around.
+Clouds and wind blown dust. Lightning, fog, and rain. Weapons and other
+helpful items that the player actually bends to pick up, instead of
+instantly acquiring. (In fact, in the case of locating weapons and items,
+flat shading may even help the player. Ive been stumped more than once
+because I could not see an item due to the background visual noise.). NPC's
+that walk, run, and fight smoothly and realistically. I think you get the
+idea.
+
+Perhaps Im overstating the amount of time and memory that would be freed up
+by using simple flat shading. Perhaps all of this would be too demanding of
+the Saturn. However, with good object oriented design and data driven
+behavior, I believe based on my programming experience -- as limited in
+application to games that it is -- much, if not all, of this is obtainable.
+
+In summary, I hope that I have made a good case for at least considering the
+use of flat shaded polygons to free up system resources, which are then put
+to interesting and entertaining uses; animating the world and otherwise
+providing a more engaging gaming environment.
+
+James Hugard
+
+internet: james.hugard@ast.com
+voice: 714/727-8662
+smail: AST Research, Inc.
+16215 Alton Parkway
+Irvine, CA 92718
+mail stop 2-76
+----------------------------------------------------------------------------
+Return to the Epsilon Graphics Page.

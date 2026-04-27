@@ -1,0 +1,33 @@
+Addressing Modes
+
+     Addressing Mode       Format of Address      Default Segment Register
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ       ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ      ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     Register                   register                    None
+
+     Immediate                    data                      None
+
+     Register Indirect            [BX]                       DS
+                                  [BP]                       SS
+                                  [DI]                       DS
+                                  [SI]                       DS
+
+     Base Relative*            label [BX]                    DS
+                               label [BP]                    SS
+
+     Direct Indexed*           label [DI]                    DS
+                               label [SI]                    DS
+
+     Base Indexed*           label [BX + SI]                 DS
+                             label [BX + DI]                 DS
+                             label [BP + SI]                 SS
+                             label [BP + DI]                 SS
+
+     String Instructions         source                     DS:SI
+                              destination                   ES:DI
+
+  *  Label [...] can be replaced with [displacement + ...].  Therefore,
+     writing [24 + BX] would produce the address 24 + BX.
+
+       Note:          Many of the string instructions use ES:DI for the
+                      destination and DS:SI for the source.
+

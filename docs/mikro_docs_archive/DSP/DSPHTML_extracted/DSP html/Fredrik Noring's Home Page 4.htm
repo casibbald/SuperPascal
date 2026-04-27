@@ -1,0 +1,72 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0047)http://www.lysator.liu.se/~noring/DSPDMAEx.html -->
+<SPML><HTML><HEAD><TITLE>Fredrik Noring's Home Page</TITLE>
+<META content="text/html; charset=windows-1250" http-equiv=Content-Type>
+<META content="MSHTML 5.00.2614.3500" name=GENERATOR></HEAD>
+<BODY aLink=#ff0000 background="Fredrik Noring's Home Page 4.files/yellow_w.gif" 
+bgColor=#c0c0c0 link=#0000f0 text=#000000 vLink=#500000>
+<TABLE>
+  <TBODY>
+  <TR>
+    <TD vAlign=top>
+    <TD vAlign=top>
+    <TD vAlign=top>
+  <TR>
+    <TD vAlign=top>
+    <TD vAlign=top><IMG alt=DSP 
+      src="Fredrik Noring's Home Page 4.files/dsp.gif">
+    <TD vAlign=top>
+      <H1>DSP 56001 Handshaked DMA Communication Example</H1>
+      <P>This example illustrates a typical DSP Handshaked DMA communication 
+      program. 
+      <BLOCKQUOTE><PRE>; DSP Handshaked DMA IO
+: (C) Fredrik Noring, Tomas Berndtsson 1994
+
+M_PCC   EQU     $FFE1           ; Port C Control Register
+M_PCDDR EQU     $FFE3           ; Port C Data Direction Register
+M_PCD   EQU     $FFE5           ; Port C Data Register
+M_CRA   EQU     $FFEC           ; SSI Control Register A
+M_CRB   EQU     $FFED           ; SSI Control Register B
+M_RX    EQU     $FFEF           ; Serial Receive Data Register
+M_TX    EQU     $FFEF           ; Serial Transmit Data Register
+M_SR    EQU     $FFEE           ; SSI Status Register
+
+          org    p:$0
+          jmp    &lt;start
+
+          org    p:$40
+start     andi    #$fb,omr               ; initialize SSI port
+          movep   #%000000000,x:&lt;&lt;M_PCC  ; SSI reset
+          movep   #%0100000000000000,x:&lt;&lt;M_CRA
+          movep   #%0011010000000000,x:&lt;&lt;M_CRB
+          movep   #%111001000,x:&lt;&lt;M_PCC
+          movep   #%000110000,x:&lt;&lt;M_PCDDR
+          movep   #%000000000,x:&lt;&lt;M_PCD  ; clear frame syncs
+
+          jsr    &lt;DMA_get    ; Receive DMA data
+          move   #0.27,A     ; Move value to the 56-bits A register
+          move   #0.31415,y0 ; Move value to the 24-bits y0 register
+          mac    x0,y0,A     ; Multiply x0 and y0 and accumulate to A
+          move   A,x0        ; Move the A1 portion of A to x0
+          jsr    &lt;DMA_send   ; Send DMA data
+
+          jmp    &lt;start      ; Continue
+
+; DMA I/O routines.
+DMA_send  movep   x0,X:&lt;&lt;M_TX
+          bset    #5,X:&lt;&lt;M_PCD       ; start frame sync
+_wait     jclr    #6,X:&lt;&lt;M_SR,_wait  ; TDE
+          bclr    #5,X:&lt;&lt;M_PCD       ; stop frame sync
+          rts
+DMA_get   bset    #4,X:&lt;&lt;M_PCD       ; start frame sync
+_wait     jclr    #7,X:&lt;&lt;M_SR,_wait  ; RDF
+          bclr    #4,X:&lt;&lt;M_PCD       ; stop frame sync
+          movep   X:&lt;&lt;M_RX,x0
+          rts
+
+</PRE></BLOCKQUOTE>
+      <P><A href="http://www.lysator.liu.se/~noring">Back</A> to <B>Fredrik 
+      Noring</B>'s Home Page.
+      <P><I><A href="http://www.lysator.liu.se/~noring/">Fredrik Noring</A> <A 
+      href="mailto:noring@lysator.liu.se">mailto:noring@lysator.liu.se</A> </I>
+      <P></P></TR></TBODY></TABLE></SPML></BODY></HTML>

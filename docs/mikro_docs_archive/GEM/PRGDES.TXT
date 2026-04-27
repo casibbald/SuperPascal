@@ -1,0 +1,78 @@
+Date: Wed, 21 Oct 87 11:19:26 SET
+To: info-atari16@score.stanford.EDU
+From: WALDI%DHDIHEP1.BITNET@wiscvm.wisc.edu
+Comment: Extracted from digest info-atari16 87-380
+Subject: Description of relocatable PRG header
+
+Date: 21 October 1987, 11:13:09 SET
+From: Roland Waldi              phone (6221) 564334  WALDI    at DHDIHEP1
+      Inst. fuer Hochenergiephysik
+      D-6900 Heidelberg
+To:   INFO-ATA at SCORE.ST
+
+Someone asked for the format of relocatable program files.
+Here it is to the best of my knowlegde, however I never checked
+if this is correct:
+
+HEADER (28bytes)
+              +--------+--------+
+           0  |     $601A       |
+              +--------+--------+--------+--------+
+           2  |  Number of bytes in text segment  |
+              +--------+--------+--------+--------+
+           6  |  Number of bytes in data segment  |
+              +--------+--------+--------+--------+
+          10  |      Number of bytes in bss       |
+              +--------+--------+--------+--------+
+          14  |  Number of bytes in symbol table  |
+              +--------+--------+--------+--------+
+          18  |        Reserved, must be 0        |
+              +--------+--------+--------+--------+
+          22  |        Reserved, must be 0        |
+              +--------+--------+--------+--------+
+          26  |     Reserved    |
+              +--------+--------+
+TEXT (program) and DATA segments
+              +--------....-----+
+              |                 |
+              +--------....-----+
+SYMBOL TABLE (optional)
+              +--------+--------+--------+----...----+
+ entry_1  +0  | Symbol Name                          |
+              +--------+--------+-------------...----+
+          +8  |       Type *)   |
+              +--------+--------+--------+--------+
+         +10  | Value                             |
+              +--------+--------+--------+--------+
+ entry_2 +14  ...
+              +--------+--------+--------+--------+
+ ...
+ *) Symbol Types:
+            $0100    bss-based relocatable
+            $0200    text-based relocatable
+            $0400    data-based relocatable
+            $0800    external reference (value = size of common region)
+            $1000    equated register (value = register number)
+            $2000    global
+            $4000    equated
+            $8000    defined
+RELOCATION TABLE (if relocatable)
+              +--------+--------+--------+--------+
+          +0  |  Offset of 1st longword to        |
+              |  relocate (relative to start of   |
+              |  TEXT segment)                    |
+              +--------+--------+--------+--------+
+          +4  | Offset |
+              +--------+
+          +5  | Offset |
+              +--------+
+              . ...    .
+              +--------+
+              | 0-byte |
+              +--------+
+  Offset counts the byte distance
+  to the next longword to relocate. If there are
+  more than 254 bytes, an Offset-value of 1 indicates that 254 should
+  be added to the offset counter.
+
+

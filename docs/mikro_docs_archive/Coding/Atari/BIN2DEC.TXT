@@ -1,0 +1,112 @@
+
+From s.wieman@student.utwente.nl Sat Aug 05 09:06:06 1995
+Newsgroups: comp.sys.m68k
+Path: news.nic.utwente.nl!news.nic.surfnet.nl!sun4nl!EU.net!newsfeed.internetmci.com!news.uoregon.edu!news.bc.net!info.ucla.edu!news.ucdavis.edu!csus.edu!netcom.com!ludis
+From: ludis@netcom.com (Ludis Langens)
+Subject: Re: Divide by 10 in 68k-asm
+Message-ID: <ludisDCqEM7.5ov@netcom.com>
+Organization: Netcom Online Communications Services (408-241-9760 login: guest)
+References: <1995Aug1.151745.3471@arbi.Informatik.Uni-Oldenburg.DE> <ludisDCoJ9s.E5H@netcom.com> <3vo0ap$19q@globe.indirect.com>
+Date: Thu, 3 Aug 1995 11:01:19 GMT
+Lines: 97
+Sender: ludis@netcom16.netcom.com
+
+In article <3vo0ap$19q@globe.indirect.com> Larry Battraw <larry@cicdphx.com> wri
+tes:
+>ludis@netcom.com (Ludis Langens) wrote:
+>>What do you need this for?  If it is for binary to decimal conversion,
+>>there is a better way that doesn't use any divides, multiplies, or table
+>>lookups.  This better method is also faster unless you have a fast
+>>hardware divide.
+>
+>       Please enlighten us with what this method is!  I have yet to come across a
+>satisfactory way to do such a thing...
+
+I'll first describe how and why this algorithm works.  Then I'll include a
+code fragment implementing the core of the algorithm.  Lets start with an
+example.  A binary value can be expressed as the sum of the value of each
+non-zero digit.  Like this:
+
+%10100010 = 128 + 32 + 2
+
+If the addition (128 + 32 + 2) is carried out in BCD, then it is simple
+to come up with the decimal value 162.  A general solution is this:
+
+num = num[7] * 2^7 + num[6] * 2^6 + num[5] * 2^5 + ... + num[0] * 2^0
+
+Now you are probably thinking you need a table of the powers of 2 in BCD
+and that you need to do many multiplies (in BCD, no less!).  Lets
+perform some algebra on the equation:
+
+num = (((num[7] * 2 + num[6]) * 2 + num[5]) * 2 + ... num[1]) * 2 + num[0]
+
+The powers of two are no longer needed.  And multiplication by two is the
+same as adding a value to itself.  Thus, each step becomes this:
+
+result <= result + result + num[n]
+
+The 680x0 happens to have an instruction that does just this operation on
+BCD values!
+
+        ABCD.B  D0,D0   ; D0 <= D0 + D0 + X
+
+Thus, all that is needed is to shift each binary bit from msb to lsb into
+the X flag and then include it in the BCD result.
+
+
+This same algorithm can be used to convert from any radix to any other
+radix.  Lets try converting from decimal back to binary:
+
+162 = 100 + 60 + 2 = 1 * 100 + 6 * 10 + 2 * 1 = (1 * $A + 6) * $A + 2
+
+In this case, the multiplies and adds are carried out in binary (the
+destination radix).  This probably looks just like any standard
+decimal to binary conversion function.
+
+
+Performance of the binary to decimal conversion can be improvde by
+skipping any leading zero bits before starting the BCD doubling stage.
+This code example also uses an end flag bit directly in the value
+being converted to cause the proper number of iterations.
+
+        ...             ;Enter with binary value in D0
+        CLR.B   D1
+        CLR.B   D2
+        CLR.B   D3
+        CLR.B   D4
+        CLR.B   D5
+        NEG.L   D0      ;Check for zero
+        BEQ.S   @2
+        NEG.L   D0      ;Restore value and set X
+@0      ADDX.L  D0,D0   ;Left align value
+        BCC.S   @0
+@1      ABCD.B  D1,D1   ;Double and add X
+        ABCD.B  D2,D2
+        ABCD.B  D3,D3
+        ABCD.B  D4,D4
+        ABCD.B  D5,D5
+        ADD.L   D0,D0   ;Next bit to X
+        BNE.S   @1
+@2      ...
+
+
+Lets compare execution speed versus an algorithm that uses divides:  For
+each of about 32 bit positions, a software divide needs to shift the
+divisor or dividend, do a trial subtract, branch conditionally, shift the
+result and insert a 1 or 0 result bit, and finally reloop.  This is five
+(or more) instructions which need to be repeated about 32 times.  The
+above code fragment has seven instructions repeated as many as 32 times.
+However, the divide method only cranks out one decimal digit whereas
+the ABCD method produces all ten!  (They do however need to be unpacked
+from BCD into ASCII and leading zeroes may need to be suppressed.)
+
+I first used this algorithm on a Z80 where divides are quite difficult.
+It can be easily implemented on any CPU that has BCD capabilities (6502,
+80x86, etc.)  It can even be done on RISC CPUs which usually lack an
+ABCD instruction because such an add is easy to simulate with some
+ANDs, ORs, and shifts.
+
+Ludis Langens
+ludis@netcom.com
+
+

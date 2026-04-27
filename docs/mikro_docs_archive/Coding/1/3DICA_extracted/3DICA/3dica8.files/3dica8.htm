@@ -1,0 +1,100 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0039)http://www.foxfiber.net/dica/3dica8.htm -->
+<HTML><HEAD><TITLE>3DICA Programming Tutorial</TITLE>
+<META content="text/html; charset=iso-8859-1" http-equiv=Content-Type>
+<META content="Ica of Hubris" name=Author>
+<META content="MSHTML 5.00.2614.3500" name=GENERATOR></HEAD>
+<BODY>
+<CENTER><B><FONT size=+3>3DICA</FONT></B> v2.22b</CENTER>
+<CENTER>
+<DT>- The Ultimate 3D Coding Tutorial (C) Ica /Hubris 1996,1997,1998</CENTER>
+<CENTER>
+<DT>- Over 150k of pure sh...er, 3d coding power!</CENTER>
+<H2>
+<HR width="100%">
+</H2>
+<H2><A name=chap8></A></H2>
+<H2>8. Utterly Important Crap</H2>This part was fully made during Idlation '88 
+Hubris meeting which was held 18th - 21th December, 19<U>9</U>8. See the 
+invitation intro <A href="http://www.foxfiber.net/dica/idlation.zip">here</A>. 
+My head aches of smoking a huge cigar in a closed room and of coding 3d. I'm 
+getting weird ideas like this one and I honestly feel like sitting in the 
+corner. 
+<P>&nbsp;<IMG height=240 src="3dica8.files/toorus.jpg" width=320> <BR><FONT 
+size=-1>Figure 8.1: Chapters 8.1 and 8.2 implemented</FONT> 
+<BLOCKQUOTE>
+  <H3><A name=chap81></A></H3>
+  <H3>8.1 An Effective Algorithm for Generating Torus Objects</H3>Here at 
+  Idlation '88 Martti (nimi muutettu) came up with an idea how to generate 
+  torus-like objects: simply 
+  sin(3b*5xt/sqrt(log(rand(4)+5.3z*y))-e^4(32-f5*cos(tan(sin(cos(b)-2))))^(-1)). 
+  You can define the variables as you wish, it won't make sense in any case. An 
+  effective optimization trick (you won't notice any difference in the result) 
+  is to use rand(). Pseudo: 
+  <BLOCKQUOTE><TT>[generate vertices] ; here we generate the vertices</TT> 
+    <BR><TT>[use them]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ; 
+    here we use them</TT></BLOCKQUOTE>A working scheme example: 
+  <BLOCKQUOTE><TT>(define (make-vertex x y z)</TT> <BR><TT>&nbsp; (list 
+    'vertex x y z))</TT> 
+    <P><TT>(define (get-coor)</TT> <BR><TT>&nbsp; (- (random 100) 50))</TT> 
+    <P><TT>(define (make-torus vertices)</TT> <BR><TT>&nbsp; (if (&lt;= vertices 
+    0) '()</TT> <BR><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (cons (make-vertex 
+    (get-coor)</TT> 
+    <BR><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+    (get-coor)</TT> 
+    <BR><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+    (get-coor))</TT> 
+    <BR><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+    (make-torus (- vertices 1)))))</TT> 
+    <P><TT>(define (get-face vertices)</TT> <BR><TT>&nbsp; (list 'face (random 
+    vertices) (random vertices) (random vertices)))</TT> 
+    <P><TT>; example:</TT> <BR><TT>(make-torus 10)</TT> <BR><TT>(get-face 
+    10)</TT></P></BLOCKQUOTE>Please notice the flexibility and usability of Scheme 
+  for this particular purpose. <BR><A name=chap82></A>
+  <H3>8.2 Phong Illumination Model Using Gamma Approximation and Evenly Hashed 
+  Gaussian Distribution not Forgetting LaRusse Fireclouds</H3>As you all know, 
+  real Phong shading is far too costly to perform in realtime, so we need to 
+  find a good approximation function.&nbsp; Our calculations have proved that 
+  any random number from 3.27 to 15.1+3i filtered with evenly hashed Gaussian 
+  Distribution and dropped through a bunch of LaRusse Fireclouds brings a good 
+  approximation which can be compared to gouraud shading (ok, you <I>can 
+  </I>compare anything to anything). Unfortunately, the operation takes 10 times 
+  more time than calculating real phong but hey, that's the <I>cost</I>! 
+  <BR>&nbsp; <BR><A name=chap83></A>
+  <H3>8.3 Coding Tips by our Graphician</H3>1. The most important thing to have 
+  is an online-tutorial. We recommend a good irc-client and that you should get 
+  to know someone who unlike you really knows about coding. Then you can ask 
+  anything until he/she gets bored and you have to find a new friend. Remember 
+  to use a fake name so you won't get&nbsp; more llama-points than you already 
+  have. 
+  <P>2. Don't upset the voodoo-gods. If you upset them, you're code won't work 
+  no matter what you do.&nbsp; Please read chapter 23.1 "How to not upset 
+  voodoo-gods." 
+  <P>3. Talk about your coding with someone who knows even less about computers 
+  than you do so that you won't feel yourself so stupid. Your mother or family 
+  pets will do fine. 
+  <P>4. Have a life. If you have a life your code isn't that important to your 
+  social status.&nbsp; Hang around with women no matter how disgusting that 
+  might feel. 
+  <P>5. Go to make your military service. If you're in the army, no one really 
+  expects that you're gonna finish any code in next 6-12 months. During that 
+  time you can use your every spare time for trying to learn something you claim 
+  you already can do. 
+  <P>6. Backup your code normally but tell everyone your computer crashed and 
+  you lost everything that you had written in last year. That gives you more 
+  time. 
+  <P>7. Read a book called "PC Kaeyttaejaen Kaesikirja" which author is Petteri 
+  Jaervinen, a famous finnish guru. Try to find the real roots of wisdom and 
+  connect yourself to higher spirit. 
+  <H3><A name=chap84></A></H3>
+  <H3>8.4 How to code your own Hubris-membah&nbsp; -Tamagotchi</H3>Okay, all you 
+  little lamers out there, here's a tutorial on how to code your own Tamagotchi 
+  featuring a Cute Little Hubris-membah! Okay, if you have DOS 6.x, just go to 
+  the command prompt and type 'QBASIC'. The type the following two lines to the 
+  editor and you're ready to run your Tamagotchi and after that you can check 
+  how your Ica, Tweeker, Delic or &lt; whoever you decide the little bastard to 
+  be &gt; is doing. 
+  <BLOCKQUOTE><TT>10 PRINT "He's idling"</TT> <BR><TT>20 GOTO 
+  10</TT></BLOCKQUOTE></BLOCKQUOTE>&nbsp; 
+<P><A href="http://www.foxfiber.net/dica/3dica.htm">Back to the index</A> 
+</P></DT></BODY></HTML>

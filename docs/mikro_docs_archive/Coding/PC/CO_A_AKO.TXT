@@ -1,0 +1,64 @@
+Turbo Assembler	 Version 2.02	     18/11/01 16:31:16	    Page 1
+HELLO.ASM
+
+
+
+      1				     ; hello = [hello]
+      2				     ; hello[si] = [hello][si]
+      3				     ; hello[si][1] = hello[si+1] = hello[si]+1	... hello je iba offset	od data	segmentu, je to	teda+
+      4				     iba cislo,	ako ta jednotka
+      5				     ; (z pohladu asm je to iba	jeden offset, hello+1)
+      6				     ; mov dl,offset hello - zapis XYr,	v dl je	cisl 8,	r pridava assembler, je	to ako mov dl,08
+      7				     ; mov dl,hello - zapis 00XYr, 16 bit posunutie
+      8
+      9					     DOSSEG
+     10	0000				     .MODEL SMALL
+     11	0000				     .STACK 100h
+     12
+     13	0000				     .DATA
+     14	0000  01 02 03 04 05 06	07+	     DB	1,2,3,4,5,6,7,8
+     15	      08
+     16	0008  48 65 6C 6B 6F 2C	20+  hello   DB	'Helko,	world',13,10,'$'
+     17	      77 6F 72 6C 64 0D	0A+
+     18	      24
+     19	0017				     .CODE
+     20	0000  B8 0000s			     mov  ax,@data
+     21	0003  8E D8			     mov  ds,ax
+     22	0005  BE 0002			     mov  si,2
+     23	0008  BB 0008r			     mov  bx,offset hello
+     24	000B  8A 10			     mov  dl,0[bx][si]
+     25	000D  B4 02			     mov  ah,02h
+     26	000F  CD 21			     int  21h
+     27	0011  B4 4C			     mov  ah,4ch
+     28	0013  CD 21			     int  21h
+     29					     END
+Turbo Assembler	 Version 2.02	     18/11/01 16:31:16	    Page 2
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "18/11/01"
+??FILENAME			  Text	 "HELLO	  "
+??TIME				  Text	 "16:31:16"
+??VERSION			  Number 0202
+@CODE				  Text	 _TEXT
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 HELLO
+@MODEL				  Text	 2
+@WORDSIZE			  Text	 2
+HELLO				  Byte	 DGROUP:0008
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  STACK				  16  0100 Para	  Stack	  STACK
+  _DATA				  16  0017 Word	  Public  DATA
+_TEXT				  16  0015 Word	  Public  CODE
+

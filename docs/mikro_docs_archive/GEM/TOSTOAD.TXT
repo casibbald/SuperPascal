@@ -1,0 +1,77 @@
+Date: 24 Apr 88 14:24:35 GMT
+Comment:  Extracted from Info-Atari16 (INFO-A16) digest number 88-215
+From: braner@tcgould.tn.cornell.edu  (braner)
+Subject: converting a TOS prg into a DA (C source by Moshe Braner)
+To: info-atari16@score.stanford.edu
+
+/*
+Thought this might be useful for some people.  This seems to be about
+the minimum code needed to convert a TOS program to a desk accessory.
+Note the "manual" saving and restoring of the menu bar bitmap.
+Note that a DA should not use dynamic memory allocation.
+(The DA version of GNOME uses a large static array to do its own
+internal malloc()ing from.)
+Also beware: the "current directory", as the DA sees it, can change
+between openings since the current application can change it and GEMDOS
+only keeps one "current directory".  Surprisingly, although the desktop
+normally makes the top window the current directory, that is not always
+the case!
+
+    - Moshe Braner
+*/
+
+/*
+   This code manually extracted from a program
+   that was actually tested with Laser C.
+*/
+
+#include <osbind.h>
+#include <obdefs.h>
+#include <gemdefs.h>
+extern int gl_apid;
+int    menu_id, event, ret;
+int    xdesk, ydesk, hdesk, wdesk;
+int    msgbuff[8];
+char    menusave[1520];
+main()
+{
+    int    i;
+    char    *cp;
+    /* your TOS application's initializations here */
+    Cconws ("\033f");    /* disable vt52 cursor    */
+    appl_init();
+    menu_id = menu_register (gl_apid,"  your DA's name");
+    wind_get (0, WF_WORKXYWH, &xdesk, &ydesk, &wdesk, &hdesk);
+daloop:
+    event = evnt_multi (MU_MESAG,
+            0,0,0,0,0,0,0,0,0,0,0,0,0,
+            msgbuff,
+            0,0, &ret,&ret,&ret,&ret,&ret,&ret);
+    /* could have simply used evnt_mesag instead:
+        evnt_mesag (msgbuf);        */
+    if ((event & MU_MESAG) == 0
+        || msgbuff[0] != AC_OPEN
+        || msgbuff[4] != menu_id )
+            goto daloop;
+    graf_mouse(M_OFF,0x0L);
+    cp = (char *) Physbase();
+    for (i=0; i<1520; i++)
+        menusave[i] = *cp++;
+    wind_update(TRUE);
+    form_dial (FMD_START,
+            xdesk, ydesk, wdesk, hdesk,
+            xdesk, ydesk, wdesk, hdesk);
+    /* enable vt52 cursor if needed */
+    /* your TOS application does its thing here */
+    /* disable vt52 cursor if on */
+    form_dial (FMD_FINISH,
+            xdesk, ydesk, wdesk, hdesk,
+            xdesk, ydesk, wdesk, hdesk);
+    wind_update (FALSE);
+    cp = (char *) Physbase();
+    for (i=0; i<1520; i++)
+        *cp++ = menusave[i];
+    graf_mouse(M_ON,0x0L);
+    goto daloop;
+
+

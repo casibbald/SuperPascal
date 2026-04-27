@@ -1,0 +1,190 @@
+An excerpt from an intervew with Leonard Tramiel - By Martin "Retro Rogue" 
+Goldberg The Tramiel Clan - Gary, Sam, Jack, and Leonard. 
+
+Leonard Tramiel is a member of the mighty Tramiel clan. His father Jack 
+founded Commodore in 1953 (known for the now legendary PET, Vic20, and 
+Commodore 64 computers) and bought Atari from Warner in 1984 after being 
+ousted from Commodore (he wanted Commodore to grow more, some board members 
+thought they were already spread to thin). Leonard's older brother Sam was 
+named as President of Atari.
+Leonard's involvement with the family business began back at Commodore in 
+1976, while finishing his degree in Astrophysics from Columbia University. His 
+father Jack had bought MOS Technology, makers of the now legendary 6502 
+processor chip (versions of which were used in the Commodore Pet andCBM line, 
+Commodore Vic 20, Commodore 64, the entire Apple II line, the Atari 2600, 
+5200, 7800 and XE game consoles, the entire Atari 8bit computer line, and the 
+Nintendo Entertainment System to name a few). Jack wanted a personal computer 
+to show at an upcoming trade show and told 6502 creator and MOS founder Chuck 
+Peddle, and Leonard that they had 6 months to do it in. They did it, and the 
+world was introduced to the Commodore PET (Personal Electronic Transactor). 
+Involved in further projects at Commodore, Leonard came along with the rest of 
+the Tramiel during their transition from Commodore to Tramiel Technologies to 
+Atari Corporation. Leonard served as Vice Preisdent of Software Development 
+during most of his tenure at Atari Coproration (1984-1996) and later as Vice 
+President of Advanced Technology.
+The following are excerpts from an interview that Leonard was kind enough to 
+grant me while I'm doing research for my book on the history of Atari. 
+Classicgaming.com is the only place you can find this interview, and they will 
+exclusively have all future excerpts from other interviews with Atari notables 
+that I conduct while doing my research.
+
+On the transition from Atari Inc. to Atari Corp. 
+
+Marty: You guys got the home gaming and computer division of Atari and the 
+coinop was split off in to Atari Games. Did you guys retain the rights to some 
+of the older coinops as well though? (The actual Pong, Asteroids, Centipede, 
+etc. arcade games).
+Leonard:We had the rights to all of Atari's games in the non-coinop field. 
+These were eventually sold to Hasbro. They have since sold them again.
+Marty: Yes, that's what I was wondering. So Atari Games retrained all the 
+coinop rights for the Atari coinops from 1972-1984?
+Leonard: Right. 
+
+Marty: Which brings me to another question - when you bought Atari and formed 
+Atari Corp., did that also include the exclusive rights to the Atari logo and 
+name? Or was the rights to the Atari name and logo split between both you and 
+Atari Games?
+Leonard:Atari Games certainly had the right to their own name! I think there 
+may have been a requirement for them to add "Games" anytime they used it, but 
+the rights were certainly shared.
+
+Marty: Including for the logo itself? 
+Leonard: Yes, the logo, with the word Games added below. 
+
+Marty: What happened to the rest of the Sword Quest series prizes (the crown 
+the philosopher's stone), and was there a specific reason for canceling it 
+when Atari transferred hands to your family? Some have speculated that because 
+you were primarily interested in Atari for it's name in computers that it 
+would be natural for you to cancel this. Do you know what happened to the 
+prototype to the Airworld cartridge as well?
+Leonard: If I remember correctly the Sword Quest series had a set of contests 
+associated with it. This, combined with very little in the way of public 
+interest, were the major reasons for cancellation. I wasn't involved in this 
+one at all so I'm going by what I happened to hear over the years. I have no 
+recollection of any Airworld items.
+
+Marty: What was the status of the Nintendo deal (Warner/Atari had been in 
+negotiations with Nintendo at the time for distribution of their Famicom 
+system that became the NES) at the time you took over? Had it already been 
+cancelled before your family took over, or was it just lost in the shuffle of 
+the takeover and eventually fizzled out?
+Leonard: I'm pretty sure there was no serious negotiation between Nintendo and 
+Atari. I don't know what your source of information is, but there's a lot of 
+bad information in the world.
+
+Marty: The two main video game history resource books on the market detail 
+this. Game Over is specifically about Nintendo's history and Phoenix is about 
+the entire industry in general, and both make mention of this.
+Leonard: I didn't read Game Over but I have read other books on related 
+subjects. There was one written by an ex-Commodore employee that got so many 
+things wrong I was amazed. Even things he was closely involved in. I would 
+take these books with many POUNDS of salt.
+
+The 7800 
+
+Marty: Regarding the 7800, was there a specific reasoning to cancelling it 
+when you took over and then releasing it several years later? I know that 
+Warner/Atari had the inventory ready to go, so when you decided to cancel the 
+release in '84, did you have any specific plans for the inventory at that 
+time? Trash it, unload it overseas or something else?
+Leonard: I was quite busy with the ST stuff but, as remember it there were a 
+few factors in the 7800 delay. One was the lack of sales of Atari game 
+machines in general. Another was a problem with the GCC contract.
+
+Marty: This is interesting, because most people assume the 7800 wasn't delayed 
+but rather cancelled and then brought out of mothballs when Nintendo 
+resurrected things with their NES. So it'd be great to set that straight and 
+clear things up.
+Leonard: I remember a big demo setup by the GCC folk to try to convince 
+everyone how great the 7800 was. It was impressive enough that the contractual 
+issues were uncovered. When the 7800 launch didn't happen there was no plan to 
+reschedule. On the other hand the inventory wasn't scrapped or sold off. Is 
+that a delay or a cancellation? To be successful it is important to be 
+flexible. A subtle point is that the neogtiations were very on and off, mostly 
+off.
+
+Marty: Ok, that's a shame then. Many Atari fans say that if it could have been 
+launched on schedule or even in '85, it would have done quite nicely against 
+the NES.
+Leonard: Maybe it would have, maybe not. The 7800 was basically a 2600 with 
+some things put into hardware that were done in software on the 2600. It was 
+still quite a limited machine. At this point it is difficult to say for sure.
+
+The Lynx 
+
+Marty: I just wanted to say thanks for the Lynx and Jaguar. The Lynx still 
+holds it's own to this day and kids I show it to get blown away when they 
+compare it to their crappy Gameboy color's.
+Leonard: The Lynx was nice machine. Too bad it was impossible to keep it 
+competitive with the other systems at the time. Our LCD manufacturer would not 
+reduce the price. We sued, and won, but the case took so long that the product 
+line was long dead by the time it was over.
+
+Marty: The Lynx became to costly to manufacture because of the LCD screen 
+prices. So after the Lynx died you sued the LCD manufacturer? Did you feel the 
+high price of the LCD screens (thereby not allowing you to drop the price of 
+the Lynx) had something to do with the Lynx failing and that's why you sued 
+them? Or were there other factors you feel led to the Lynx failing and 
+Nintendo's piece of garbage succeeding?
+Leonard: Correct. The Lynx was effectively dead by the time the lawsuit was 
+filed. We tried to get the LCD manufacturer to reduce the price based on our 
+analysis of competing products, like the Sega Game Gear.
+Our feedback from both consumers and retailers was that the Lynx would sell 
+and sell well but not at the price we could make money at. The major factor 
+that kept the price up was the cost of the LCD.
+The lawsuit that was eventually filed was for contract violation. There was a 
+most favored nation clause in the contract that required the supplier to sell 
+us product for the same price as similar products to other customers. We were 
+quite sure that this clause had been violated and after court ordered 
+discovery we were able to prove the case.
+The Gameboy had two things going for it over the Lynx. It was cheap and it was 
+tiny.
+
+On Atari Corp.'s lack of Advertising 
+
+Marty: To the general public, Atari Corp. is not known for strong advertising 
+or support of it's products and I'd love to hear your feeling on this.
+Leonard: Atari Corp. was not a strong advertising company. The same was true 
+of Commodore, for the same obvious reason.
+Marty: That's what I'm curious about with though. Was that the philosophical 
+view of your family?
+Leonard: I can't say that there is a family philosophy. On advertising: My 
+dad's general rule was to spend 10% of the previous periods profit on 
+advertising. There was lots of variations but that was the baseline. Lawsuits 
+are best avoided, if not then settle if you can. This is true for almost 
+everyone that is sued. Atari didn't sue very often, as a result they won a 
+significant percentage of the time.
+
+Marty: Looking back now, do you think this view on advertising hurt sales on 
+the various products at all? Or is there anything you would have done 
+differently? Or do you feel it was the right course?
+Leonard: I'm not sure. More advertising might have helped but it might not 
+have been worth the money.
+Accomplishments and wishes 
+
+Marty: Well, I'll use that to lead in to another direction - What do you feel 
+is your greatest accomplishment with Atari? Something that you remember fondly 
+to this day?
+Leonard: We managed to maintain and improve a sophisticated Graphical User 
+Interface with a very small group. TOS was a ROM based product. In the 
+product's entire lifetime there was only one patch and that problem was NEVER 
+reported (or at least I never saw a report). TOS was also very compatible from 
+version to version. We even released a protected-memory multi-tasking 
+operating that was compatible with the vast majority of applications many 
+years before either Apple or Microsoft.
+
+Marty: Also, are there any projects that never saw the light of day that you 
+wish would have?
+Leonard: The Falcon030 Microbox would have been a real nice machine. I also 
+would have really enjoyed programming the Panther video game system.
+(Interviewers note - The Panther was the followup gaming console to the Atari 
+Jaguar).
+
+Let me just say thanks again to Leonard for the interview. And to the people 
+ out there, I hope you enjoyed this glimpse in to Atari's past from one of 
+it's notables.
+
+
+1996-2001 GameSpy Industries. Contact us for more information on GameSpy 
+Industries. Be sure to read our legal stuff and check out how you can 
+advertise with us and target your products and services to gamers.

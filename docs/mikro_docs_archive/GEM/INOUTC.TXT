@@ -1,0 +1,115 @@
+Date: 11 Nov 87 01:05:29 GMT
+Comment:  Extracted form Info-Atari16 (INFO-A16) digest number 87-411
+From: decvax!minow@ucbvax.Berkeley.EDU  (Martin Minow)
+Subject: Re: FILE I/O: C turorial on Upper & lower case routines for I/O
+To: info-atari16@score.stanford.edu
+
+In article <2023@homxc.UUCP> jdn@homxc.UUCP (J.NAGY) asks about the
+difference between Fseek and fseek (etc.), noting that they look
+quite similar.
+
+The "lower-case" functions match the C stdio library routines.
+The "Upper-case" functions are direct calls to the operating system.
+(As such, they are closer to lseek(), open(), etc.)  As noted, the
+lower-case functions are generally preferable for portability.
+
+The Upper-case functions are the only ones that can be used in a desk
+accessory (they don't expand memory).  They are *much* harder to use.
+As a public-service, I'm including a small open a file and read a byte
+routine.  The code is made ugly as the operating system doesn't seem
+to have a notion of "end of file."  (It's extracted from a longer program
+and untested as such, so use it as a model only.)
+
+Martin Minow
+decvax!minow
+
+-----
+#include <osbind.h>
+#include <stat.h>
+
+#define FileBufferSize    512
+typedef struct {
+    int        handle;
+    long    filesize;
+    long    offset;
+    char    *bp;
+    char    *ep;
+    char    buffer[FileBufferSize];
+} FileInfo;
+
+#define FileTell(fid)    ((fid)->offset)
+
+#define strchr    index            /* Brain-damaged Software Dev.    */
+
+FileInfo    InFile;
+char        filename[64];        /* Stores file name for open    */
+
+
+typeout(infile)
+char        *infile;
+{
+    register int        c;
+
+    if (strchr(infile, ':') == NULL
+     && strchr(infile, '\\') == NULL) {
+        filename[0] = Dgetdrv() + 'a';
+        filename[1] = ':';
+        filename[2] = EOS;
+        Dgetpath(&filename[2], 0);    /* Must use "default" here    */
+        strcat(filename, "\\");
+        strcat(filename, infile);
+    }
+    else {
+        strcpy(filename, infile);    /* User specified drive name    */
+    }
+    if (FileOpen(&InFile, filename, 0) < 0) {
+        Cconws("Can't open the file\r\n");
+        Pterm(1);
+    }
+    while ((c = FileGetc(&InFile)) != EOF)
+        Cconout(c);
+    Fclose(Infile.handle);
+    Pterm(0);
+}
+
+int
+FileOpen(fid, filename, mode)
+register FileInfo    *fid;        /* Store stuff here        */
+char            *filename;    /* Fully-qualified file name    */
+int            mode;        /* Open mode            */
+{
+    DMABUFFER    stupid;        /* Needed to get file size    */
+    int        status;
+
+    Fsetdta(&stupid);
+    if ((status = Fsfirst(filename, 0)) < 0)
+        return (status);
+    fid->filesize = stupid.d_fsize;
+    fid->offset = 0;
+    fid->bp = fid->ep = NULL;
+    fid->handle = Fopen(filename, mode);
+    return (fid->handle);
+}
+
+int
+FileGetc(fid)
+register FileInfo    *fid;
+{
+    register long        readsize;
+    register int        result;
+
+    if (fid->offset >= fid->filesize)
+        return (EOF);
+    while (fid->bp >= fid->ep) {
+        readsize = fid->filesize - fid->offset;
+        if (readsize > FileBufferSize)
+        readsize = FileBufferSize;
+        if ((readsize = Fread(fid->handle, readsize, fid->buffer)) <= 0)
+        return (EOF);
+        fid->bp = &fid->buffer[0];
+        fid->ep = &fid->buffer[readsize];
+    }
+    fid->offset++;
+    return(*fid->bp++ & 0xFF);
+
+

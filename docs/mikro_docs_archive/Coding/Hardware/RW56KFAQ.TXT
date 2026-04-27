@@ -1,0 +1,337 @@
+[Image]                                                             [Image]
+---------------------------------------------------------------------------
+
+Q. How does 56Kbps modem technology work? What makes it different from
+28.8Kbps and 33.6Kbps technology?
+
+A. The basic concept behind this communications technology is that the
+public switched telephone network (PSTN) is increasingly a digital rather
+than analog network. Existing analog modems, such as V.34, "see" the PSTN
+as an analog system, even though the signals are digitized for
+communications throughout most of the network. Rockwell's 56Kbps technology
+looks at the PSTN as a digital network which just happens to have an
+"impaired" section represented by the copper wire connection between the
+central office and the user's home, usually referred to as the analog local
+loop. To make the technology work over that analog loop, it must "equalize"
+the line using special technology that converts the signal samples seen by
+the user's modem into the equivalent of what is being sent from the central
+office.
+
+More details are available in our white paper, which is available on our
+web site at http://www.nb.rockwell.com/mcd/K56Plus/56k_wp.html.
+
+Q. Is this new 56Kbps analog modem technology an extension of V.34
+(28.8/33.6Kbps)?
+
+A. No, the techniques used in V.34 (28.8Kbps) have been exploited to their
+limits. This is a new technique where the network is viewed as a digital
+transmission medium and the data is encoded for transmission over the
+user's telephone line, also known as the analog local loop.
+
+Q. Can any two modems incorporating this technology connect at 56Kbps?
+
+A. Yes, if one is a central-site modem with a digital connection to the
+network. On the other hand, two end-user modems incorporating this
+technology will not connect using this technique. Furthermore, 56Kbps
+speeds can only be achieved on good line conditions.
+
+Q. Does 56Kbps technology have different applications than previous modems,
+then?
+
+A. 56Kbps technology will primarily be used for faster web browsing and
+Internet access, and for faster remote access to corporate LANs that
+digitally connect to the PSTN.
+
+Q. How can you receive data at 56Kbps when the theoretical Shannon's Limit
+is about 35 Kbps?
+
+A. Shannon's limit is theoretically determined by the impairments (noise)
+in the telephone link. This new technique relies on a reduced noise
+environment due to a digital connection to the network by the service
+provider and a new encoding technique.
+
+Q. Why hasn't this technology been developed before?
+
+A. Actually, the concept has been around for a number of years but it
+hasn't been practical because most modems installed at service providers
+used to use analog connections to interface to the network.
+
+Q. Is this new high-speed analog modem technology a compression algorithm
+or a modulation scheme?
+
+A. It is neither a compression algorithm nor a modulation scheme. Data is
+actually passed on the telephone line at 56Kbps. It is a technique for
+encoding data for transmission over the telephone line -- we prefer to
+refer to it as an encoding technique instead of a modulation scheme.
+
+Q. What's the difference between modulation and encoding schemes?
+
+A. In modulation, a carrier is modified so that it carries information.
+Ordinary modems modulate a carrier to carry digital data. In this new
+technique we encode the data. By "encoding," we mean that data is sent in
+digital form through the network, and encoded in such a manner that it can
+pass through the user's analog telephone link at a high rate. This is a
+very technical area which can best be understood by reading our white paper
+describing the technology.
+
+Q. Can you define this new product within the context of ISDN, frame relay,
+cable modems or ADSL?
+
+A. There are no relationships. In reference to all of these techniques, the
+advantage of this new technique is that it works over the existing switched
+telephone network. It does not require the telephone company to replace or
+add any new equipment.
+
+Q. What do you mean in your news release by "bridge the gap" between
+current analog transmission rates and fully digital communication?
+
+A. ISDN, which provides two 64Kbps channels, has not yet achieved a
+significant penetration in the home market. This 56Kbps technology will
+allow users to gain the speed advantages of almost one ISDN channel without
+having to order and pay for a new ISDN telephone line.
+
+Q. How will 56Kbps services compare in price to other digital services?
+
+A. This technology does not require new services. It will utilize the
+existing analog telephone service.
+
+Q. Can the 56Kbps technology go to even higher speeds? Under what
+circumstances?
+
+A. Theoretically, the technology can approach 64Kbps; however, there are a
+number of practical problems with achieving this speed including line
+noise, non-linear distortion, the quality of the network codec, and others.
+The industry is working to push the technology to its highest possible data
+rate, and rates near 64Kbps may be possible in the future.
+
+Q. Does the user need an additional phone line?
+
+A. No, this new technology will work over a single existing analog phone
+line.
+
+Q. Does the phone company need to install new equipment?
+
+A. No. The use of this technique will be transparent to existing phone
+company equipment.
+
+Q. Does the user need new equipment?
+
+A. The user must have a modem which implements this new technology.
+
+Q. Will it work on long-distance calls or only local calls?
+
+A. It will work on both local and long-distance calls, depending upon the
+network interconnection. See our white paper for more details.
+
+Q. What do the ISPs have to do for users to get 56Kbps Internet access and
+web-browsing speeds?
+
+A. Similar to end-users, the ISP must have equipment that includes modems
+which support this technique. Additionally, the ISP must utilize a digital
+connection to the network. This will be an extremely straightforward
+process for ISPs who are installing new central-site equipment featuring
+the new 56Kbps modems. However, ISPs who wish to upgrade existing
+central-site equipment to the new 56Kbps technology face two additional
+issues.
+
+First, ISPs will probably wish to use ISDN Primary Rate Interface (PRI)
+network connections rather than lower-performance T1 "robbed bit"
+interfaces. All other things being equal, users will be able to connect at
+a higher rate to an ISP utilizing ISDN PRI than to one utilizing a T1
+"robbed bit" signaling. Many ISPs, therefore, will want to upgrade their
+network interface to ISDN PRI, as well as adding 56Kbps modem capability to
+their central-site equipment.
+
+Second, ISPs will need to make sure that their equipment provides adequate
+compression performance at 56Kbps operation. Without adequate compression
+performance, the "effective throughput" may not be much better than what
+users experienced at 28.8 Kbps or 33.6 Kbps. Some of the central-site
+modems which are being promoted as "upgradeable" to a 56Kbps encoding
+scheme may only have enough processing power to support adequate
+compression performance at 28.8Kbps and 33.6Kbps speeds. In these cases,
+users may not experience better throughput than when they were operating at
+28.8Kbps or 33.6Kbps speeds. This is an especially insidious problem
+because it occurs at the central site, out of the control of the user. Even
+if the user has purchased a new 56 Kbps modem, the throughput may be
+limited by poor compression performance at the central site.
+
+See [Image] for the complete listing of modem manufacturers and Internet
+Service Providers (ISPs) supporting Rockwell K56Plus technology.
+
+Q. What exactly is "effective throughput?" Why is it so important to
+achieving full 56Kbps performance?
+
+A. It is important to first understand how modems work. Data is first sent
+into a modem, where it is compressed and sent over the telephone line to
+another modem, where it is then decompressed. The amount of data that can
+be sent into the modem and effectively transmitted to the other end is
+called the effective throughput. The level of compression that the modem's
+processing power can support affects the effective throughput. The better
+the compression, the higher the effective throughput. And the higher the
+effective throughput, the faster the Web pages will come up on the user's
+screen.
+
+Q. Will 56Kbps technology be backward-compatible with existing modems that
+are already installed?
+
+A. Products incorporating this new technology will also contain all
+previous modem modulations, including V.34, V.32bis, and facsimile
+modulations. During the initial stages of a connection the two modems will
+determine what modulation and at what speed the transmission will occur.
+
+Q. Why can't users get 56Kbps speed both sending and receiving?
+
+A. It is more difficult to equalize the upstream channel, and therefore
+more difficult to achieve the same high data rates as are achieved in the
+downstream channel. However, for Internet access, the data rate in the
+upstream direction is less important than downstream, since the upstream
+channel transmits mostly "key strokes and mouse clicks." At present, a data
+rate of around 30 Kbps can be attained in the upstream direction, but
+research continues toward increasing that rate.
+
+Q. Why can't all 56Kbps modems connect to each other, initially? What
+happens if a user with one manufacturers' 56Kbps modem tries to connect to
+a remote network or ISP that has another manufacturers' 56Kbps modem on the
+other end?
+
+A. Although it appears that most companies are using the same basic
+technique to achieve 56Kbps operation, the specific design choices are
+unlikely to be the same. However, if two modems are unable to connect at
+56Kbps, they will drop down to a mutually interoperable industry-standard
+data rate like 28.8Kbps or 33.6Kbps. Rockwell is working with the
+appropriate standards bodies, toward the development of a ratified
+specification that will serve as a worldwide interoperability vehicle.
+
+Q. What is happening with the industry standards effort for 56Kbps modem
+technology? What standards organizations will be involved, if any, in
+addition to the ITU?
+
+A. The ITU sets international standards and thus would be the preferred
+standards body for this technology. On November 13, 1996, Rockwell
+Semiconductor Systems hosted the TR-30 Pulse Code Modulation (PCM) ad hoc
+group, the first standards meeting aimed at creating draft standards for
+PCM modem technology. These draft standards are being developed to ensure
+interoperability between 56Kbps products from a broad spectrum of modem
+vendors and other communications equipment suppliers. Rockwell was joined
+at the meeting by a number of leading U.S. PC and communications companies
+including Intel, Lucent, Hayes, Motorola, IBM, Compaq and Cisco. This ad
+hoc committee has been created under the direction of the Electronics
+Industry Association (EIA) and Telecommunications Industry Association
+(TIA) to develop an EIA/TIA interim standard for U.S. 56Kbps PCM modems by
+mid-1997. The TIA TR-30 group also will serve as the advisory committee to
+the U.S. government on modem-related issues involving the International
+Telecommunications Union (ITU). It is expected that the group's interim
+work in the U.S. will form the basis for a U.S. submission to the ITU for a
+worldwide standard for 56Kbps modem technology. Rockwell is a charter
+member of this TIA group and is the assistant editor for the draft
+standard, working with Motorola.
+
+Q. Why is interoperability so important to the success and adoption of
+56Kbps modem technology? Will 56Kbps modem technology follow the same
+standards-development process as the previous 28.8Kbps and 33.6Kbps modem
+technology? Are there unique new interoperability issues that need be
+resolved before 56Kbps modem technology achieves its full potential, since
+this technology relies on the digital telephony infrastructure?
+
+A. Interoperability is critical to any modem technology. In the case of
+56Kbps modems, the technology introduces new issues which may require
+slightly different handling by the industry standards bodies as compared to
+previous 28.8Kbps and 33.6Kbps efforts. Rockwell is working with a number
+of other leading PC, modem, and telecommunications equipment vendors to
+address these new issues which may impact the future success of 56Kbps
+modems. Also, Rockwell has joined with Lucent to announce that the two
+companies will make their 56Kbps modem chipsets interoperate at 56 Kbps.
+Agreements like this help to ensure that customers who purchase a modem
+that implements Rockwell's K56Plus will have the highest probability of
+achieving a connection at speeds up to 56Kbps.
+
+Q. Some people say that the first to market will achieve status as the de
+facto 56Kbps standard. Why isn't that true? Why does the industry need to
+wait for the standards bodies to determine specifications?
+
+A. The diffusion rate for a new modem technology like this will be slow,
+and it is critical that the industry develop worldwide standards. Early
+installations of 56Kbps will likely be "show POPs" rather than general
+deployment. Network operators will likely move slowly to avoid problems for
+their users. The issue of "which 56Kbps?" will disappear when there are
+standards. Rockwell is an active participant in the standards-development
+process, and is also working very closely with the central-site equipment
+suppliers who provide the critical ISP technology to make 56Kbps work.
+
+Q. What is the next step after the TIA/TR30 PCM Modem interim
+specifications are completed?
+
+A. Once the TIA PCM ad hoc committee develops its interim draft standard,
+for which Rockwell is the assistant editor, it will likely be submitted to
+the ITU. Modem manufacturers may choose to implement the TR30 interim
+standard until the ITU standard is achieved.
+
+Q. How long will that process take?
+
+A. The TIA PCM ad hoc committee has committed to finalizing a draft
+standard by mid-1997. The ITU standardization process could take another 12
+to 15 months.
+
+Q. When can we see Rockwell's K56Plus?
+
+A. Rockwell will be demonstrating its K56Plus technology at COMDEX.
+
+Q. Why has Rockwell announced K56Plus before it's ready to ship?
+
+A. It takes time to educate people about this new technology, and for
+central-site equipment providers to incorporate the technology into their
+plans. This is not like traditional modem products that operate in an
+isolated environment -- 56Kbps technology is just one component of a large
+network infrastructure including both central-site and client-side modems.
+Rockwell announced early to help prepare the market for the final product
+and for its successful migration into customers' hands.
+
+Q. What will be the price premium of modems incorporating Rockwell's
+K56Plus technology over today's high-speed V.34 (33.6Kbps)modems?
+
+A. It is too early to know how modem manufacturers will price their
+products. However, it's likely that this new technology will follow the
+same price path as 28.8Kbps modems, which entered the market at retail
+prices in the mid $200 range, and quickly came down in price to under $100.
+
+Q. What customer support is there for Rockwell's K56Plus technology?
+
+A. Rockwell has already gained public support for its K56Plus technology
+from key central-site modem suppliers including Ascend, Cascade, Hayes,
+Microcom and Shiva, plus more than 100 leading client-modem manufacturers.
+These manufacturers support an installed base of more than 40 million modem
+users.
+
+See [Image] for the complete listing of modem manufacturers and Internet
+Service Providers (ISPs) supporting Rockwell K56Plus technology.
+
+Q. What modem experience has Rockwell applied to the development of its
+K56Plus technology?
+
+A. Rockwell has been a proven modem technology leader, and will continue to
+apply that knowledge base to our 56Kbps modems. The company has shipped
+more than 25 million high-speed modems for PC-based client subscriber
+applications in 1996 alone, and has extended its already well-established
+market leadership position of central site modem connection points.
+Rockwell also has experience in ATM, frame relay and other technologies
+needed to provide complete networking solutions.
+
+Q. What is Rockwell's current worldwide market share for modem products?
+
+A. According to market analysis by Dataquest and Rockwell, between January
+1995 and March 1996, more than 70 percent of access concentrator ports,
+which contain a central-site modem, were based on Rockwell modem chipsets.
+Rockwell also supplies more than 50 percent of the worldwide modem products
+into remote modem applications.
+
+                   --------------------------------------
+
+                          [Image] [Image][Image]
+                       [Image][Image][Image][Image]
+
+---------------------------------------------------------------------------
+ What's |  Worldwide  |  Search  |   Technical  |   Company  |   Corporate
+  New   |  Contacts   |          |   Reference  |   Profile  |     site
+---------------------------------------------------------------------------
+
+Copyright © 1996 Rockwell International, all rights reserved

@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0038)http://tomas.nocrew.org/DSP/DSP-3.html -->
+<HTML><HEAD><TITLE>DSP Programming - part three</TITLE>
+<META content="text/html; charset=windows-1250" http-equiv=Content-Type>
+<META content="MSHTML 5.00.2614.3500" name=GENERATOR></HEAD>
+<BODY>
+<H1 align=center>Addressing modes</H1>This part will cover the uses of the 
+memory and the different addring modes available in the DSP56001. 
+<P>Often you need to use more space to store data than in the few registers the 
+ALU have. Then it's time to take use of the enormous memory the DSP have access 
+to. This can be done in two ways, like in 68K assembler, throught direct 
+addressing or via one of the eight address registers of the AGU. Either way, the 
+memory bank to used much always be specified. This is done by writing X:nn, 
+Y:nn, L:nn or P:nn where nn is an address. <BR>Here are two examples: 
+<DL compact>
+  <DD><CODE>MOVE #$123456,X:$2A</CODE> 
+  <DD><CODE>MOVE #$ABCDEF,Y:$2A</CODE> </DD></DL>The memory position $2A in the X 
+memory now contains the value $123456 and in the Y memory, at the same position, 
+a value of $ABCDEF. A third way of using the memory, is to combine the X and Y 
+memory positions into one 48-bit position. By using the L:nn addressing mode 
+like this: 
+<DL compact>
+  <DD><CODE>MOVE L:$2A,X</CODE> </DD></DL>the register X will be $123456:ABCDEF. 
+<P>Here are a few more examples and the results of them: 
+<DL compact>
+  <DD><CODE>MOVE L:$2A,A</CODE> </DD></DL>A=$00:123456:ABCDEF 
+<DL compact>
+  <DD><CODE>MOVE L:$2A,A10</CODE> </DD></DL>A=$XX:123456:ABCDEF<BR>A2 is not 
+affected, the previous value is still present. 
+<DL compact>
+  <DD><CODE>MOVE L:$2A,AB</CODE> 
+</DD></DL>A=$00:123456:000000<BR>B=$FF:ABCDEF:000000 
+<P>The fourth memory addressing mode is P:nn and is used to move data to and 
+from the program memory. This have to be done with a special instruction, MOVEM. 
+
+<P>The second way of addressing is with the use of address registers. You then 
+use X:(Rn), Y:(Rn), L:(Rn) or P:(Rn) where n decides which of the registers, 
+R0-R7, that is used. As in 68K assembler, the address register can also be 
+predecreamented or postinkreamented. This is done by using X:-(Rn) or X:(Rn)+. 
+The DSP also allows postdecreamentation, X:(Rn)-. These three only increase or 
+decrease with one each time, but the DSP also makes it possible to increase or 
+decrease with more than one at a time, with the use of the offset registers of 
+the AGU, N0-N7. Each address register has its own offset register. R0 must 
+therefore only use N0 as offset register, R1 with N1 and so on. There are three 
+addressing modes which use the offset registers: X:(Rn)+Nn, X:(Rn)-Nn and 
+X:(Rn+Nn). In the first two cases, Rn is increased or decreased, respectively, 
+after the address has been used. In the last case, Nn is used as an offset to Rn 
+when the address is generated, but Rn is not changed. The offset registers are 
+two compliments 16-bit numbers, which gives values from -32768 to +32767. 
+<P>The last eight registers of the AGU, the moduloregister, M0-M7 are, as with 
+the offset registers, also restricted to its own address register. The modulo 
+registers are used to create circular buffers, very useful in digital signal 
+processing such as filters and FFT. When you read from a circular buffer and 
+reach the end, the address register will jump back to the beginning of the 
+buffer again. Moduloregisters are not set to anything specific when a program is 
+started. It is therefore recommended that you begin your program with setting 
+proper values on the modulo registers. A value of 65535 ($FFFF) turns off the 
+modulo function for the corresponding address register. Values from 1 to 32767 
+tells the size of the circular buffer to be used. The size of the buffer is the 
+value of the modulo register plus one, giving possible buffer sizes of 2 to 
+32768 words. Modulo register values of 32768 to 65534 are reserved in the DSP 
+for future use. A value of 0 (zero) specifies a special mode, which I will get 
+back to later. 
+<P>When you have decided how large buffer you want, there are some restrictions 
+to where the buffer may be placed in the memory. Take the size of the buffer, 
+here called M, a value from 2 to 32768. In our exampel, let's use a value of 
+M=$548, which makes the buffer 1352 words large.The value $547 (1351) is placed 
+in the modulo register to be used, for example M3. Then find a value, k, so that 
+2^k&gt;=M. The address where the buffer begins, must then have k LSBs zeroed. 
+Complicated? Not very, in our example, the smallest value of k is 11, since 
+2^11=2048. The buffer address therefore have to have eleven cleared LSBs. The 
+lowest position of the buffer will then be %0000100000000000=$0800. The first 
+position after the buffer will be $800+$548=$D48 (3400). 
+<P>The following example will set up our example buffer: 
+<DL compact>
+  <DD><CODE>ORG X:$800 ; Position of buffer</CODE> 
+  <DT><CODE>buffer
+  <DD>DS 1352 ; reserve 1352 words</CODE>
+  <P></P></DD></DL>Then set the registers correctly: 
+<DL compact>
+  <DD>MOVE #buffer,R3 ; R3=$800 (R3 is not restricted to the X memory!) 
+  <DD>MOVE #1352-1,M3 ; M3 equals buffer size minus one </DD></DL>If we then use 
+R3 with postinkrementation, (R3)+, R3 will, after 1351 times of use, have a 
+value of $D47 but the next time R3 is supposed to be increased to get a value of 
+$D48, it will instead loop around the circular buffer and R3 will be $800. The 
+same thing if (R3)- or -(R3) is used, it will jump to $D47 when decreasing $800. 
+When the offset registers are used, the address will also modulo. Let's say we 
+set offset register N3 with the value 5 and that we use (R3)+N3. Starting on 
+$800, we will increase with N3 270 times to end up at address $D46. Next time, 
+we would have come to $D4B, but the modulo register makes R3 loop around and we 
+will come to $D4B-$548=$803. The same thing, but backwords, will happen if we 
+use (R3)-N3. When (R3+N3) is used, the address register will also loop around 
+before used, but will not be updated. 
+<P>If the offset register is set to be exactly equal to 2^k, in our example, 
+N3=2048, the offset register may be used in a special way. Using (R3)+N3, when 
+R3=$800, will not modulo around the buffer and end up at position $AB8 as you 
+might have expected. In this case, R3 will be placed in the next possible 
+circular buffer, i.e. at position $1000 where a different circular buffer may be 
+placed. If more than one circular buffer is needed, this is a way of jumping 
+between them without having to set the address register manually. 
+<P>Left to be explain should be when a modulo register is set to 0 (zero), a 
+mode which is called Reverse Carry or Bit Reverse Mode. This is a mode used for 
+Fast Fourier Transforms (FFT), something I don't know anything about. I can't 
+really say why this mode is useful, but will explain what it does anyway. 
+<P>It first perform a bit reverse the address register internally, which means 
+that MSB switches place with LSB, the next MSB and bit 1 changes places, and so 
+on. It then increases or decreases according to the mode used, with one or with 
+an offset register. And finally it bit reverses the address register again, use 
+the address generated and updates the register. 
+<P>For a more descriptive exlaination of this, I refer to <A 
+href="http://www2.motorola-dsp.com/dsp/dsp/home/eng/tec/56001um.html">The 
+DSP56001 User's Manual</A>, section 5. 
+<P>Summary of addressing modes possible:<BR>
+<DL compact>
+  <DD>Absolute addressing 
+  <DD>(Rn) 
+  <DD>(Rn)+ 
+  <DD>(Rn)- 
+  <DD>-(Rn) 
+  <DD>(Rn)+Nn 
+  <DD>(Rn)-Nn 
+  <DD>(Rn+Nn) </DD></DL>All modes may be used for all of X:, Y:, L: and P:. 
+<P>Be careful with the pipelining effects when using the address, offset and 
+modulo registers. The register may not be used in the instruction directly after 
+it has been set. An increase or decrease of the registers may be used though, 
+since pipelining does not effect then. 
+<HR>
+<A href="http://tomas.nocrew.org/DSP/DSP-2.html">Prev part - Fixpoint numbers 
+and ALU registers</A> <BR>Next part - Short description of instruction (not yet 
+finished) 
+<P><A href="http://tomas.nocrew.org/DSP/DSP-main.html">Back to DSP main page</A> 
+
+<P><A href="http://tomas.nocrew.org/index.html">Back to Index page</A> 
+<HR width="40%">
+
+<P align=center><I>Accessed <BR clear=all><PRE>RXML parse error: This tag doesn't handle content - it probably should end with "/&gt;".
+ | &lt;accessed/&gt;
+</PRE></I></BODY></HTML>

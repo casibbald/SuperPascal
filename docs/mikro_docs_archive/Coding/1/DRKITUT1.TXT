@@ -1,0 +1,224 @@
+                                                ,  ,
+                                               / \/ \
+                                              (/ //_ \_
+     .-._                                      \|| .   \
+      \  '-._                            _,:__.-"/---\_ \
+ ______/___  '.    .--------------------'~-'--.)_,( , )\ \ 
+`'--.___  _\  /    |             DarK I      ,'    \)|\ `\|
+   /___.-'  \ \ _:,_    Tutorial #1: Fire effect   " ||   (
+   .'__ _.'\ '-/,`-~`                                |/
+       \  ___.> /=,| http://www.multimania.com/darki |
+       / _.-'/_ )  |   email:darki@multimania.com    |
+       /`   ( /(/  |_________________________________|
+             \\ "	     Ascii art by Shanaka Dias (snd)
+              '==' 
+
+Introduction:
+This is the first tutorial (of many I hope) on programming various 2d
+and 3d effects. I am starting off with the standard fire effect. Often
+enough, people who write tutorials start with stuff about mode 13h,
+palettes, etc ... by I figure that there is already plenty enough stuff
+out there on those topics.
+Before you start reading, maybe you will want to download fire.zip from
+my homepage (unless you already have) and look at it and the code. Just
+so we know what we are talking about here ;) If you feel that the code 
+is somewhat obscure (I think it is ...) well then read on!
+
+Part I: Generating a cool palette
+The first thing your program will have to do, (after setting up video
+mode and such) is to create a cool palette for the fire. This turns out
+to be a crucial part of the effectiveness of the effect.
+To look good, the palette must contain a smooth gradient of colors that
+range from white to black, passing by reds, oranges, yellows and maybe
+some blues for the top of the fire. As we will see later on, the order
+of colors is important. The palette should look like this:
+____________________
+|Color 0   | Black |
+|   .      |       |
+|   .      |       |
+|   .      |       |
+|Color n1  | Blue  |
+|   .      |       |
+|   .      |       |
+|   .      |       |
+|Color n2  | Red   |
+|   .      |       | 
+|Color n3  | Orange|
+|   .      |       |
+|Color n4  | Yellow|
+|   .      |       |
+|Color 255 | White |
+|__________|_______|
+The higher the color index is, the 'hotter' the pixel is. So at the bottom
+of the fire everything is white, then it gradually decreases to black.
+The trick is to have smooth color runs between the various colors at indexes
+0, n1, n2, ... so that the whole thing looks smooth. And the key to smooth
+color runs is: LINEAR INTERPOLATION. Remember this one if you haven't already
+its one of those things that you will often need in programming (especially
+graphics programming). If you already know what this is and are comfortable
+with it, just skip a paragraph or two. Its a realy simple formula and
+has an incredible number of applications. Here it goes:
+
+Value = Start_Value + t * (End_Value - Start_Value)
+where t varies from 0 to 1
+
+Wow, read that over once or twice ;) The parameter t specifies the
+position of the value you want to get between Start_Value and End_Value as a
+fraction. For example, consider the linear run of numbers:
+0,5,10,15,20,25, ...., 100
+It is said to be linear because the numbers progress by addition (+5 each
+time). Now, what is the number right in the middle of the sequence ?
+Easy, with our formula we just write:
+
+Number_in_the_middle = 0 + 0.5 * (100 - 0)
+                     = 50
+And that's the correct answer of course! (write the whole thing out if you're
+not sure ;))
+
+Back to palettes and smooth color runs. We know that between color index 0
+and 10 for example we want to have a smooth run of colors that goes from
+black to blue. All we have to do to get those colors in between is:
+Color = Black + t * (Blue - Black)
+and since we want to do this from color index 0 to 10: t=i/10 where i is
+the index of the color to generate. Colors of course have red, green and blue
+components so the real calulation is:
+
+t = i / 10
+Color.Red   =  Black.Red   + t * (Blue.Red   - Black.Red)
+Color.Green =  Black.Green + t * (Blue.Green - Black.Green)
+Color.Blue  =  Black.Blue  + t * (Blue.Blue  - Black.Blue)
+
+The following C code will do the job for you:
+
+void make_gradient (byte start_index, byte red_s, byte green_s,
+                    byte blue_s, byte end_index, byte red_e,
+                    byte green_e, byte blue_e)
+{
+  //Produces smooth gradients from RGB_start to RGB_end
+  //(on the variable's names s = start and e = end
+  unsigned char index;
+  unsigned char max = (end_index - start_index);
+
+  float red_inc, green_inc, blue_inc;
+
+  //Set the two starting values
+  set_color(start_index, red_s, green_s, blue_s);
+  set_color(end_index, red_e, green_e, blue_e);
+  //Compute the RGB increments
+  red_inc = (red_e - red_s) / ((float) (max));
+  green_inc = (green_e - green_s) / ((float) (max));
+  blue_inc = (blue_e - blue_s) / ((float) (max));
+  //Set middle colors
+  for (index = 1; index < max; index++)
+    set_color((start_index + index), (red_s + red_inc * index),
+                                     (green_s + green_inc * index),
+                                     (blue_s + blue_inc * index));
+}
+
+I assume that you can write the set_color function on your own.
+Making a good palette will take a little tweaking, but this function
+will make things easier.
+
+Part II: I want to see some flames!
+
+Ok, ok, here it comes ... Lets see how this cool effects is done:
+There are several steps to the algorithm:
+a) Generate the bottom of the fire (to keep it going)
+b) Scroll the fire up
+c) Smooth the colors as they move up
+d) Display to the screen
+We will need at least two arrays the same size of the screen (320x200).
+a) The bottom line is filled randomly at various places with white (color
+255). Now you will need a random number generator to do this.
+At the time I wrote the program, I had no clue as to how to do that, and I
+figured it required very complex mathematics. It turns out that it doesn't.
+However I didn't know that at the time and I found an alternate solution.
+I pregenerated a few random 'bottom line' for the fire and simply copied
+them to the bottom line of the fire buffer at run time. That's not the best
+way though. Here is a small bit of inline assembly that will generate a
+pseudo-random number between 0 and n - 1:
+(n should be smaller that 255 even though the parameter is an int)
+
+int seed;
+int fast_rand(int n)
+{
+  asm mov ax, seed
+  asm add ax, 1234
+  asm xor al, ah
+  asm rol ah, l
+  asm add ax, 4321
+  asm ror al, 1
+  asm xor ah, al
+  asm mov seed, ax
+  asm xor dx, dx
+  asm mov cx, n
+  asm div cx                   ;Divide by n
+  asm mov al, ah               ;Save remainder (which ranges from 0 - (n-1))
+  asm xor ah, ah
+;Return value is in _AX
+}
+
+There is no real logic behind this, the idea is just to mess with the value
+in the seed variable enough so that it look random. You might want to fool
+with that function yourself to make it smaller or whatever. I think you get
+the idea.
+
+b/c)This part of the algorithm is what makes the fire realy go. Lets call
+our first offscreen buffer, page1 and the other page2. The trick to scroll
+upwards is to read pixel (x, y) from page1 and to display it at (x, y-1)
+on page2. (Note that special care must be taken not to go beyond the memory
+limit of the buffer).
+But simple upward scrolling is not what we need. We need to decrease the
+pixel color as well. And to do this correctly we must smooth the value that
+is being scrolled up. Instead of reading the pixel (x,y), we read the pixels
+AROUND (x,y) and put an AVERAGE of those into (x,y-1) on page2. Having a
+palette organized linearly helps with this since we don't have to worry
+about the rbg values of the colors, we can just average their indexes and
+it will look good :)
+In order to make the averaging process simpler, we take the 4 or 8
+surrounding pixels and use a shift to divide the result.
+Thus:
+page2(x,y-1)=(page1(x-1,y-1) + page1(x,y-1) + page1(x+1,y-1)
+              page1(x-1,y  ) +     0        + page1(x+1,y  )
+              page1(x-1,y+1) + page1(x,y+1) + page1(x+1,y+1)) >> 3;
+
+
+d)Now that page2 contains a smoothed and moved up page1, we can just copy
+it to the screen with our favorite 'rep movsd' intruction and swap around
+page1 and page2 so we can repeat the process again. And that's it! You should
+have a burning fire on your screen!
+
+
+Part III: Higher Grounds
+- Ok, I got all that, but how can I make this even better ?
+There are several variations on this theme. Lets see briefly in theory what
+they are.
+The first possibility, which I have implemented, is based on a program by
+Frank Paxti that I found a while ago on Hornet.org (which is closed now
+unfortunately :_( ). The idea is to work on a per-pixel basis. When you move
+a pixel up, you randomly displace its x coordinate by -1, 0, or 1. You also
+decrease its color randomly based on a decay value. The fire is kept running
+by copying to the bottom line a few random colored pixels which are
+smoothed (only the bottom line that is) so that the fire will spread left and
+right. This really looks real good. I'm not posting the source I've written
+to my homepage because its basically a C translation of what that other guy
+had done in pascal/asm, mail me (darki@multimania.com) if you desperately
+want to have a look at it or browse the ruins of Hornet.org and see if you
+can find the original still there...
+
+Other ideas for a better fire effect would be to distort the bitmap with an
+image warping algorithm on top of the rest, I don't know if this would really
+look good and I haven't tried to implement it. Its up to you to see ...
+You might also try to code this effect with high/true color video modes
+(15,16,24 and 32bit). It would probably require a color table to emulate the
+palette hardware ...
+
+Conclusion/Final word:
+That's all folks! If you have any comments, question or suggestions, this
+is your chance: e-mail me at: darki@multimania.com I will try to reply
+to all mail personally or make global updates to this text file if many
+people have the same problem. Feel free to submit ideas or topics you would
+like to read a tutorials about ;)
+
+Visit my homepage: http://www.multimania.com/darki/
+

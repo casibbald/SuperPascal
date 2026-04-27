@@ -1,0 +1,352 @@
+<html>
+
+<head>
+<title>Sutherland-Hodgman Clipping</title>
+</head>
+
+<body BGCOLOR="#000000" TEXT="0088FF" LINK="#00FFFF" VLINK="#008080" ALINK="#000080">
+
+<h1>Sutherland-Hodgman Clipping</h1>
+
+<h2>Fourth part of <a href="http://pages.infinit.net/jstlouis/3dbhole"><i>The 3D Coding
+Blackhole</i></a> tutorial series</h2>
+
+<ul>
+  <li><a HREF="#Overview">Overview</a> </li>
+  <li><a HREF="#Z">Z-Clipping</a> </li>
+  <li><a HREF="#Screen">Clipping against the screen</a> </li>
+</ul>
+<a NAME="Overview">
+
+<h1><font color="#FFFFFF">Overview</font></h1>
+</a>
+
+<p>Some chineese proverb says that drawing polygons elsewhere than on the screen is bad,
+so you're better clip your polygons. You must clip against the edges of the screen, but
+also against the front of the view volumes (you must not draw things behind the viewer,
+when the <b><i>z</i></b> coordinate is too small). When we clip a polygon, we don't check
+if every point is inside the limits, but we rather add necessary vertices. So we will need
+a third polygon structure: </p>
+
+<pre WRAP>
+typedef struct
+{
+    int Count;
+   _3D Vertex[20];
+}CPolygon_t;
+</pre>
+
+<p>And since we can have additional vertices to project, we can no longer project
+vertices, we will rather project clipped 3D polygons onto 2D polygons: </p>
+
+<pre WRAP>
+void M3D_Project(CPolygon_t *Polygon,Polygon2D_t *Clipped,int focaldistance)
+{
+   int v;
+    for(v=0; v&lt;Polygon-&gt;Count; v++)
+   {
+      if(!Polygon-&gt;Vertex[v].z)Polygon-&gt;Vertex[v].z++;
+         Clipped-&gt;Points[v].x=Polygon-&gt;Vertex[v].x*focaldistance/
+            Polygon-&gt;Vertex[v].z+Origin.x;
+         Clipped-&gt;Points[v].y=Polygon-&gt;Vertex[v].y*focaldistance/
+            Polygon-&gt;Vertex[v].z+Origin.y;
+   }
+   Clipped-&gt;PointsCount=Polygon-&gt;Count;
+}
+</pre>
+<a NAME="Z">
+
+<h1><font color="#FFFFFF">Z-Clipping</font></h1>
+</a>
+
+<p>We will start our Z-Clipping (or clipping against the front of the view volume) by
+defining macros to compute the <b><i>z</i></b> deltas between the first point and the
+second (<i>dold</i>) and between the first point and the minimum <b><i>z</i></b> value.
+Then we will compute the proportion, and make sure we don't get a divide by zero. </p>
+
+<pre WRAP>
+WORD ZMin=20;
+#define INIT_ZDELTAS dold=V2.z-V1.z;  dnew=ZMin-V1.z;
+#define INIT_ZCLIP INIT_ZDELTAS if(dold)m=dnew/dold;
+
+</pre>
+
+<p>Then we will create a function that will take as parameter a clipped polygon pointer
+(where it will write the resulting clipped vertices), a first vertex (the beginning of the
+edge we're clipping) and a second one (the end): </p>
+
+<pre WRAP>
+void CLIP_Front(CPolygon_t *Polygon,_3D V1,_3D V2)
+{
+   float dold,dnew, m=1;
+   INIT_ZCLIP</pre>
+
+<p>Now we must check if the edge is either totally inside the viewport, leaving it or
+entering it. If the edge isn't totally inside, we compute the intersection of the edge and
+the viewport, with our <b><i>m</i></b> value, computed with INIT_ZCLIP.<br>
+<br>
+If it's inside: </p>
+
+<pre WRAP>
+   if ( (V1.z&gt;=ZMin) &amp;&amp; (V2.z&gt;=ZMin) )
+      Polygon-&gt;Vertex[Polygon-&gt;Count++]=V2;
+</pre>
+
+<p>If it's leaving the viewport: </p>
+
+<pre WRAP>
+   if ( (V1.z&gt;=ZMin) &amp;&amp; (V2.z&lt;ZMin) )
+   {
+      Polygon-&gt;Vertex[Polygon-&gt;Count   ].x=V1.x + (V2.x-V1.x)*m;
+      Polygon-&gt;Vertex[Polygon-&gt;Count   ].y=V1.y + (V2.y-V1.y)*m;
+      Polygon-&gt;Vertex[Polygon-&gt;Count++ ].z=ZMin;
+   }
+</pre>
+
+<p>If it's entering the viewport: </p>
+
+<pre WRAP>
+   if ( (V1.z&lt;ZMin) &amp;&amp; (V2.z&gt;=ZMin) )
+   {
+      Polygon-&gt;Vertex[Polygon-&gt;Count   ].x=V1.x + (V2.x-V1.x)*m;
+      Polygon-&gt;Vertex[Polygon-&gt;Count   ].y=V1.y + (V2.y-V1.y)*m;
+      Polygon-&gt;Vertex[Polygon-&gt;Count++ ].z=ZMin;
+      Polygon-&gt;Vertex[Polygon-&gt;Count++ ]=V2;
+   }
+</pre>
+
+<p>And that's it with this edge Z-Clipping function: </p>
+
+<pre WRAP>
+}
+</pre>
+
+<p>Now we must write an entire polygon Z-Clipping procedure. And for the occasion, we will
+define a macro searching for the appropriate polygon vertex in an object structure: </p>
+
+<pre>
+#define Vert(x) Object-&gt;Vertex[Polygon-&gt;Vertex[x]]
+</pre>
+
+<p>And here is the function: </p>
+
+<pre WRAP>
+void CLIP_Z(Polygon_t *Polygon,Object_t *Object,CPolygon_t *ZClipped)
+{
+   int d,v;
+   ZClipped-&gt;Count=0;
+   for (v=0; v&lt;Polygon-&gt;Count; v++)
+   {
+      d=v+1;
+      if(d==Polygon-&gt;Count)d=0;
+      CLIP_Front(ZClipped, Vert(v).Aligned,Vert(d).Aligned);
+   }
+}
+</pre>
+
+<p>This one is pretty straightforward: it simply calls FrontClip, doing a vertex
+wrap-around. <a NAME="Screen"></p>
+
+<h1><font color="#FFFFFF">Clipping against the screen</font></h1>
+</a>
+
+<p>Clipping against the edges of the screen is the same as Z-Clipping, but you have 4
+edges instead of one, so we will need 4 different functions. But they will all use the
+same delta initialization: </p>
+
+<pre WRAP>
+#define INIT_DELTAS dx=V2.x-V1.x;  dy=V2.y-V1.y;
+#define INIT_CLIP INIT_DELTAS if(dx)m=dy/dx;
+</pre>
+
+<p>And the edges will be: </p>
+
+<pre WRAP>
+_2D TopLeft, DownRight;
+</pre>
+
+<p>And to simplify further use of the types _2D and _3D, we'll define two useful
+functions: </p>
+
+<pre WRAP>
+_2D P2D(short xshort y)
+{
+   _2D Temp;
+   Temp.x=x;
+   Temp.y=y;
+   return Temp;
+}
+_3D P3D(float x,float y,float z)
+{
+   _3D Temp;
+   Temp.x=x;
+   Temp.y=y;
+   Temp.z=z;
+   return Temp;
+}
+</pre>
+
+<p>then use them to specify the viewport: </p>
+
+<pre WRAP>
+TopLeft=P2D(0, 0);
+DownRight=P2D(319, 199);
+</pre>
+
+<p>And here comes the 4 edge clipping functions: </p>
+
+<pre WRAP>
+void CLIP_Left(Polygon2D_t *Polygon,_2D V1,_2D V2)
+{
+   float   dx,dy, m=1;
+   INIT_CLIP
+
+   // ************OK************
+   if ( (V1.x&gt;=TopLeft.x) &amp;&amp; (V2.x&gt;=TopLeft.x) )
+   Polygon-&gt;Points[Polygon-&gt;PointsCount++]=V2;
+   // *********LEAVING**********
+   if ( (V1.x&gt;=TopLeft.x) &amp;&amp; (V2.x&lt;TopLeft.x) )
+   {
+      Polygon-&gt;Points[Polygon-&gt;PointsCount].x=TopLeft.x;
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++].y=V1.y+m*(TopLeft.x-V1.x);
+   }
+   // ********ENTERING*********
+   if ( (V1.x&lt;TopLeft.x) &amp;&amp; (V2.x&gt;=TopLeft.x) )
+   {
+      Polygon-&gt;Points[Polygon-&gt;PointsCount].x=TopLeft.x;
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++].y=V1.y+m*(TopLeft.x-V1.x);
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++]=V2;
+   }
+}
+void CLIP_Right(Polygon2D_t *Polygon,_2D V1,_2D V2)
+{
+   float dx,dy, m=1;
+   INIT_CLIP
+   // ************OK************
+   if ( (V1.x&lt;=DownRight.x) &amp;&amp; (V2.x&lt;=DownRight.x) )
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++]=V2;
+   // *********LEAVING**********
+   if ( (V1.x&lt;=DownRight.x) &amp;&amp; (V2.x&gt;DownRight.x) )
+   {
+      Polygon-&gt;Points[Polygon-&gt;PointsCount].x=DownRight.x;
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++].y=V1.y+m*(DownRight.x-V1.x);
+   }
+   // ********ENTERING*********
+   if ( (V1.x&gt;DownRight.x) &amp;&amp; (V2.x&lt;=DownRight.x) )
+   {
+      Polygon-&gt;Points[Polygon-&gt;PointsCount].x=DownRight.x;
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++].y=V1.y+m*(DownRight.x-V1.x);
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++]=V2;
+   }
+}
+/*
+=================
+CLIP_Top
+=================
+*/
+void CLIP_Top(Polygon2D_t *Polygon,_2D V1,_2D V2)
+{
+   float   dx,dy, m=1;
+   INIT_CLIP
+   // ************OK************
+   if ( (V1.y&gt;=TopLeft.y) &amp;&amp; (V2.y&gt;=TopLeft.y) )
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++]=V2;
+   // *********LEAVING**********
+   if ( (V1.y&gt;=TopLeft.y) &amp;&amp; (V2.y&lt;TopLeft.y) )
+   {
+      if(dx)
+         Polygon-&gt;Points[Polygon-&gt;PointsCount].x=V1.x+(TopLeft.y-V1.y)/m;
+      else
+         Polygon-&gt;Points[Polygon-&gt;PointsCount].x=V1.x;
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++].y=TopLeft.y;
+   }
+   // ********ENTERING*********
+   if ( (V1.y&lt;TopLeft.y) &amp;&amp; (V2.y&gt;=TopLeft.y) )
+   {
+      if(dx)
+         Polygon-&gt;Points[Polygon-&gt;PointsCount].x=V1.x+(TopLeft.y-V1.y)/m;
+      else
+         Polygon-&gt;Points[Polygon-&gt;PointsCount].x=V1.x;
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++].y=TopLeft.y;
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++]=V2;
+   }
+}
+void CLIP_Bottom(Polygon2D_t *Polygon,_2D V1,_2D V2)
+{
+   float dx,dy, m=1;
+   INIT_CLIP
+   // ************OK************
+   if ( (V1.y&lt;=DownRight.y) &amp;&amp; (V2.y&lt;=DownRight.y) )
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++]=V2;
+   // *********LEAVING**********
+   if ( (V1.y&lt;=DownRight.y) &amp;&amp; (V2.y&gt;DownRight.y) )
+   {
+      if(dx)
+         Polygon-&gt;Points[Polygon-&gt;PointsCount].x=V1.x+(DownRight.y-V1.y)/m;
+      else
+         Polygon-&gt;Points[Polygon-&gt;PointsCount].x=V1.x;
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++].y=DownRight.y;
+   }
+   // ********ENTERING*********
+   if ( (V1.y&gt;DownRight.y) &amp;&amp; (V2.y&lt;=DownRight.y) )
+   {
+      if(dx)
+         Polygon-&gt;Points[Polygon-&gt;PointsCount].x=V1.x+(DownRight.y-V1.y)/m;
+      else
+         Polygon-&gt;Points[Polygon-&gt;PointsCount].x=V1.x;
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++].y=DownRight.y;
+      Polygon-&gt;Points[Polygon-&gt;PointsCount++]=V2;
+   }
+}
+</pre>
+
+<p>And now we must do the entire polygon clipping function, but for that we will need an
+additional global variable: </p>
+
+<pre WRAP>
+polygon2D_t TmpPoly;
+
+void CLIP_Polygon(Polygon2D_t *Polygon,Polygon2D_t *Clipped)
+{
+   int v,d;
+
+   Clipped-&gt;PointsCount=0;
+   TmpPoly.PointsCount=0;
+
+   for (v=0; v&lt;Polygon-&gt;PointsCount; v++)
+   {
+      d=v+1;
+      if(d==Polygon-&gt;PointsCount)d=0;
+      CLIP_Left(&amp;TmpPoly, Polygon-&gt;Points[v],Polygon-&gt;Points[d]);
+   }
+   for (v=0; v&lt;TmpPoly.PointsCount; v++)
+   {
+      d=v+1;
+      if(d==TmpPoly.PointsCount)d=0;
+      CLIP_Right(Clipped, TmpPoly.Points[v],TmpPoly.Points[d]);
+   }
+   TmpPoly.PointsCount=0;
+   for (v=0; v&lt;Clipped-&gt;PointsCount; v++)
+   {
+      d=v+1;
+      if(d==Clipped-&gt;PointsCount)d=0;
+      CLIP_Top(&amp;TmpPoly, Clipped-&gt;Points[v],Clipped-&gt;Points[d]);
+   }
+   Clipped-&gt;PointsCount=0;
+   for (v=0; v&lt;TmpPoly.PointsCount; v++)
+   {
+      d=v+1;
+      if(d==TmpPoly.PointsCount)d=0;
+      CLIP_Bottom(Clipped, TmpPoly.Points[v],TmpPoly.Points[d]);
+   }
+}
+</pre>
+
+<p>The principle is exactly the same as with Z-Clipping, so you should be able to easily
+figure it out.</p>
+
+<p><em>Copyright © 1996-1998 Jerome St-Louis</em></p>
+
+<p><a href="MAILTO:jerstlouis@videotron.ca">jerstlouis@videotron.ca</a></p>
+</body>
+</html>

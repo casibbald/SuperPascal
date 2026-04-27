@@ -1,0 +1,104 @@
+12. Using VGA Mode 13h for Fast Graphics
+
+12.1  INTRODUCTION AND PREPARATION
+
+Mode 13h is so widely used for graphics applications in DOS because it
+is very easy to use.  The screen is constantly being redrawn by the
+video card.  To affect what the card draws, it is necessary to write to
+the screen buffer.  The screen buffer in mode 13h is always at
+segment:offset = A000:0000.  Thus, to set up drawing directly to the
+video buffer, this is what you'd most often first do:
+
+  ; Change the video mode to 13h
+   xor ah, ah         ;VIDEO Function 00h: Change screen
+   mov al, 13h        ;Put the desired graphics mode into AL
+   int 10h            ;Call VIDEO
+
+  ; Prepare for writing to the video buffer
+   mov di, 0a000h     ;Put the video segment into DI
+   mov es, di         ; so it can easily be put into ES
+   xor di, di         ;Start writing at coordinates (0,0)
+
+12.2  WRITING PIXELS TO THE SCREEN
+
+Why is Mode 13h so popular?  To understand, you must know a few basic
+facts.  In Mode 13h, the screen is 320 by 200, or 320 pixels across and
+200 pixels down.  In each pixel, there's a possibility of 256 colors,
+which can be fit into one byte.  Thus, 320*200*1 = 64000 bytes, about
+the size of one segment.  Think of the screen as an array of colors.
+The first row takes up addresses A000:0000 to A000:013F (decimal 319),
+the second row takes up addresses A000:0140 to A000:027F (decimal 639),
+and so on.  To plot a pixel, assuming ES=A000:
+
+  ; Plot a pixel in video mode 13h, where
+  ; PixelAddress = (320 * Y) + X
+   mov ax, 320        ; Prepare for the multiplication
+   mul [Y]            ; Assuming that Y is defined in the data segment
+                      ;   earlier in the program
+   mov di, ax         ; Put in into the pointer to the offset of ES
+   add di, [X]        ; Assuming that X is defined in the data segment
+                      ;   earlier in the program
+   mov al, [Color]    ; Assuming that Color is defined in the data
+                      ;   segment earlier in the program
+   stosb              ; Write it to the screen!
+
+See how easy that was?  Something to remember is that it is zero-based.
+The upper-left corner is (0,0), and the lower-right is (319,199).  A
+complete TASM Ideal mode procedure might look something like this (it
+assumes that the video card is already set to mode 13h):
+
+PROC WritePixel BASIC ; Or whatever language you might want to link
+                      ;  it to
+   USES es, di        ; It's always a good idea to preserve ES and DI
+   ARG X:word, Y:word, Color:BYTE
+   mov di, 0a000h     ; Put the video segment into DI
+   mov es, di         ;   so it can easily be put into ES
+   mov ax, 320        ; Prepare for the multiplication
+   mul [Y]            ; Offset pointer by the Y value passed in
+   mov di, ax         ; Put in into pointer to the offset of ES
+   add di, [X]        ; Offset the pointer by the X value passed in
+   mov al, [Color]    ; Put color to be written to the screen in AL
+   stosb              ; Write it to the screen!
+   ret
+ENDP WritePixel
+
+To write a horizontal line, just put the length in CX, and replace the
+STOSB with a REP STOSB.  Writing a vertical line is only a little more
+tricky.  Observe the following TASM Ideal mode procedure:
+
+PROC VerticalLine BASIC  ; Or whatever language you might want to link
+                      ;  it to
+   USES es, di        ; It's always a good idea to preserve ES and
+                      ;  DI
+   ARG X:word, Y:word, Color:BYTE, Length:word
+   mov di, 0a000h     ; Put the video segment into DI
+   mov es, di         ; so it can easily be put into ES
+   mov ax, 320        ; Prepare for the multiplication
+   mul [Y]            ; Offset the pointer by the Y value passed in
+   mov di, ax         ; Put in into the pointer to the offset of ES
+   add di, [X]        ; Offset the pointer by the X value passed in
+   mov al, [Color]    ; Put the color to be written to the screen
+                      ; in AL
+   mov cx, [Length]   ; Prepare for the loop
+YLoop:
+   stosb              ; Write it to the screen!
+   add di, 319        ; Move down one row (DI has already advanced
+                      ;  once because of the STOSB, thus the 319)
+   loop YLoop
+   ret
+ENDP VerticleLine
+
+Observe how there is a tight loop that moves DI down one row each
+iteration.
+
+In short, the easiest way to write directly to the Mode 13h video
+buffer is to think of the screen as just a 320 by 200 array of bytes,
+starting at A000:0000.
+
+Author: Michael Averbuch (mikeaver@prairienet.org)
+Last Change: 29 Dec 94
+
+---------------------------------------------------------------------------
+Parent document is top of "x86 Assembly Language FAQ - General Part 1/2"
+Previous document is "11. Ralf Brown's Interrupt List"
+Next document is "13. Real Mode/Protected Mode"

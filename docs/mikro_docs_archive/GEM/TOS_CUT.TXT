@@ -1,0 +1,1259 @@
+SYSTEM ARCHITECTURE
+=================== 
+
+GEM DOS System Modules:
+
+- Console Command Processor (CCP) 
+- Basic Disk Operating System (BDOS) 
+- Basic I/O System (BIOS)        
+
+TRANSIENT PROGRAMS
+------------------
+The Transient Program Area (TPA) consists  of  all  the  contiguous  memory
+space  not  occupied  by  the  operating system when GEM DOS is resident in
+memory.  GEM DOS loads executable command files from  disk  into  the  TPA.
+Command  files  are  also  called  transient  programs because they are not
+memory resident nor configured within the  operating  system.
+
+
+GEM DOS FILE SPECIFICATION
+--------------------------
+The GEM DOS file specification consists of four fields:    a  one-character
+drive  designation  delimited  by  a  colon (d:), a directory path in which
+directory names are delimited by backslashes (\), a one- to eight-character
+filename,  and  an optional one- to three-character filetype separated from
+the filename by a period (.).  Directories and files have the  same  naming
+conventions.  The format of a file specification is shown below.
+Format:  
+
+  d:\path\filename.typ
+
+Example:  
+
+  A:\LIBRARY\OBJS\FLOATER.OBJ
+
+The  drive designation, path, and filetype fields are optional.  The colon,
+backslash, and period delimiters are required only when you  include  these
+fields in the file specification.
+
+Drive   designation   values   range   from  A  through  P  when  the  BIOS
+implementation supports 16 drives, the maximum  number  that  GEM  DOS  can
+support.
+
+The   characters  in  the  filename  and  filetype  fields  cannot  contain
+delimiters (the colon, backslash,  and  period).    The  CCP  automatically
+converts  a  command line and its file specifications (if any) to uppercase
+internally before parsing them.
+
+Table 1-1 lists some additional characters you should avoid using  in  your
+file specifications.  These characters are reserved because several GEM DOS
+built-in commands and utilities have special uses for them.
+
+Delimiter Characters: [ ] ( ) < > = * & , ! | ? / \ $ . : ; + -
+
+WILDCARDS
+---------
+GEM DOS supports two wildcards, the question mark (?) and the  asterisk (*)
+Several  utilities  and  BDOS functions allow you to specify wildcards in a
+file specification to perform the operation or  function  on  one  or  more
+files.
+
+The ? wildcard matches any one character in the character position occupied
+by  this  wildcard.    For  example,  the  file  specification  WH?TMAN.OBJ
+indicates  that  the  third  letter of the filename can be any alphanumeric
+character if the remainder of the file specification matches.  Thus, the  ?
+wildcard matches exactly one character position.
+
+The  * wildcard matches one or more characters in the field or remainder of
+a field that this wildcard occupies.  GEM DOS internally pads the field  or
+remaining portion of the field occupied by the * wildcard with ?  wildcards
+before searching for a match.  For  example,  GEM  DOS  converts  the  file
+specification  G*.BAT  to G???????.BAT before searching for a matching file
+specification.  Thus, any file that starts with the  letter  G  and  has  a
+filetype of BAT matches this file specification.
+
+GEM DOS TERMINOLOGY
+-------------------
+Table 1-2 list the terminology used throughout this guide to  describe  GEM
+DOS values and program components.
+
+   Term      Meaning 
+   ---------+-------
+   Nibble   | 4-bit value
+   Byte     | 8-bit value
+   Word     | 16-bit value
+   Longword | Signed 32-bit value
+   Address  | 32-bit value that specifies a storage location
+   Offset   | A  fixed  displacement  that references a storage location,
+            | other data source, or destination
+   Text Segment
+            | The   section  of  a  program  that  contains  the  program
+            | instructions
+   Data Segment
+            | The section of a program that contains initialized data
+   BSS      | The  Block  Storage  Segment is a section of a program that
+            | contains uninitialized data 
+
+
+THE CCP AND TRANSIENT PROGRAMS
+==============================
+
+This section discusses the Console Command Processor (CCP), built-in and
+transient commands, loading and exiting transient programs, and the GEM DOS
+program execution model.
+
+
+CCP BUILT-IN AND EXTERNAL COMMANDS
+----------------------------------
+After an initial cold start, GEM DOS displays  a  sign-on  message  at  the
+console.   The drive containing the system disk is logged in automatically.
+GEM DOS displays its "{a}" prompt  to  indicate  the  currently  logged  in
+drive,  and  that  the  operating system is ready to receive a command line
+from the console.
+
+In response to the prompt, a user types the filename of a batch or  command
+file  with  its  command  tail, if required.  GEM DOS supports two types of
+commands, built-in and transient.  Built-in commands are part of  the  CCP.
+Transient  commands  are  loaded  in  the  TPA  and do not reside in memory
+allocated to GEM DOS.  The GEM DOS User's Guide describes the built-in  and
+transient commands that GEM DOS supports.
+
+A  transient  command is a machine-readable program file that GEM DOS loads
+from disk into memory for execution.  Section 3  describes  the  format  of
+transient command files.
+
+When the user enters a command line, the CCP parses it and tries to execute
+the file specified.  The CCP asssumes a file is a command file when it  has
+the  filetype  BAT.    When  the  user specifies only the filename, the CCP
+searches the current directory  and  drive  for  a  file  with  a  matching
+filename and a filetype of BAT.  If the CCP does not locate a batch file to
+match the filename specified, it searches for a command file whose filetype
+is PRG.
+
+
+LOADING A PROGRAM
+-----------------
+Either  the  CCP or a transient program can load a program into memory with
+the BDOS Load and Execute a Process Function (4B) described in Section 4.7.
+After  the  program is loaded, the TPA contains the program segments (text,
+data, and bss), a user stack, and a base page.  A base page exists for each
+program  loaded  into  memory.   The base page is a 256-byte data structure
+that  defines  a  program's  operating  environment.    The  base  page  is
+initialized  by  the  Load and Execute a Process (4B) function described in
+Section 4.7.  GEM DOS allocates 256 bytes (minimum) for the program's  user
+stack.
+
+
+The TPA and Base Page Initialization
+
+The format of the Transient Program Area (TPA) that GEM DOS establishes for
+an application program is shown in Figure 2-1.
+
+
+         __________ <-------- High TPA
+        |          |<---- Initial Stack Pointer
+        |  Appli-  |
+        |  cation  |
+        |   User   |
+        |   Area   |
+        |          |
+        ------------
+        |    BSS   |
+        ------------
+        |   Data   |
+        ------------
+        |   Text   |
+        ------------
+        | Base Page|
+        ------------<-------- Low TPA
+
+
+                      Figure 2-1.  GEM DOS TPA Format
+
+
+The initial stack pointer is directed at the top end of the TPA.  The  base
+page  contains  pointers  as  described  in Section 2.3.  To insure maximum
+compatibility with future releases of  GEM  DOS,  it  is  recommended  that
+memory  not  required  by your program be freed for use by other processes.
+The top of the stack should be moved down to an acceptable  value  adjacent
+to  or  within  the bss, and an M_SHRINK (4A) function should be performed.
+If additional memory is needed later, perform an  M_FREE  (49)  or  M_ALLOC
+(48) function to determine the amount of available memory (specify nbytes =
+-1 for the M_ALLOC call); follow this by another call to M_ALLOC to have  a
+portion  of  that  memory  allocated.  These operations reformat the TPA as
+shown in Figure 2-2.
+
+
+         __________ <---------- High TPA
+        |          |
+        | Available|
+        | to other |
+        | Processes|
+        ------------<----------- Stack Pointer
+        |  Appli-  |
+        |  cation  |
+        |  User    |
+        |  Area    |
+        ____________
+        |   BSS    |
+        ------------
+        |   DATA   |
+        ------------
+        |   TEXT   |
+        ------------
+        | BASE PAGE|
+        ------------<----------- Low TPA
+
+
+                         Figure 2-2.  Adjusted TPA
+
+
+BASE PAGE FORMAT
+----------------
+Table 2-1 lists the byte offset, length, value, and briefly  describes  the
+fields  in  the  base page that Load and Execute a Process (4B) initializes
+for transient programs.
+
+
+
+                       Table 2-1.  Base Page Format
+
+Base Page
+  Offset    Length  Value        Description
+
+    00        4     p_lowtpa     Base address of the TPA
+    04        4     p_hitpa      High address of the TPA + 1
+    08        4     p_tbase      Base address of text (code)
+    0C        4     p_tlen       Length (in bytes) of text (code)
+    10        4     p_dbase      Base address of initialized data
+    14        4     p_dlen       Length (in bytes) of data
+    18        4     p_bbase      Base address of BSS uninitialized
+                                 data
+    1C        4     p_blen       Length of BSS uninitialized data
+    2C        4     p_env        Pointer to the environment string
+   x80       x80    p_cmdlin     Command line image
+
+
+Note:  All other base page fields are reserved.
+
+
+EXITING TRANSIENT PROGRAMS
+--------------------------
+GEM DOS supports two ways of exiting  a  transient  program  and  returning
+control to the CCP:
+
+*   Interactively, when the user types Ctrl-C at the console
+
+*   A programmed return to the CCP through:
+
+    --  Program Terminate (00)
+    --  Terminate and Stay Resident (31)
+    --  Terminate Process (4C)
+
+Typing  Ctrl-C  from  the  console  returns  control to the CCP only if the
+program uses any of the following functions:
+
+*   Read Character from Standard Input Device (01)
+*   Write Character to Standard Output Device (02)
+*   Read Character from Standard Input, No Echo (08)
+*   Write String to Standard Output Device (09)
+*   Read Edited String from Standard Input Device (0A)
+*   Check Status of Standard Output Device (10)
+
+Ctrl-C terminates execution of the main program and any additional programs
+loaded beyond the CCP level.
+
+
+GEM DOS COMMAND FILE FORMAT
+===========================
+
+The  GEM  DOS  command  file  format  is  the  output of the RELMOD format
+conversion utility.  RELMOD accepts a CP/M-68K.. format relocatable  output
+file generated by LINK68 or LO68, the GEM DOS linkers, and converts it to a
+GEM DOS relocatable file.   RELMOD,  LINK68,  and  LO68  are  described  in
+Section 6.
+
+Command  files  consist  of  a  file  header  followed by the text and data
+segments.    Optionally,  a  command  file  contains  a  symbol  table  and
+relocation  information.    These  components  are  shown in Figure 3-1 and
+described in the following sections.
+
+
+                          ______________________
+                         |         File         |
+                         |        Header        |
+                         |______________________|
+                         |       Text and       |
+                         |     Data Segments    |
+                         |______________________|
+                         |     Symbol Table     |
+                         |     (if present)     |
+                         |______________________|
+                         |    Relocation Data   |
+                         |     (if present)     |
+                         |______________________|
+
+                 Figure 3-1.  GEM DOS Command File Layout
+
+
+THE HEADER AND PROGRAM SEGMENTS
+-------------------------------
+The  figure  3-2  shows  the  format  of  the  header   for   non-segmented
+(contiguous) executable files.
+
+
+              +--------+--------+
+          00H |      601AH      |
+              +--------+--------+--------+--------+
+          02H |  Number of bytes in text segment  |
+              +--------+--------+--------+--------+
+          06H |  Number of bytes in data segment  |
+              +--------+--------+--------+--------+
+          0AH |      Number of bytes in bss       |
+              +--------+--------+--------+--------+
+          0EH |  Number of bytes in symbol table  |
+              +--------+--------+--------+--------+
+          12H |        Reserved, must be 0        |
+              +--------+--------+--------+--------+
+          16H |        Reserved, must be 0        |
+              +--------+--------+--------+--------+
+          1AH |     Reserved    |
+              +--------+--------+
+
+                 Figure 3-2.  GEM DOS Command File Header
+
+
+The  14-word,  601AH-type  header  denotes a relocatable file that contains
+contiguous text, data, and block storage segments.  Note that GEM DOS  does
+not support programs with non-contiguous segments.
+
+The fields at offsets 12H, 16H, and 1AH are reserved and must be zero.  The
+text segment image follows the field at offset 1AH.
+
+The text segment contains  the  executable  instruction  code.    The  data
+segment  contains  the  initialized  data  variables.    The  text and data
+segments must be relocatable.
+
+The inclusion of the symbol table and relocation information in the command
+file is controlled by the GEM DOS linkers, described in Section 6.
+
+
+SYMBOL TABLE
+------------
+The  symbol  table  defines the symbols referenced by a command file.  Each
+entry in the symbol table is associated with an index  that  indicates  its
+entry  number.    Entries are numbered sequentially starting with zero.  As
+shown in Figure 3-3, each symbol table entry is  composed  of  seven  words
+that describe the symbol's name, type, and value.
+
+
+                             +--------+--------+
+                           0 |                 |
+                             +      Symbol     +
+                             |                 |
+                             +                 +
+                             |       Name      |
+                             +                 +
+                           6 |                 |
+                             +--------+--------+
+                           8 |       Type      |
+                             +--------+--------+
+                           A |                 |
+                             +      Value      +
+                           C |                 |
+                             +--------+--------+
+
+                      Figure 3-3.  Symbol Table Entry
+
+
+Table 3-1 describes the fields of a symbol table entry.
+
+
+
+                   Table 3-1.  Symbol Table Entry Fields
+
+   Field     Definition 
+
+
+   Name      Symbol   name,   null-padded   right  if  less  than  eight
+             characters.
+
+   Type      Symbol type as indicated by the following values:
+
+             0100H:  bss-based relocatable
+             0200H:  text-based relocatable
+             0400H:  data-based relocatable
+             0800H:  external reference
+             1000H:  equated register
+             2000H:  global
+             4000H:  equated
+             8000H:  defined
+
+
+   Value     Symbol value where the value can be  an  address,  register
+             number, value of an expression, and so forth. Note that the
+             linkers interpret the value when  the  symbol  is  external
+             (0800H) as the size of a common region.  
+
+
+
+RELOCATION INFORMATION
+----------------------
+The relocation information indicates the offset  between  longwords  to  be
+relocated.   The offset from the beginning of the text segment to the first
+longword that requires relocation is stored as  a  longword  following  the
+symbol  table.  Following that, bytes are used to store succeeding offsets.
+If the offset between two longwords to be relocated  is  greater  than  254
+bytes,  the relocation information has a byte of 1 for each multiple of 254
+bytes, plus a byte whose value indicates any  remainder.    A  zero  offset
+value  indicates the end of relocation information.  Note that GEM DOS does
+not support 16-bit relocatable objects.
+
+See Figure 3-3.  Table 3-2 lists the  relocation  offset  byte  values  and
+their meanings.
+
+
+                       .                          .
+                       .                          .
+                       .__________________________.
+                       |       Symbol Table       |
+                       |__________________________|
+                       |      Offset of 1st       |
+                       |   Longword to Relocate   |
+                       |     (Longword Value)     |
+                       |__________________________|
+                       |    Succeeding Offsets    |
+                       |       (Byte Values)      |
+                       |__________________________|
+                       |          End of          |
+                       |  Relocation Information  |
+                       |        (Zero Byte)       |
+                       |__________________________|
+
+        Figure 3-4.  Location and Format of Relocation Information
+
+
+
+                 Table 3-2.  Relocation Offset Byte Table
+
+                                            Byte
+                                           Value
+
+                                             0                             
+
+                                             1                             
+                                                                           
+                                       2 through 254                       
+
+                                            255
+
+
+*
+ Plus 254 times the number of "1" bytes that preceded this byte.
+
+All relocation information is relative to the beginning load address (start
+of text).
+
+
+SYSTEM FUNCTION CALLS
+===================== 
+
+This section describes the GEM  DOS  system  function  calls,  their  entry
+parameters, return values, and error codes.
+
+
+INTRODUCTION
+------------
+The  GEM  DOS  system  calls  are  divided  into  the following categories:
+Character Device I/O, File  Management,  Drive  and  Directory  Management,
+Program Control, Memory Management, and Time.  Table 4-1 lists each GEM DOS
+system call according to these categories.  Also listed in  Table  4-1  are
+references  to  the  sections  of  this  chapter that describe each call in
+detail.
+
+
+
+                Table 4-1.  GEM DOS System Call Categories
+
+                                       Number
+
+Character Device I/O: 01 02 03 04 05 06 07 08 09 0A 0B 10 11 12 13
+
+File Management: 1A 2F 3C 3D 3E 3F 40 41 42 43 44 45 46 4E 4F 56 57
+
+Drive and Directory Management: 0E 19 36 39 3A 3B 47
+
+Program Control: 00 25 30 31 35 4B 4C
+
+Memory Management: 48 49 4A
+
+Time: 2A 2B 2C 2D
+
+
+FUNCTION CALL PARAMETERS
+------------------------
+The GEM DOS parameter-passing convention supports function call  references
+from C and other high-level languages.
+
+A function call reference from a high-level language constructs a parameter
+block that  contains  the  number  of  the  function  call,  any  necessary
+parameters,  and  other relevant data (such as a drive code or file handle)
+and performs a TRAP #1 instruction.  GEM DOS then processes  the  reference
+and executes the appropriate actions.
+
+The  general  format of a GEM DOS function call parameter block is shown in
+Figure 4-1.
+
+
+                                        Low Memory
+     +--------------------------------+ (Parameter
+     |         Function Number        |  Block Address)
+     +--------------------------------+
+     |          1st Parameter         |
+     +--------------------------------+
+     |          2nd Parameter         |
+     +--------------------------------+
+     |          3rd Parameter         |
+     +--------------------------------+
+     .                                .
+     .                                .
+     .                                .
+     +--------------------------------+ High memory
+
+
+             Figure 4-1.  Function Call Parameter Block Format
+
+
+The positions of the parameters and  the  function  number  in  Figure  4-1
+conform  to  the  order  in  which  they  are  placed on the stack by the C
+language.  Specifically, the C code:
+
+  CALL (functionnumber, P1, P2, P3, ... Pn)
+
+loads the Pn parameter into the  parameter  block  first,  followed  by  P3
+through  P1,  until  the function number is the last entry in the parameter
+block.
+
+
+GEM DOS File and Device Handles
+
+F_CREATE  (3C),  F_OPEN  (3D),  and  F_DUP  (45)  return  a  16-bit  binary
+identifier  value  in register D0.L.  This identifier is called a "handle."
+The handle is used to later identify files or devices that have been opened
+or  created  with  the system call that originally returned it.  Although a
+handle is 16 bits long, your program should test the entire long word value
+returned  in  D0.L  to determine if the value represents an error code or a
+valid handle.
+
+Table 4-2 lists the handles that identify devices.
+
+
+
+                    Table 4-2.  GEM DOS Device Handles
+
+          Handle
+       Value        Device
+
+         4          Standard list device
+                    Output can be redirected.
+
+         3          Standard AUX device
+                    I/O can be redirected.
+
+         2          Standard error device (stdErr)
+                    I/O can be redirected.
+
+         1          Standard output device (stdOut)
+                    Output can redirected at
+                    the command line.
+
+         0          Standard input device (stdIn)
+                    Input can be redirected at
+                    the command line.
+
+
+Your program can use these handles without previously opening them.    Your
+program can redirect I/O for these devices with F_FORCE (46).
+
+Your  program  can  open  the following devices by specifying a device name
+with the F_OPEN (3D) function:
+
+*   The console device, CON:
+*   The auxiliary device, AUX:
+*   The list device, PRN:
+*   The bit bucket, NUL:
+
+Note that I/O for the devices opened by name cannot be redirected.  See the
+descriptions of F_OPEN (3D) and F_FORCE (46) in Section 4.5.
+
+
+Return Values
+
+GEM  DOS function calls return all byte, word, and long data in register D0
+by default.  Those function calls that return more  information  place  the
+address of an information return buffer in D0 or fill in a caller-specified
+buffer.  The individual function call descriptions explain how data returns
+to the caller.
+
+
+Error Return Codes
+
+The  GEM  DOS  function  calls place a negative number in D0 to indicate an
+error return.  See the  individual  function  call  descriptions  for  more
+complete information.
+
+Table  4-3  lists the error codes returned by the GEM DOS function calls in
+register D0.L.  Also listed in Table 4-3 are the  numbers  of  the  PC  DOS
+function call error codes that correspond to the GEM DOS error codes.
+
+
+
+                       Table 4-3.  BDOS Error Codes
+
+           GEM DOS    PC DOS
+            Return    Equiv.  Code         Error Report
+
+             -32L       1     EINVFN       Invalid function
+             -33L       2     EFILNF       File not found
+             -34L       3     EPTHNF       Path not found
+             -35L       4     ENHNDL       No handles left (too many open f
+             -36L       5     EACCDN       Access denied
+             -37L       6     EIHNDL       Invalid handle
+             -39L       8     ENSMEM       Insufficient memory
+             -40L       9     EIMBA        Invalid memory block address
+             -46L       15    EDRIVE       Invalid drive specified
+             -49L       18    ENMFIL       No more files
+             -64L             ERANGE       Range error
+             -65L             EINTRN       Internal error
+             -66L             EPLFMT       Invalid program load format
+             -67L             EGSBF        Setblock failure (due to growth
+                                           restrictions)
+
+
+GEM DOS SYSTEM CALL SUMMARY
+---------------------------
+Table  4-4 lists the hexadecimal number and mnemonic of each GEM DOS system
+function call.  The table includes the parameters a process  must  pass  to
+the system call and the values the system returns to the calling process.
+
+
+
+                  Table 4-4.  GEM DOS System Call Summary
+
+          Hex    Mnemonic             Input Parameters
+
+           0     P_TERM0              none
+
+           1     C_CONIN              none
+
+           2     C_CONOUT             Character
+
+           3     C_AUXIN              none
+
+           4     C_AUXOUT             Character
+
+           5     C_PRNOUT             Character
+
+           6     C_RAWIO              FF/Character
+
+           7     C_RAWCIN             none
+
+           8     C_NECIN              none
+
+           9     C_CONWS              *Character String
+
+           A     C_CONRS              *Input Buffer
+
+           B     C_CONIS              none                                 
+
+           E     D_SETDRV             Drive Code
+
+           10    C_CONOS              none                                 
+
+           11    C_PRNOS              none                                 
+
+           12    C_AUXIS              none                                 
+
+           13    C_AUXOS              none                                 
+
+           19    D_GETDRV             none
+
+           1A    F_SETDTA             DTA (Long Value)
+
+           25    S_SETVEC             Vector#
+                 Address
+
+           2A    T_GETDATE            none                                 
+                                      Bits 0-4 = day (1-31)
+                                      Bits 5-8 = month (1-12)
+                                      Bits 9-15 = year (0-119)
+
+           2B    T_SETDATE            Date Word:                           
+                                      Bits 0-4 = (1-31)
+                                      Bits 5-8 = (1-12)
+                                      Bits 9-15 = (0-119)
+
+           2C    T_GETTIME            none                                 
+                                      Bits 0-4 = 2-sec increments
+                                      Bits 5-10 = minutes
+                                      Bits 10-15 = hours
+
+           2D    T_SETTIME            Time Word (binary):                  
+                                      Bits 0-4 = 2-sec increments
+                                      Bits 5-10 = minutes
+                                      Bits 10-15 = hours
+
+           2F    F_GETDTA             none
+
+           30    S_VERSION            none
+
+           31    P_TERMRES            Memory Size
+                 Exit Code
+
+           35    S_GETVEC             Vector#
+
+           36    D_FREE               *Return Buffer
+                 Drive Code           # of Clusters
+                                      Bytes/Sectors
+                                      Sects/Clusters
+                                      D0.L = Error Code
+
+           39    D_CREATE             *Path String
+
+           3A    D_DELETE             *Path String
+
+           3B    D_SETPATH            *Path String
+
+           3C    F_CREATE             *Path String
+                 Attribute
+
+           3D    F_OPEN               *Path String
+                 Access Mode
+
+           3E    F_CLOSE              Handle
+
+           3F    F_READ               Handle
+                 # of Bytes           Error Code
+                 *Buffer
+
+           40    F_WRITE              Handle
+                 # of Bytes           Error Code
+                 *Buffer
+
+           41    F_DELETE             *Path String
+
+           42    F_SEEK               Offset
+                 Handle               Error Code
+                 Mode Value
+
+           43    F_ATTRIB             *Path String
+                 Mode Value           Error Code
+                 Attribute
+
+           44    F_IOCTL              Subfunction #
+                 Handle or Drive Code Bit Map of Device Information
+                 Byte Count or Bit Map
+                 *Buffer              # of Bytes Read/Written
+                                      I/O Status
+                                      Media Type
+
+           45    F_DUP                Handle
+                                      Error Code
+
+           46    F_FORCE              Standard Handle
+                 Duplicate Handle
+
+           47    D_GETPATH            *Path Buffer
+                 Drive Code
+
+           48    M_ALLOC              # of Bytes or -1L
+                 (for # of available bytes)
+                                      0 on Failure
+
+           49    M_FREE               Memory Block Addr
+
+           4A    M_SHRINK             Memory Block Addr
+                 # of bytes to keep
+
+           4B    P_EXEC               Load Value
+                 *Path String         Base Page Addr
+                 *Command Tail        Error Code
+                 *Environment Strings
+
+           4C    P_TERM               Status Code
+
+           4E    F_SFIRST             *Path String
+                 Attribute
+
+           4F    F_SNEXT              none
+
+           56    F_RENAME             *Path String
+                 *Path String (New Name)
+
+           57    F_DATIME             *Time/Date Buffer
+                 Buffer
+                 Handle
+                 Get/Set Flag
+
+
+Conventions used in Table 4-4:
+
+   *         =   Pointer to
+   #         =   Number
+   Addr      =   Address
+   DTA       =   Disk Transfer Address
+   Handle    =   File or Device Handle
+   Path String   =                                                         
+                 directory path, and filename
+
+
+CHARACTER DEVICE I/O FUNCTIONS
+------------------------------
+Table  4-5  lists  the  number,  mnemonic,  and  name of the GEM DOS system
+function described in this section.
+
+
+
+                Table 4-5.  Character Device I/O Functions
+
+               Hex     Mnemonic
+
+               01      C_CONIN
+               02      C_CONOUT
+               03      C_AUXIN
+               04      C_AUXOUT
+               05      C_PRNOUT
+               06      C_RAWIO
+               07      C_RAWCIN
+               08      C_NECIN                                             
+               09      C_CONWS
+               0A      C_CONRS
+               0B      C_CONIS
+               10      C_CONOS
+               11      C_PRNOS
+               12      C_AUXIS
+               13      C_AUXOS
+
+
+
+
+INSTRUCTION SET SUMMARY
+=======================
+
+This section contains two tables that describe  the  assembler  instruction
+set  distributed  with  GEMDOS.   Table 5-3 summarizes the assembler (AS68)
+instruction set.  Table 5-4 lists variations on the instruction set  listed
+in  Table  5-3.   For details on specific instructions, refer to Motorola's
+16-Bit Microprocessor User's Manual, third edition, MC68000UM(AD3).
+
+
+
+                    Table 5-3.  Instruction Set Summary
+
+  Instruction     Description
+
+  abcd            Add Decimal with Extend
+  add             Add
+  and             Logical AND
+  asl             Arithmetic Shift Left
+  asr             Arithmetic Shift Right
+
+  bcc             Branch Conditionally
+  bchg            Bit Test and Change
+  bclr            Bit Test and Clear
+  bra             Branch Always
+  bset            Branch Test and Set
+  bsr             Branch to Subroutine
+  btst            Bit Test
+
+  chk             Check Register Against Bounds
+  clr             Clear Operand
+  cmp             Compare
+
+  dbcc            Test Condition, Decrement, and Branch
+  divs            Signed Divide
+  divu            Unsigned Divide
+
+  eor             Exclusive OR
+  exg             Exchange Registers
+  ext             Sign Extend
+
+  illegal         Illegal Instruction
+
+  jmp             Jump
+  jsr             Jump to Subroutine
+
+  lea             Load Effective Address
+  link            Link Stack
+  lsl             Logical Shift Left
+  lsr             Logical Shift Right
+
+  move            Move
+  movem           Move Multiple Registers
+  movep           Move Peripheral Data
+  muls            Signed Multiply
+  mulu            Unsigned Multiply
+
+  nbcd            Negate Decimal with Extend
+  neg             Negate
+  nop             No Operation
+  no              One's Complement
+
+  or              Logical OR
+
+  pea             Push Effective Address
+
+  reset           Reset External Devices
+  rol             Rotate Left without Extend
+  ror             Rotate Right without Extend
+  roxl            Rotate Left with Extend
+  roxr            Rotate Right with Extend
+  rte             Return From Exception
+  rtr             Return and Restore
+  rts             Return from Subroutine
+
+  sbcd            Subtract Decimal with Extend
+  scc             Set Conditional
+  stop            Stop
+  sub             Subtract
+  swap            Swap Data Register Halves
+
+  tas             Test and Set Operand
+  trap            Trap
+  trapv           Trap on Overflow
+  tst             Test
+
+  unlk            Unlink
+
+
+
+                Table 5-4.  Variations of Instruction Types
+
+  Instruction         Variation
+
+  add       add       Add
+            adda      Add Address
+            addq      Add Quick
+            addi      Add Immediate
+            addx      Add with Extend
+
+  and       and       Logical AND
+            andi      AND Immediate
+            andi to ccr
+            andi to sr
+
+  cmp       cmp       Compare
+            cmpa      Compare Address
+            cmpm      Compare Memory
+            cmpi      Compare Immediate
+
+  eor       eor       Exclusive OR
+            eori      Exclusive OR Immediate
+            eori to ccr
+            eori to sr
+
+  move      move      Move
+            movea     Move Address
+            moveq     Move Quick
+            move to ccr
+            move to sr
+            move from sr
+            move to usp
+
+  neg       neg       Negate
+            negx      Negate with Extend
+
+  or        or        Logical OR
+            ori       OR Immediate
+            ori to ccr
+            ori to sr OR Immediate to Status Register
+
+  sub       sub       Subtract
+            suba      Subtract Address
+            subi      Subtract Immediate
+            subq      Subtract Quick
+            subx      Subtract with Extend
+
+
+ASCII AND HEXADECIMAL CONVERSIONS
+=================================
+
+ASCII stands for American Standard Code for Information Interchange.    The
+code contains 96 printing and 32 non-printing characters used to store data
+on a disk.   Table  C-1  defines  ASCII  symbols.    Table  C-2  shows  the
+conversions of the ASCII character code in binary, decimal, and hexadecimal
+notations.
+
+
+                         Table C-1.  ASCII Symbols
+
+            Symbol      Meaning                   Symbol
+
+  ACK   acknowledge        FS      file separator
+  BEL   bell               GS      group separator
+  BS    backspace          HT      horizontal tabulation
+  CAN   cancel             LF      line feed
+  CR    carriage return    NAK     negative acknowledge
+  DC    device control     NUL     null
+  DEL   delete             RS      record separator
+  DLE   data link escape   SI      shift in
+  EM    end of medium      SO      shift out
+  ENQ   enquiry            SOH     start of heading
+  EOT   end of transmission        SP
+  ESC   escape             STX     start of text
+  ETB   end of transmission        SUB
+  ETX   end of text        SYN     synchronous idle
+  FF    form feed          US      unit separator
+                           VT      vertical tabulation
+
+
+                    Table C-2.  ASCII Conversion Table
+
+  Binary        Decimal     Hexadecimal
+
+  0000000       0           0           NUL
+  0000001       1           1           SOH (CTRL-A)
+  0000010       2           2           STX (CTRL-B)
+  0000011       3           3           ETX (CTRL-C)
+  0000100       4           4           EOT (CTRL-D)
+  0000101       5           5           ENQ (CTRL-E)
+  0000110       6           6           ACK (CTRL-F)
+  0000111       7           7           BEL (CTRL-G)
+  0001000       8           8           BS  (CTRL-H)
+  0001001       9           9           HT  (CTRL-I)
+  0001010       10          A           LF  (CTRL-J)
+  0001011       11          B           VT  (CTRL-K)
+  0001100       12          C           FF  (CTRL-L)
+  0001101       13          D           CR  (CTRL-M)
+  0001110       14          E           SO  (CTRL-N)
+  0001111       15          F           SI  (CTRL-O)
+  0010000       16          10          DLE (CTRL-P)
+  0010001       17          11          DC1 (CTRL-Q)
+  0010010       18          12          DC2 (CTRL-R)
+  0010011       19          13          DC3 (CTRL-S)
+  0010100       20          14          DC4 (CTRL-T)
+  0010101       21          15          NAK (CTRL-U)
+  0010110       22          16          SYN (CTRL-V)
+  0010111       23          17          ETB (CTRL-W)
+  0011000       24          18          CAN (CTRL-X)
+  0011001       25          19          EM  (CTRL-Y)
+  0011010       26          1A          SUB (CTRL-Z)
+  0011011       27          1B          ESC (CTRL-[)
+  0011100       28          1C          FS  (CTRL-\)
+  0011101       29          1D          GS  (CTRL-])
+  0011110       30          1E          RS  (CTRL-^)
+  0011111       31          1F          US  (CTRL-_)
+  0100000       32          20          (SPACE)
+  0100001       33          21          !
+  0100010       34          22          "
+  0100011       35          23          #
+  0100100       36          24          $
+  0100101       37          25          %
+  0100110       38          26          &
+  0100111       39          27          '
+  0101000       40          28          (
+  0101001       41          29          )
+  0101010       42          2A          *
+  0101011       43          2B          +
+  0101100       44          2C          ,
+  0101101       45          2D          -
+  0101110       46          2E          .
+  0101111       47          2F          /
+  0110000       48          30          0
+  0110001       49          31          1
+  0110010       50          32          2
+  0110011       51          33          3
+  0110100       52          34          4
+  0110101       53          35          5
+  0110110       54          36          6
+  0110111       55          37          7
+  0111000       56          38          8
+  0111001       57          39          9
+  0111010       58          3A          :
+  0111011       59          3B          ;
+  0111100       60          3C          <
+  0111101       61          3D          =
+  0111110       62          3E          >
+  0111111       63          3F          ?
+  1000000       64          40          @
+  1000001       65          41          A
+  1000010       66          42          B
+  1000011       67          43          C
+  1000100       68          44          D
+  1000101       69          45          E
+  1000110       70          46          F
+  1000111       71          47          G
+  1001000       72          48          H
+  1001001       73          49          I
+  1001010       74          4A          J
+  1001011       75          4B          K
+  1001100       76          4C          L
+  1001101       77          4D          M
+  1001110       78          4E          N
+  1001111       79          4F          O
+  1010000       80          50          P
+  1010001       81          51          Q
+  1010010       82          52          R
+  1010011       83          53          S
+  1010100       84          54          T
+  1010101       85          55          U
+  1010110       86          56          V
+  1010111       87          57          W
+  1011000       88          58          X
+  1011001       89          59          Y
+  1011010       90          5A          Z
+  1011011       91          5B          [
+  1011100       92          5C          \
+  1011101       93          5D          ]
+  1011110       94          5E          ^
+  1011111       95          5F          <
+  1100000       96          60          '
+  1100001       97          61          a
+  1100010       98          62          b
+  1100011       99          63          c
+  1100100       100         64          d
+  1100101       101         65          e
+  1100110       102         66          f
+  1100111       103         67          g
+  1101000       104         68          h
+  1101001       105         69          i
+  1101010       106         6A          j
+  1101011       107         6B          k
+  1101100       108         6C          l
+  1101101       109         6D          m
+  1101110       110         6E          n
+  1101111       111         6F          o
+  1110000       112         70          p
+  1110001       113         71          q
+  1110010       114         72          r
+  1110011       115         73          s
+  1110100       116         74          t
+  1110101       117         75          u
+  1110110       118         76          v
+  1110111       119         77          w
+  1111000       120         78          x
+  1111001       121         79          y
+  1111010       122         7A          z
+  1111011       123         7B          {
+  1111100       124         7C          |
+  1111101       125         7D          }
+  1111110       126         7E          ~
+  1111111       127         7F          DEL
+
+
+MOTOROLA S-RECORD FORMAT
+======================== 
+
+The Motorola S-record format is a  method  of  representing  binary  memory
+images  in  an  ASCII  form.  The  primary use of S-records is to provide a
+convenient form for transporting programs  between  computers.  Since  most
+computers have a means of reading and writing ASCII information, the format
+is widely applicable. The SENDC68 utility provided with GEM DOS can be used
+to convert programs into S-record form.
+
+An  S-record file consists of a sequence of S-records of various types. The
+entire content of an S-record is ASCII. When a hexadecimal number needs  to
+be  represented  in  an S-record, it is represented by the ASCII characters
+for the hexadecimal digits comprising the number.  Each  S-record  contains
+the five fields shown in Figure E-1. Table E-1 describes each field.
+
+
+Field:
++---------+---------+---------+---------+---------+---------+
+|    S    |  type   | length  | address |   data  |  cksum  |
++---------+---------+---------+---------+---------+---------+
+Size*:
+     1         1         2     2, 4 or 6   varies      2
+
+* in characters
+
+
+                       Figure E-1.  S-record Format
+
+
+
+                  Table E-1.  S-record Field Descriptions
+
+Field           Description 
+
+
+S               The ASCII character S. This signals the beginning of the S-
+                record.
+
+type            A digit between 0 and 9, represented  in  ASCII,  with  the
+                exceptions  that  4  and 6 are not allowed. The use of each
+                type value is explained in Table E-2.
+
+length          The number of character pairs in the record, excluding  the
+                first  three fields. (That is, one half the number of total
+                characters in the address, data, and  cksum  fields.)  This
+                field  has  two hexadecimal digits, representing a one-byte
+                quantity.
+
+address         The address at which the data portion of the record  is  to
+                reside  in  memory.  The  data  goes  to  this  address and
+                successively higher numbered addresses. The length of  this
+                field  is  determined by the record type in the second byte
+                of the S-record.
+
+data            A variable length field containing the actual  data  to  be
+                loaded  into memory. Specify each byte of data as a pair of
+                hexadecimal digits in ASCII.
+
+cksum           A checksum compute  over  the  length,  address,  and  data
+                fields. Compute the checksum as follows:
+
+                *   add  the  values  of the character pairs in the length,
+                    address, and data fields
+                *   take the one's complement of the sum
+                *   drop the most significant byte
+
+                Enter the least significant byte value in the  cksum  field
+                as two ASCII hexadecimal digits.  
+
+
+There  are  eight  types  of  S-records.  They  can  be  divided  into  two
+categories: records containing actual data and records used to  define  and
+delimit  groups  of data-containing records. Types 1, 2, and 3 are reserved
+for records in the first category; types 0, 5, 7, 8, and 9 for reserved for
+records  in  the  second category. Types 4 and 6 are not allowed. Table E-2
+defines the types.
+
+Note: All byte values in Table E-2 are expressed as  two  ASCII  characters
+representing the hexadecimal value.
+
+
+
+                   Table E-2.  S-Record Type Definitions
+
+Type            Meaning 
+
+
+0               This  type  is  a  header record used at the beginning of a
+                group of S-records. The data field can contain any  desired
+                identifying  information.  The  address  field is two bytes
+                long and is normally zero.
+
+1               This type of record contains normal data. The address field
+                is two bytes long.
+
+2               This type is the same as type 1 except the address field is
+                3 bytes long.
+
+3               This type is the same as type 1 except the address field is
+                4 bytes long.
+
+5               This  type indicates the number of type 1, 2, and 3 records
+                in a group of S-records. The count is placed in the address
+                field. The data field is empty.
+
+7               This record signals the end of a block of type 3 S-records.
+                If desired, the 4-byte address field can be used to contain
+                an  address  at  which  to  pass control. The data field is
+                empty.
+
+8               This type is the same as type 7 except that it ends a block
+                of type 2 S-records and the address field is 3 bytes long.
+
+9               This type is the same as type 7 except that it ends a block
+                of type 1 S-records and the address field is 2 bytes  long.

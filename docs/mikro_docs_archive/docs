@@ -1,0 +1,1702 @@
+<!doctype html public "-//W3C//DTD HTML 4.0 Transitional//EN"
+		"http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+
+<body bgcolor="#F0F0F0" text="#606860">
+<h1><p align="center">Ultimate /|\ ATARI 4nd d3m0 coding page !!!</p></h1>
+<br>
+<br>
+<p align="justify">So I finally did it... after two days of typing, sorting and 
+copying, my text-collection is finished!!! As you can see, this page lacks any 
+kind of design, you can't imagine how f*cking hard it's to collect something 
+like this, so I haven't got any power left to play with html... All these texts I 
+downloaded when I worked in internet caffe, I was looking for something better 
+than Programmer's Heaven = more general texts about democoding... 
+(www.google.com -> "democoding tutorial" ;) Some words about coding 
+cathegories: when I was sorting these files, I created three folders: 
+cool, ok and not interesting :) It represented how much I understood them :) 
+In the present I'm a little bit more experienced, so this division isn't 
+actual for me, but it can helps someone... Also: 100% rated ones are most 
+understable texts instead of 30% (short or unclear texts). It's only my 
+personal opinion ofcourse. There's a lot of things to be added (e.g. Atari 
+XE/XL stuff, Motorola PDF's, Unix, security, better comments/description ...), 
+but you have to wait to time when I'll get bored, because I want to do another 
+things on my Atari Falcon as typing this html code ;)</p>
+<br>
+<br>
+
+<h2><p align="center">:::My stuff:::</p></h2>
+
+<dl>
+	<dt>
+		<em>Texts and tutorials I've written</em>
+	</dt>
+
+	<dd>
+		<table border=2>
+			<tr>
+				<th>Title</th>
+				<th>Date</th>
+				<th>Comment</th>
+			</tr>
+			<tr>
+				<th><a href="https://docs.google.com/document/d/1d8MSFrcVLW_bLnO7bhokuOTNXoM6yK2pQ8O5oyPx9oI/edit?usp=sharing" target="_blank">Ultimate Guide to the LDG Architecture and its Pitfalls</a></th>
+				<td>December 18, 2011</td>
+				<td>An article meant for some Atari (disk) magazine but since all had died before I could publish it, I post it here.</td>
+			</tr>
+			<tr>
+				<th><a href="mikro/special-gcc336.html">GCC 3.3.6 usage for Atari projects</a></th>
+				<td>September 29, 2006</td>
+				<td>(Cross-)compile your 060-optimized GCC 3.3.6, published as
+				    <a href="http://dhs.nu/special.php" target="_blank">DHS Special Feature</a></td>
+			</tr>
+			
+			<tr>
+				<th><a href="mikro/mikro.html">An interview with Mikro</a></th>
+				<td>July 16, 2003</td>
+				<td>for <a href="http://alive.atari.org" target="_blank">Alive 7 diskmag</a>, interview with me ;)</a></td>
+			</tr>
+			
+			<tr>
+				<th><a href="mikro/videl.html">Videl in practice</a></th>
+				<td>March 8, 2003</td>
+				<td>for <a href="http://msb.neostrada.pl/chosneck.html" target="_blank">Chosneck #2 diskmag</a>,
+				    Videl regs and math description</td>
+			</tr>
+			<tr>
+				<th><a href="mikro/030_stram.html">68030, ST RAM and things around it</a></th>
+				<td>March 8, 2003</td>
+				<td>for <a href="http://msb.neostrada.pl/chosneck.html" target="_blank">Chosneck #2 diskmag</a>,
+				    deep cycle/timing description on Falcon030</td>
+			</tr>
+			<tr>
+				<th><a href="mikro/3d_rot.html">Rotations in Mathematics and Demos</a></th>
+				<td>March 8, 2003</td>
+				<td>for <a href="http://msb.neostrada.pl/chosneck.html" target="_blank">Chosneck #2 diskmag</a>,
+				    left/right-handed system, math vs computer screen</td>
+			</tr>
+			<tr>
+				<th><a href="mikro/3d_code.html">Some hints for 3D coding</a></th>
+				<td>March 8, 2003</td>
+				<td>for <a href="http://msb.neostrada.pl/chosneck.html" target="_blank">Chosneck #2 diskmag</a>,
+				    some random hints</td>
+			</tr>
+			<tr>
+				<th><a href="mikro/060_fastram.html">Optimizing for FastRAM and 68060 CPU</a></th>
+				<td>March 8, 2003</td>
+				<td>for <a href="http://msb.neostrada.pl/chosneck.html" target="_blank">Chosneck #2 diskmag</a>,
+				    some basic stuff about 060 optimizing</td>
+			</tr>
+			
+			<tr>
+				<th><a href="mikro/basic3d.html"> (Really) Basic Things About 3D Graphics</a></th>
+				<td>October 30, 2002</td>
+				<td>for <a href="http://www.tscc.de/ucm.html" target="_blank">UCM 23 diskmag</a>, real lameness ;)</td>
+			</tr>
+			
+			<tr>
+				<th><a href="mikro/skczscen.html">Czech and Slovak Scene Report</a></th>
+				<td>October 30, 2002</td>
+				<td>for <a href="http://www.tscc.de/ucm.html" target="_blank">UCM 23 diskmag</a></a></td>
+			</tr>
+			
+			<tr>
+				<th><a href="mikro/narsil50.html">Narsil 50 review</a></th>
+				<td>October 30, 2002</td>
+				<td>for <a href="http://www.tscc.de/ucm.html" target="_blank">UCM 23 diskmag</a>, review and short thoughts about czech Atari diskmag</a></td>
+			</tr>
+			
+			<tr>
+				<th><a href="mikro/lektvar.html">Lektvar review</a></th>
+				<td>October 30, 2002</td>
+				<td>for <a href="http://www.tscc.de/ucm.html" target="_blank">UCM 23 diskmag</a>, review of czech Atari game</a></td>
+			</tr>
+			
+			
+		</table>
+	</dd>
+</dl>
+
+<br>
+<br>
+<h2><p align="center">:::Coding:::</p></h2>
+
+<dl>
+<dt><em>Coding docs [rating: 100%]</em></dt>
+<dd><table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="Coding/1/2D_BUMP.TXT">2D Bumpmapping</a></th>
+<td>Sqr(-1)</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/3D-ROTAT.TXT">Avatar's Guide To 3D-Rotations</a></th>
+<td>Avatar</td>
+<td>12 -> 6 muls optimization</td>
+</tr>
+<tr>
+<th><a href="Coding/1/3DROTATE.TXT">3D Dimensional Rotations For Computer Graphics</a></th>
+<td>Lithium/VLA</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/3DSHADE.TXT">3D Shading In Computer Graphics</a></th>
+<td>Lithium/VLA</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/BSPTREE.TXT">BSP Trees</a></th>
+<td>Tom Hammersley</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/BSP_FAQ.TXT">BSP FAQ</a></th>
+<td>Bretton Wade</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/CAM_MATR.TXT">Camera & Matrices</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/CRC.TXT">A Painless Guide To CRC Error Detection Algorithms</a></th>
+<td>Ross N. Williams</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/DRKITUT1.TXT">Fire Effect</a></th>
+<td>DarK I</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/FATMAP.TXT">Fast affine texture mapping</a></th>
+<td>MRI/Doomsday</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/FRACTALS.TXT">Fractals references</a></th>
+<td>Usenet</td>
+<td>references to books about fractals</td>
+</tr>
+<tr>
+<th><a href="Coding/1/MANDEL.TXT">Mandelbrot algorithm</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/NEWLINE.TXT">Fastest Line Algorithm</a></th>
+<td>Luke Hutchison</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/OTMMATX.TXT">Matrix transformation tutorial</a></th>
+<td>Voltaire/OTM</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/OTMPHONG.TXT">Approx. technique for the Phong Shading model</a></th>
+<td>Voltaire/OTM</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/OTMPOLY.TXT">Complete HOW TO of polygons</a></th>
+<td>Voltaire/OTM</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/OTMSORT.TXT">Sorting algorithms for 3D graphics</a></th>
+<td>Voltaire/OTM</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/OTMVOXEL.TXT">Voxel landscape</a></th>
+<td>Voltaire/OTM</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/PACKING.TXT">Packing Algorithms</a></th>
+<td>Axe/Superior</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/PLYGCLIP.TXT">Polygon Clipping</a></th>
+<td>Adrian Brown</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/RADIX.TXT">Radix sort algorithm</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/RANDOM.TXT">Random Function</a></th>
+<td>Usenet</td>
+<td>quite nice routine to generate pseudo-random numbers (x86 source)</td>
+</tr>
+<tr>
+<th><a href="Coding/1/RSA2.TXT">RSA encryption</a></th>
+<td>?</td>
+<td>cool explanation of RSA encryption</td>
+</tr>
+<tr>
+<th><a href="Coding/1/SCIMATH2.TXT">SciMath FAQ</a></th>
+<td>Alex Lopez-Ortiz</td>
+<td>interesting math-problems etc</td>
+</tr>
+<tr>
+<th><a href="Coding/1/SORT_ALG.TXT">Sort algorithms</a></th>
+<td>?</td>
+<td>Pascal sources</td>
+</tr>
+<tr>
+<th><a href="Coding/1/SQROOT.TXT">Fast Squareroots</a></th>
+<td>Arne Steinarson</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/SQRT.TXT">Squareroots</a></th>
+<td>Wongster</td>
+<td>some IRC rip...</td>
+</tr>
+<tr>
+<th><a href="Coding/1/S_BUFFER.TXT">S-Buffer FAQ</a></th>
+<td>Paul Nettle</td>
+<td>forget the Z-Buffer !</td>
+</tr>
+<tr>
+<th><a href="Coding/1/TEXLIGHT.TXT">Lighting Your Texture Maps</a></th>
+<td>Tom Hammersley</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/TEXTURE.TXT">Texture Mapping</a></th>
+<td>Sean Barrett</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/TEXTURE2.TXT">Texture Mapping</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/TRANSFRM.TXT">Perspective Transforms</a></th>
+<td>Andre Yew</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/TRANSPAR.TXT">16bpp color transparency</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/TUNNEL.TXT">How to do free-directional tunnels</a></th>
+<td>BlackAxe/KolOr</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/VGOPHONG.TXT">Phong lighting and specular highlights</a></th>
+<td>TimJ/Vertigo</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/VGOSHADO.TXT">Realtime Shadow FAQ</a></th>
+<td>Vector/Vertigo</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/VOXEL.TXT">Voxels</a></th>
+<td>Alex Chalfin</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/WALLTEXT.TXT">Texture Mapping (Walls only)</a></th>
+<td>Peylow/T.O.Y.S.</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/WATER.TXT">Water</a></th>
+<td>Tom Hammersley</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/3DBH.ZIP">3D Coding Blackhole</a></th>
+<td>Jerome St-Loius</td>
+<td>about 3D graphics, html format, pictures, long names</td>
+</tr>
+<tr>
+<th><a href="Coding/1/3DGPL.ZIP">3DGPL</a></th>
+<td>Sergei Savchenko</td>
+<td>complete tutorial about 3D graphics</td>
+</tr>
+<tr>
+<th><a href="Coding/1/3DICA.ZIP">3DICA</a></th>
+<td>Ica/Hubris</td>
+<td>complete tutorial about 3D graphics, html format, long names</td>
+</tr>
+<tr>
+<th><a href="Coding/1/3DROT1.ZIP">3D Rotations in 100% Assembler</a></th>
+<td>Vulture/Outlaw Triad & Matt Us Allem</td>
+<td>explanation, source (both x86 & motorola), really cool</td>
+</tr>
+<tr>
+<th><a href="Coding/1/3DROT2.ZIP">3D Rotate</a></th>
+<td>Draeden/VLA</td>
+<td>explanation + x86 source</td>
+</tr>
+<tr>
+<th><a href="Coding/1/ANUTUT1.ZIP">Plasmas</a></th>
+<td>Raphius/Anubis</td>
+<td>explanation + C source</td>
+</tr>
+<tr>
+<th><a href="Coding/1/DNTUT.ZIP">Intro to 3D Graphics Programming</a></th>
+<td>Kiwidog</td>
+<td>explanation + Pascal source</td>
+</tr>
+<tr>
+<th><a href="Coding/1/FATMAP2.ZIP">Fast affine texture mapping II</a></th>
+<td>MRI/Doomsday</td>
+<td>explanation + C++ source</td>
+</tr>
+<tr>
+<th><a href="Coding/1/FP8_8.ZIP">Fixed-point unit for Atari ST</a></th>
+<td>Ray/.tSCc.</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/FREEDIR.ZIP">Free Direction Rendering</a></th>
+<td>Kombat/Immortals</td>
+<td>explanation + C++ source</td>
+</tr>
+<tr>
+<th><a href="Coding/1/FULLR_1.ZIP">Full Screen Rotation and Scaling</a></th>
+<td>Scott A. Deming</td>
+<td>explanation + C source</td>
+</tr>
+<tr>
+<th><a href="Coding/1/FULLR_2.ZIP">Realtime Full screen image rotation</a></th>
+<td>Scott Deming</td>
+<td>explanation + C source</td>
+</tr>
+<tr>
+<th><a href="Coding/1/OTSTARS.ZIP">3D Starfield</a></th>
+<td>Vulture/Outlaw Triad</td>
+<td>explanation + x86 source</td>
+</tr>
+<tr>
+<th><a href="Coding/1/PLASTUT.ZIP">Code Your Own Plasma</a></th>
+<td>Spansh/Dynamix</td>
+<td>a lot of plasmas, x86 sources, huge explanation</td>
+</tr>
+<tr>
+<th><a href="Coding/1/PXD.ZIP">PXD trainers</a></th>
+<td>Peroxide</td>
+<td>PXD tutorials -- advanced topics about 3D and XMS memory</td>
+</tr>
+<tr>
+<th><a href="Coding/1/RSAFAQ.ZIP">RSA FAQ</a></th>
+<td>Usenet</td>
+<td>everything you want to know about encryption methods</td>
+</tr>
+<tr>
+<th><a href="Coding/1/SQRT.ZIP">Fast Squareroot</a></th>
+<td>Noble Roman</td>
+<td>explanation + C source</td>
+</tr>
+<tr>
+<th><a href="Coding/1/STARS.ZIP">Star field</a></th>
+<td>Draeden/VLA</td>
+<td>explanation + x86 source</td>
+</tr>
+<tr>
+<th><a href="Coding/1/T1NBUF11.ZIP">N-Buffering</a></th>
+<td>Type One/Pulpe</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/1/TCP_BUMP.ZIP">2d color bump-mapping</a></th>
+<td>T.C.P./d4z</td>
+<td>explanation + .exe file</td>
+</tr>
+<tr>
+<th><a href="Coding/1/X3MDMO01.ZIP">How To Create Plasma Effects</a></th>
+<td>Sten Roger Sandvik</td>
+<td>explanation + x86 source</td>
+</tr>
+<tr>
+<th><a href="Coding/1/ZED3D.ZIP">Zed3D</a></th>
+<td>Zed</td>
+<td>one of the best references about computer graphics, M$ .doc format</td>
+</tr>
+</table>
+</dl>
+
+<dl>
+<dt><em>Coding docs [rating: 60%]</em></dt>
+<dd><table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="Coding/2/3D-TRICK.TXT">Math Tricks</a></th>
+<td>Dr.Zixus/Trinity</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/3DALGFAQ.TXT">3D Algorithms FAQ</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/3D_CAM.TXT">3D Cameras</a></th>
+<td>Shadow Bandit/Diabolic Force</td>
+<td>formulas for camera moving</td>
+</tr>
+<tr>
+<th><a href="Coding/2/3D_FAQ.TXT">3D Graphics FAQ</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/ANTIALIS.TXT">Efficient Antialiasing</a></th>
+<td>Hin Jang</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/BEZIER.TXT">Cubic Bezier</a></th>
+<td>Ron Capelli</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/BILERP.TXT">Bilinear Interpolation of Texture maps</a></th>
+<td>Tom Hammersley</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/BRESENHA.TXT">Bresenham's Line Algorithm</a></th>
+<td>Sunir Shah</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/BUMPMAP2.TXT">Bumpmapping</a></th>
+<td>Brian Lingard</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/CLIP.TXT">A Cheater's Form of Z Clipping</a></th>
+<td>Ian Romanick</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/COMPRFAQ.TXT">Compression FAQ</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/CORDIC.TXT">Cordic Rotators</a></th>
+<td>Ken Turkowski</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/DOOM.TXT">Doom 3D Engine Techniques</a></th>
+<td>Brian Marshall</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/FIXED.TXT">How to use Fixed Point Math</a></th>
+<td>Night Stalker</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/FIXEDPOI.TXT">Fixed Point</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/FOG_FAQ.TXT">FAQs on fog</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/FRACTCOM.TXT">Fractal Image Compression</a></th>
+<td>Louisa F. Anson</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/FREETEX.TXT">Free Direction Texture Mapping</a></th>
+<td>hannu Helminen</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/FRUSTUM.TXT">Frustum Clipping</a></th>
+<td>Tom Hammersley</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/GFXFAQ.TXT">Graphics FAQ</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/GRAVITY.TXT">Gravity FAQ</a></th>
+<td>Edgar Roman</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/JELLO.TXT">Ray Tracing Jell-O Brand Gelatin</a></th>
+<td>Paul S. Heckbert</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/KARMADOC.TXT">More About Shading, Z-Buffer and Textures</a></th>
+<td>Karma</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/LINEOF.TXT">Line of Sight algorithm</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/LOS.TXT">A Fast Algorithm for Calculating Shading and Visivility on 2D Field</a></th>
+<td>Joseph Hall</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/MARCH_CU.TXT">Overview of the Marching Cubes Algorithm</a></th>
+<td>Matthew Ward</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/OPENGFAQ.TXT">OpenGL FAQ</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/ORTHO.TXT">Quaternions and Orthogonal 4x4 Real Matrices</a></th>
+<td>Henry G. Baker</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/PERTEX.TXT">Texture Mapping Polygons in Perspective</a></th>
+<td>Paul Heckbert</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/POLYCLIP.TXT">Clipping Polygons</a></th>
+<td>Patrick Reilly</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/QNUMBERS.TXT">Quaternion Numbers</a></th>
+<td>Henrik Engstrom</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/RAY.TXT">Ray-Tracing with Affine Transforms</a></th>
+<td>Otto J. A. Smith</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/RAY1.TXT">Dan's Raytracing Notes</a></th>
+<td>Dan Lyke</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/RAYSTUFF.TXT">Light Makes Right</a></th>
+<td>Eric Haines</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/SBUFF2.TXT">S-Buffering</a></th>
+<td>Tom Hammersley</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/SHADOWS.TXT">A Comparison of Three Shadow Volume Algorithms</a></th>
+<td>Mel Slater</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/SHADOWS2.TXT">Shadows</a></th>
+<td>Tom Hammersley</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/SIN.TXT">Sinus table generator</a></th>
+<td>KarL/NoooN</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/SINCOSC.TXT">Fast sin and cos calculations</a></th>
+<td>Cry0/Quasar</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/SPECULAR.TXT">Fast Specular Highlights with Local Light Sources and Viewer</a></th>
+<td>Zed</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/SPEEDY.TXT">Speedy Free Direction Texture Mapping And Other Nifty Tricks</a></th>
+<td>Hokan Anderson</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/SPHERES.TXT">Texturing, Bumpmapping of Spheres in Realtime</a></th>
+<td>Hans Kopp</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/TEXTMAP.TXT">Texture Mapping: A new tool for molecular graphics</a></th>
+<td>Michael Teschner</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/TEXTURE4.TXT">Texture Mapping Howto</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/TEXTURE5.TXT">Reflections on Flat-Shading vs Texture Mapping</a></th>
+<td>James Hugard</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/TILEMAP.TXT">Tile Texture Mapping Doc </a></th>
+<td>MRI/Doomsday</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/TILETMAP.TXT">Tiled texture Mapping for pow2 Texture Sizes</a></th>
+<td>TheGlide/SpinningKids</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/WARPING.TXT">Warping in Crystal Space</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/WWH1.TXT">Sub-pixel accuracy</a></th>
+<td>Paul Nettle</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/WWH2.TXT">Sub-texel accuracy</a></th>
+<td>Paul Nettle</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/WWH3.TXT">Rendering convex n-gons</a></th>
+<td>Paul Nettle</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/WWH4.TXT">Properly reordering face vertex indices</a></th>
+<td>Paul Nettle</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/WWH5.TXT">Calculating a rotation matrix based on location/target</a></th>
+<td>Paul Nettle</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/3D.ZIP">3D Viewing System Tutorial</a></th>
+<td>Gautam N. Lad</td>
+<td>explanation + C source</td>
+</tr>
+<tr>
+<th><a href="Coding/2/AI.ZIP">Artifical Intelligence</a></th>
+<td>various</td>
+<td>various docs about AI</td>
+</tr>
+<tr>
+<th><a href="Coding/2/BSP.ZIP">BSP Trees</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/2/CROSFADE.ZIP">Cross Fade</a></th>
+<td>Esak</td>
+<td>explanation + C/x86 sources</td>
+</tr>
+<tr>
+<th><a href="Coding/2/GVECTORS.ZIP">Gouraud Vectors</a></th>
+<td>Tumblin/Bodies In Motion</td>
+<td>explanation + C/x86 sources</td>
+</tr>
+<tr>
+<th><a href="Coding/2/LENS.ZIP">Lens</a></th>
+<td>Joey</td>
+<td>explanation + .gif</td>
+</tr>
+<tr>
+<th><a href="Coding/2/TEXTURE.ZIP">Perspective Texture Mapping Using Area Subdivision Method</a></th>
+<td>Karli Freivalds</td>
+<td>explanation + .exe file</td>
+</tr>
+<tr>
+<th><a href="Coding/2/WGT.ZIP">WGT Graphics Tutorials</a></th>
+<td>Chris Egerter</td>
+<td>Filled Polygons, Shaded Polygons, Texture Mapped Polygons, C + .exe files</td>
+</tr>
+</table>
+</dl>
+
+<dl>
+<dt><em>Coding docs [rating: 30%]</em></dt>
+<dd><table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="Coding/3/3DENVMAP.TXT">3DEnvMap algorithm</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/3DROTAT.TXT">3D Rotations/Instancing</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/BALLI.TXT">How a ballistic program works</a></th>
+<td>R. White</td>
+<td>what is this page about? :-)</td>
+</tr>
+<tr>
+<th><a href="Coding/3/BARYCENT.TXT">Triangle Intersection with Barycentric Coordinates</a></th>
+<td>Jeff Arenberg</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/BLOBBYSU.TXT">Blobs</a></th>
+<td>Bill Johnston</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/BUMPMAP.TXT">Bump mapped normal</a></th>
+<td>Robin Green</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/ENVMAP.TXT">Enviroment Mapping</a></th>
+<td>Frenzy/Tesko</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/GOURAUD.TXT">Gouraud Shading</a></th>
+<td>Marijn Meijles</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/INVMAT.TXT">Matrix Inverse</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/KOHONEN.TXT">AI Learning Algorithms</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/NORMAL.TXT">Finding the normal at the surface of the set</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/PARTICLE.TXT">Particle Systems</a></th>
+<td>Tom Hammersley</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/PATCHSPH.TXT">Patchsphere</a></th>
+<td>Eben Ostby/Pixar</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/QROTATE.TXT">3D Rotations/Instancing</a></th>
+<td>Usenet</td>
+<td>not the same as the one above</td>
+</tr>
+<tr>
+<th><a href="Coding/3/REFINTEN.TXT">Raytracing Transparent Objects</a></th>
+<td>Doug McDonald</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/REFLECT.TXT">Raytracing Transparent Objects</a></th>
+<td>Doug McDonald</td>
+<td>corrected one</td>
+</tr>
+<tr>
+<th><a href="Coding/3/RPN.TXT">Reverse Polish Notation</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/SHADOWS3.TXT">Realtime Shadows</a></th>
+<td>lks</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/SHADOWS4.TXT">Fast Multi-Pass Exact Screen-Space Shadows</a></th>
+<td>Zed</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/STEREO.TXT">Stereoscopic Projection</a></th>
+<td>Ian Romanick</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/TERRAFOR.TXT">Terraforming</a></th>
+<td>Sean Cier</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/TEXTURE3.TXT">Constant Slope Texture Mapping</a></th>
+<td>John McCarthy</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/3/TRIANGLE.TXT">Generation of list of 3D triangle</a></th>
+<td>Kimberley</td>
+<td></td>
+</tr>
+</table>
+</dl>
+
+<dl>
+<dt><em>Atari docs</em></dt>
+<dd><table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Alive/3D.TXT">Introducing 3D Graphics</a></th>
+<td>Mr.Pink/RG</td>
+<td>short intro to 3D translations</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/128.TXT">DHS 128 B-tro</a></th>
+<td>Mr.Pink/RG</td>
+<td>Mr.Pink explanate DHS' code</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/3DCAM.TXT">3D Programming and Camera Movement</a></th>
+<td>Tat/Avena</td>
+<td>cool doc about moving/rotating 3D objects</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/COOKIE.TXT">The Cookie Report</a></th>
+<td>Mr.Pink/RG</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/DSP_MREG.TXT">DSP M-Registers</a></th>
+<td>Tat/Avena</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/FADE.TXT">Fading Techniques on the Atari Falcon</a></th>
+<td>Mr.Pink/RG</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/FPU.TXT">FPU Programming</a></th>
+<td>Mr.Pink/RG</td>
+<td>complete overview of 68882 instructions</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/MIDI.TXT">MIDI Programming</a></th>
+<td>Mr.Pink/RG</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/MMU.TXT">The MMU</a></th>
+<td>Mr.Pink/RG</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/NEM.TXT">Nemesis Coding</a></th>
+<td>Mr.Pink/RG</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/STDEMO1.TXT">ST Demos Exposed #1</a></th>
+<td>Tat/Avena</td>
+<td>explanation of famous Atari ST 'impossible' fxs..</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/STDEMO2.TXT">ST Demos Exposed #2</a></th>
+<td>Tat/Avena</td>
+<td>part 2</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/STDEMO3.TXT">ST Demos Exposed #3</a></th>
+<td>Tat/Avena</td>
+<td>part 3</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/TRACK.TXT">Tracker Music Tutorial</a></th>
+<td>Toodeloo/DHS</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/TRACK2.TXT">Advanced techniques for swing and polyrhytms</a></th>
+<td>Toodeloo/DHS</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/BLOB.ZIP">The Blob</a></th>
+<td>Tat/Avena</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/DSPCALLS.ZIP">DSP Programming Using the XBIOS</a></th>
+<td>Tat/Avena</td>
+<td>XBIOS calls, how 2 use them, ...</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/INTRO18.ZIP">Maggie #18 Intro</a></th>
+<td>Tat/Avena</td>
+<td>complete source code</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/INTRO21.ZIP">Maggie #21 Intro</a></th>
+<td>Tat/Avena</td>
+<td>complete 68000 source code (ultra fast c2p routs etc)</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/JAGPAD.ZIP">JagPad Programming Tips</a></th>
+<td>Mr.Pink/RG</td>
+<td>3 parts of Maggie forum - how to code jagpad routines, examples etc</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/SPLINE.ZIP">Splines</a></th>
+<td>Tat/Avena</td>
+<td>Bezier & Hermite splines, source code</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Maggie/TEXTURES.ZIP">Artifical Textures</a></th>
+<td>Tat/Avena</td>
+<td>the easy way of 2D/3D textures</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Undercover/ALLATARI.TXT">Tidy coding for all Ataris</a></th>
+<td>EarX/FUN</td>
+<td>how to avoid "dirty" code</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Undercover/BLOBZ.TXT">Blobs Invasion</a></th>
+<td>Deez/Mind Design</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Undercover/C2P_2.TXT">Chunky to Planar</a></th>
+<td>Ray/.tSCc.</td>
+<td>nice explanation, examples, ...</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Undercover/DSP_CODE.TXT">Some hints on writing applications for the Falcon DSP</a></th>
+<td>EarX/FUN</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Undercover/LINEALG.TXT">Fuck Bresenham!</a></th>
+<td>EarX/FUN</td>
+<td>faster than Bresenham's algorithm? Hmm...</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Undercover/SIN_GEN.TXT">How to calculate sinewave values in 680x0</a></th>
+<td>EarX/FUN</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Undercover/TRIG.TXT">Implementing trig-functions</a></th>
+<td>Ray/.tSCc.</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Undercover/ASM_BOOK.ZIP">Making optimized assembly code</a></th>
+<td>EarX/FUN</td>
+<td>best doc what I ever read about demo-coding!</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/Undercover/C2P.ZIP">Chunky to Planar</a></th>
+<td>Candyman/Cream</td>
+<td>de facto same as the Ray's text, complete source code</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/BIN2DEC.S">Binary to decimal convertor</a></th>
+<td>Greg Garner</td>
+<td>680x0 source code</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/HBL.S">HBL source example</a></th>
+<td>Johan Sorensen</td>
+<td>again just a source code</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/STEFRACT.S">Fractal scroller for STE</a></th>
+<td>Jesper Rudberg</td>
+<td>only STE, no Falcon</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/2DCLIP.TXT">Fast 2D Line Clipper</a></th>
+<td>Usenet</td>
+<td>some strange mix of 680x0 assembly & Unix script</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/BIN2DEC.TXT">Divide by 10 in 68k-asm</a></th>
+<td>Ludis Langens</td>
+<td>explanation + example, very nice idea!</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/VECT_FIX.TXT">How to code vectordemos</a></th>
+<td>Asterix/Movement</td>
+<td>best text about vector-coding, I fixed some formulas, source code included</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/FLAMES.ZIP">Flames for Falcon 030</a></th>
+<td>Martin Steen</td>
+<td>short intro, but in .txt file is explained how the fire works (in german)</td>
+</tr>
+<tr>
+<th><a href="Coding/Atari/VBI.ZIP">VBI</a></th>
+<td>Amgem</td>
+<td>doc, sources, principles</td>
+</tr>
+<tr>
+<th><a href="http://www.sirlab.de/tscc/codetips.html" target=_blank>.tSCc.
+codetips</a></th>
+<td>.tSCc.</td>
+<td>very good for beginners, html</td>
+</tr>
+</table>
+</dl>
+
+<dl>
+<dt><em>Hardware(-like) docs</em></dt>
+<dd><table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="Coding/Hardware/BEFORCOM.HTM">The Storm Before the COM</a></th>
+<td>?</td>
+<td>nice text about serial communication, ISDN and so on</td>
+</tr>
+<tr>
+<th><a href="Coding/Hardware/OLDCPU.HTM">A Chronology of Digital Computing Machines</a></th>
+<td>SoftQuad</td>
+<td>computers from 1623 to 1952</td>
+</tr>
+<tr>
+<th><a href="Coding/Hardware/COLORS.TXT">Graphics/Colorspace FAQ</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Hardware/COLORS2.TXT">Graphics/Colorspace FAQ</a></th>
+<td>Usenet</td>
+<td>expanded one?</td>
+</tr>
+<tr>
+<th><a href="Coding/Hardware/COPRO16A.TXT">Everything You Always Wanted To Know About Math Coprocessors</a></th>
+<td>Norbert Juffa</td>
+<td>only PC ones, but nice reading</td>
+</tr>
+<tr>
+<th><a href="Coding/Hardware/DMA_RTI.TXT">How to program DMA</a></th>
+<td>Night Stalker</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Hardware/RGBLIST.TXT">RGB List</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Hardware/RS232GID.TXT">Practical Guide to RS-232 Interfacing</a></th>
+<td>Lawrence E. Hughes</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Hardware/RW56KFAQ.TXT">56 kbps FAQ</a></th>
+<td>Rockwell</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Hardware/STD002.TXT">Department of Defense Password Management Guideline</a></th>
+<td>Computer Security Center Maryland</td>
+<td>everything about passwords security etc</td>
+</tr>
+</table>
+</dl>
+
+<dl>
+<dt><em>Other docs</em></dt>
+<dd><table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="Coding/Others/NOPASCAL.PDF">Why use C instead of Pascal?</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Others/ASCIIART.TXT">ASCII Art FAQ</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Others/VRFAQ.TXT">Virtual Reality FAQ</a></th>
+<td>Jerry Isdale</td>
+<td></td>
+</tr>
+</table>
+</dl>
+
+<dl>
+<dt><em>PC docs</em></dt>
+<dd><table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="Coding/PC/AOA.PDF">Art Of Assembler</a></th>
+<td>?</td>
+<td>very complete guide to x86 programming</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/386INTEL.TXT">Intel 386 Programmer's Reference Manual</a></th>
+<td>Intel</td>
+<td>huge reference to 386 CPUs</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/ADRESS.TXT">Addressing Modes</a></th>
+<td>?</td>
+<td>grabbed from some text when I learned to code on 8086...</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/ANSISYS.TXT">ANSI.SYS' Escape Sequences Files</a></th>
+<td>?</td>
+<td>very handy under MSDOS :)</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/ASMINST.TXT">Assembly Instruction Set</a></th>
+<td>?</td>
+<td>complete 8086 instruction set</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/COMMANDS.TXT">(Un)documented commans of last CPUs</a></th>
+<td>Potemkin's Hacker Group</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/PC/CO_A_AKO.TXT">???</a></th>
+<td>MiKRO :-)</td>
+<td>example of various equivalentions of x86 asm... bleh, try to compare to motorola :)</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/DOSREF33.TXT">Programmer's Technical Reference for MSDOS</a></th>
+<td>Klaus Overhage</td>
+<td>interrupts, functions, ...</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/INTEL.TXT">Intel 8086/186/286/386/486 Instruction Set</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/PC/MODE13H.TXT">Using VGA Mode 13h for Fast Graphics</a></th>
+<td>Michael Averbuch</td>
+<td>famous 320x200x256...</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/OBJ-LIB.TXT">Linker Overview</a></th>
+<td>?</td>
+<td>.EXE & .COM structure, nice</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/OPTIM.TXT">Optimizing</a></th>
+<td>Robert C. Pendleton</td>
+<td>various optimizing tricks</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/TECHMAN.TXT">Techman</a></th>
+<td>VVU PrS Kosice</td>
+<td>great DOS reference, in slovak only</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/ANTIDEBU.ZIP">Antidebugging trick</a></th>
+<td>various authors</td>
+<td>3 texts</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/ASMTUT.ZIP">Adam's Assembler Tutorial</a></th>
+<td>Adam</td>
+<td>good assembler course including tutorials to code fire, plasma, ...</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/CHAINDOC.ZIP">Chain-4 Documentary</a></th>
+<td>Vulture/Outlaw Triad</td>
+<td>use MSDOS text mode instead of real graphics :)</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/INTERRUP.ZIP">x86/MSDOS Interrupt List</a></th>
+<td>Ralf Brown</td>
+<td>over 8 MB of pure text, wow!!</td>
+</tr>
+<tr>
+<th><a href="Coding/PC/PENTIUM.ZIP">Pentium CPU</a></th>
+<td>various authors</td>
+<td>compilation of texts about this CPU, impressive</td>
+</tr>
+</table>
+</dl>
+
+<dl>
+<dt><em>Sound docs</em></dt>
+<dd><table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="Coding/Sound/DOLBY.TXT">How Dolby Stereo works</a></th>
+<td>Don Munsil</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Coding/Sound/FRACTAL.TXT">Fractal Music Generation</a></th>
+<td>various authors</td>
+<td></td>
+</tr>
+</table>
+</dl>
+
+<dl>
+<dt><em>Source code</em></dt>
+<dd><table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="Coding/SOURCE.ZIP">Various source codes</a></th>
+<td>various authors</td>
+<td>different quality, I recommeded ART DEMO, very impressive!</td>
+</tr>
+</table>
+</dl>
+
+<br>
+<br>
+<h2><p align="center">:::68030 Stuff:::</p></h2>
+<table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="030/MOTOROLA.TXT">Motorola 68030</a></th>
+<td>Zynx/Inferiors</td>
+<td>a MUST for Falcon coders!</td>
+</tr>
+<tr>
+<th><a href="030/PIPELINE.TXT">Pipelining on 030</a></th>
+<td>Evil/DHS</td>
+<td>grabbed from some mail, maybe useful...</td>
+</tr>
+</table>
+
+<br>
+<br>
+<h2><p align="center">:::DSP56001 Stuff:::</p></h2>
+<table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="DSP/DSP.TXT">DSP56001</a></th>
+<td>NoCrew?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="DSP/DSPDOC.ZIP">DSP56001 Hypertext</a></th>
+<td>JAY Software</td>
+<td>handy hypertext which describe registers, memory, ...</td>
+</tr>
+<tr>
+<th><a href="DSP/DSPHTML.ZIP">Introduction to DSP</a></th>
+<td>Noring/NoCrew</td>
+<td>introduction to DSP coding, html format, long names</td>
+</tr>
+<tr>
+<th><a href="DSP/DSPINSTR.ZIP">DSP Intruction Set</a></th>
+<td>?</td>
+<td>complete instruction set of DSP56001</td>
+</tr>
+<tr>
+<th><a href="DSP/SOURCES.ZIP">DSP56001 Sources</a></th>
+<td>NoCrew, Motorola, ...</td>
+<td></td>
+</tr>
+</table>
+
+<br>
+<br>
+<h2><p align="center">:::68881/2 Stuff:::</p></h2>
+<table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="FPU/68881_1.TXT">Cooperating with the Coprocessor</a></th>
+<td>Jim Reekes</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="FPU/68881_2.TXT">Speedy the Math Coprocessor</a></th>
+<td>Rich Collyer</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="FPU/881_ASM.TXT">FPU assembler programming</a></th>
+<td>Erik H. Bakke</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="FPU/MACRO881.ZIP">MC68881 as a peripheral</a></th>
+<td>Motorola</td>
+<td></td>
+</tr>
+</table>
+
+<br>
+<br>
+<h2><p align="center">:::GEM Programming Stuff:::</p></h2>
+<table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="GEM/TOS.HTM">TOS</a></th>
+<td>Draco</td>
+<td>generall overview of all versions of TOS and clones</td>
+</tr>
+<tr>
+<th><a href="GEM/ARGVSPEC.TXT">GEMDOS Extended Argument Specification</a></th>
+<td>Ken Badertscher</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/ATDSK.TXT">Atari TOS Desktop Survival Kit</a></th>
+<td>Thomas J. Hopper</td>
+<td>desktop.inf & newdesk.inf structure</td>
+</tr>
+<tr>
+<th><a href="GEM/BINFILE.TXT">Structure of Atari binary file</a></th>
+<td>Leo</td>
+<td>bss, data, text segments...</td>
+</tr>
+<tr>
+<th><a href="GEM/BIOS.TXT">BIOS System Calls</a></th>
+<td>Christer Gustavsson</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/BLITMODE.TXT">Get/Set Blitter Configuration</a></th>
+<td>?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/DESKINF.TXT">DESKTOP.INF</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/ENV-AUT.TXT">Setting default enviroment from AUTO folder</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/ENV.TXT">SET_ENV.C</a></th>
+<td>Mike Fischer</td>
+<td>explanation + source code</td>
+</tr>
+<tr>
+<th><a href="GEM/GDOS_INF.TXT">Everything You Ever Wanted To Know About GDOS</a></th>
+<td>Douglas N. Wheeler</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/GEM.TXT">GEM Programming Jungle</a></th>
+<td>Roland Waddilove</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/GEMDOS.TXT">Atari GEMDOS Manual</a></th>
+<td>Atari?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/INOUTC.TXT">Upper & lower case routines for I/O</a></th>
+<td>Martin Minow</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/LISTERR.TXT">Bomb Lister</a></th>
+<td>Leo</td>
+<td>doc + C source</td>
+</tr>
+<tr>
+<th><a href="GEM/PEXEL_AL.TXT">Pexec cookbook</a></th>
+<td>Allan Pratt</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/PRGDES.TXT">Description of relocatable PRG header</a></th>
+<td>Roland Waldi</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/SALAD.TXT">Still Another Line A Document</a></th>
+<td>Mark Jansen</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/SHELL_P.TXT">_shell_p</a></th>
+<td>Simon Poole</td>
+<td>tutorial + C source</td>
+</tr>
+<tr>
+<th><a href="GEM/TOS.TXT">GEMDOS</a></th>
+<td>Atari?</td>
+<td>very complete description of GEMDOS</td>
+</tr>
+<tr>
+<th><a href="GEM/TOSTOAD.TXT">Converting a TOS prg into a DA</a></th>
+<td>Moshe Braner</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="GEM/TOS_CUT.TXT">GEMDOS short version</a></th>
+<td>Atari?/MiKRO</td>
+<td>I cutted some parts described in another docs</td>
+</tr>
+<tr>
+<th><a href="GEM/GEM.ZIP">Professional GEM</a></th>
+<td>Tim Oren</td>
+<td>complete GEM tutorial + C sources</td>
+</tr>
+<tr>
+<th><a href="GEM/LINE_A.ZIP">LineA</a></th>
+<td>RDS Software</td>
+<td>german description of LineA, examples etc</td>
+</tr>
+</table>
+
+<br>
+<br>
+<h2><p align="center">:::ST/Falcon Memory Maps:::</p></h2>
+<table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="Memory Maps/FALC1.TXT">Atari Falcon Hardware Registers #1</a></th>
+<td>Chris/Aura & Aeon/Aura</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Memory Maps/FALC2.TXT">Atari Falcon Hardware Registers #2</a></th>
+<td>Chris/Aura & Aeon/Aura</td>
+<td>part 2</td>
+</tr>
+<tr>
+<th><a href="Memory Maps/FALC3.TXT">Atari Falcon Hardware Registers #3</a></th>
+<td>Chris/Aura & Aeon/Aura</td>
+<td>part 3</td>
+</tr>
+<tr>
+<th><a href="Memory Maps/FALREG.TXT">Falcon Registers</a></th>
+<td>?</td>
+<td>german language</td>
+</tr>
+<tr>
+<th><a href="Memory Maps/FALVIDEO.TXT">The Authoritative Guide To The Falcon Video Hardware</a></th>
+<td>Aura & Animal Mine</td>
+<td>the coolest VIDEL description on the world!</td>
+</tr>
+<tr>
+<th><a href="Memory Maps/HARD.TXT">Atari Hardware Description</a></th>
+<td>Beweise/DNS</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Memory Maps/HARDWARE.TXT">Atari ST/STe/MSTe/TT/F030 Hardware Register Listing</a></th>
+<td>Dan Hollis</td>
+<td></td>
+</tr>
+</table>
+
+<br>
+<br>
+<h2><p align="center">:::Optimizing 680x0 Code:::</p></h2>
+<table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="Optimize/68OPT.TXT">Optimizing 680x0 Applications</a></th>
+<td>Tomas Evensen</td>
+<td>various optimizing methods for 68000/030/040/060</td>
+</tr>
+<tr>
+<th><a href="Optimize/ASP68K6.TXT">ASP68k Project</a></th>
+<td>Michael Glew</td>
+<td>for total lamers :)</td>
+</tr>
+<tr>
+<th><a href="Optimize/OPTIMIZE.TXT">?</a></th>
+<td>?</td>
+<td>nice optimizing tricks...</td>
+</tr>
+<tr>
+<th><a href="Optimize/OPTSRC.TXT">Optimizing your source code</a></th>
+<td>Stefan Posthuma</td>
+<td>dirty optimizing on pure 68000</td>
+</tr>
+<tr>
+<th><a href="Optimize/MOVE16V2.ZIP">Move16 instruction</a></th>
+<td>?</td>
+<td>Illustrate using of 040's Move16</td>
+</tr>
+</table>
+
+<br>
+<br>
+<h2><p align="center">:::Others:::</p></h2>
+<table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="Others/6502.TXT">6502 bugs</a></th>
+<td>Ivo van Poorten</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Others/INTERVIE.TXT">An excerpt from an interview with Leonard Tramiel</a></th>
+<td>Martin Goldberg</td>
+<td>original interview!</td>
+</tr>
+<tr>
+<th><a href="Others/PICATARI.TXT">ST Picture Formats</a></th>
+<td>David Baggett</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="Others/PROFIBUC.TXT">Atari ST/STE/TT Profibuch bugs</a></th>
+<td>Julian F. Reschke</td>
+<td>in german language</td>
+</tr>
+<tr>
+<th><a href="Others/DEVPAC.ZIP">Devpac</a></th>
+<td>?</td>
+<td>big Devpac manual, czech language</td>
+</tr>
+</table>
+
+<br>
+<br>
+<h2><p align="center">:::ST/E Stuff:::</p></h2>
+<table border=2>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Comment</th>
+</tr>
+<tr>
+<th><a href="ST_E/BLITTER.TXT">Blitter user manual for the Atari ST</a></th>
+<td>Atari?</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="ST_E/DMA_HDD.TXT">How To Use Atari ST Harddisk Port</a></th>
+<td>Doug Collinge</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="ST_E/MODEMIO.TXT">Writing communications software</a></th>
+<td>Usenet</td>
+<td></td>
+</tr>
+<tr>
+<th><a href="ST_E/OPCODE.TXT">68000er Opcoder</a></th>
+<td>?</td>
+<td>german language</td>
+</tr>
+<tr>
+<th><a href="ST_E/ARPBOOK.ZIP">Atari ST Machine Specific Programming In Assembly</a></th>
+<td>Robert C. Arp</td>
+<td>really huge asm book (about 250 files!)</td>
+</tr>
+<tr>
+<th><a href="ST_E/STINTERN.ZIP">Atari ST Intern</a></th>
+<td>?</td>
+<td>czech translation, ascii format</td>
+</tr>
+<tr>
+<th><a href="ST_E/TIMING.ZIP">Timing Tables for 68000</a></th>
+<td>various authors</td>
+<td>not complete, not best, but I haven't got anything better :)</td>
+</tr>
+</table>
+
+<A HREF="http://counters.dataintech.com/"><IMG
+SRC="http://counters.dataintech.com/counter.php?id=17586&login=mikro5"
+BORDER="0"></A>
+
+</body>
+</html>

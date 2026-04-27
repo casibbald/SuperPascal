@@ -1,0 +1,682 @@
+
+
+
+
+
+
+              EVERYTHING YOU EVER WANTED TO KNOW ABOUT GDOS (AND MORE)
+
+                                by Douglas N. Wheeler
+
+
+          WHAT IS GDOS?
+
+               GDOS is  an extension  to GEM which adds new capabilities to
+          your ST.  GDOS is available with many  commercial Atari programs,
+          as well  as to  registered Atari  developers ($500 if it is to be
+          distributed with a  product,  free  if  it  is  not  going  to be
+          distributed).
+          The three primary new capabilities are:
+
+               1.  The ability to use multiple fonts in various point sizes
+          on the screen, printer, and other output devices.
+
+               2.  Allows the creation of metafiles, which are standardized
+          files intended to be usable by many different applications.  This
+          allows files created in one program to be used in another.
+
+               3.  Support for various output  devices with  resolutions up
+          to 32,767 x 32,767 (including emulation of this resolution on the
+          screen).  This allows  graphics  to  be  printed  at  the highest
+          resolution of the output device.
+
+
+          HOW TO USE GDOS
+
+               In theory,  using GDOS  is as  simple as putting GDOS.PRG in
+          your AUTO folder and booting the computer.   In practice, though,
+          a series  of conditions must be met.  The most important of these
+          conditions is that there must be a valid  ASSIGN.SYS file present
+          in the root directory of the boot disk.
+               The following is a typical ASSIGN.SYS file.
+
+          PATH=C:\GDOS.SYS
+          ;
+          01p SCREEN.SYS  ; default screen
+          ;
+          02p SCREEN.SYS  ; low resolution
+          ATSS10.FNT      ; fonts
+          ATSS12.FNT
+          ATSS18.FNT
+          ATSS24.FNT
+          ATTP10.FNT
+          ATTR10.FNT
+          ATTR12.FNT
+          ATTR18.FNT
+          ATTR24.FNT
+          ;
+          03p SCREEN.SYS  ; medium resolution
+          ATSS10CG.FNT
+          ATSS12CG.FNT
+
+
+
+
+
+          ATSS18CG.FNT
+          ATSS24CG.FNT
+          ATTP10CG.FNT
+          ATTR10CG.FNT
+          ATTR12CG.FNT
+          ATTR18CG.FNT
+          ATTR24CG.FNT
+          ;
+          04p SCREEN.SYS  ; high resolution
+          ATSS10.FNT
+          ATSS12.FNT
+          ATSS18.FNT
+          ATSS24.FNT
+          ATTP10.FNT
+          ATTR10.FNT
+          ATTR12.FNT
+          ATTR18.FNT
+          ATTR24.FNT
+          ;
+          21 FX80.SYS  ; Epson 9-pin dot-matrix printer
+          ATSS10EP.FNT
+          ATSS12EP.FNT
+          ATSS18EP.FNT
+          ATSS24EP.FNT
+          ATTP10EP.FNT
+          ATTR10EP.FNT
+          ATTR12EP.FNT
+          ATTR18EP.FNT
+          ATTR24EP.FNT
+          ;
+          31r META.SYS  ; metafile driver
+          ATSS10MF.FNT
+          ATSS12MF.FNT
+          ATSS18MF.FNT
+          ATSS24MF.FNT
+          ATTP10MF.FNT
+          ATTR10MF.FNT
+          ATTR12MF.FNT
+          ATTR18MF.FNT
+          ATTR24MF.FNT
+
+               As  you  can  see,  I  have  divided  the file into distinct
+          groups.  The first line of  the ASSIGN.SYS  file is  used to tell
+          GDOS where  the fonts  and device drivers are located.  This line
+          must always start with PATH= which is followed  by a  pathname of
+          up to 64 characters locating the fonts and drivers.
+               Following the  path identifying  line is  the list of device
+          drivers and their associated  fonts.   Each group  is composed of
+          four parts.  First if a number representing the type of device:
+
+               01-10  Screen drivers
+               11-20  Plotter drivers
+               21-30  Printer drivers
+               31-40  Metafile drivers
+
+
+
+
+
+               41-50  Camera drivers
+               51-60  Tablet drivers
+
+          The Atari STs have four built-in device drivers, they are:
+
+               01   Default screen  (used when  an application doesn't care
+          about the screen resolution)
+               02  Low resolution screen
+               03  Medium resolution screen
+               04  High resolution screen
+
+               Immediately following the device number may be a "load flag"
+          of either  "p" or "r".  A "p" indicates that the device driver is
+          "p"ermanent and does not need to be loaded by GDOS.   Because the
+          ST has  it's screen  drivers built  into ROM, there will be a "p"
+          after devices  01-04.   An "r"  indicates that  the device driver
+          should be kept "r"esident, causing GDOS to load the device driver
+          immediately and hold it  in  memory.    If  a  load  flag  is not
+          present,  GDOS   will  only   load  the  device  driver  when  an
+          application opens (accesses) that device.
+               After the device number and load flag is the filename of the
+          device driver  as it  appears in the disk directory.  In the case
+          of ROM-resident drivers, the filename is only a place-holder (but
+          must be present).  Keep in mind that the device driver must be in
+          the folder specified in the path line.
+               On the lines following those three items is a list  of fonts
+          associated with  that device  (again, these  are the filenames as
+          they appear in the indicated path of the disk).
+               You may have noticed a  few  lines  with  semicolons  (;) in
+          them.   GDOS will  treat any  text on  a line  to the  right of a
+          semicolon as a comment and will ignore it.
+               Some ASSIGN.SYS files have  a  device  00  (00p SCREEN.SYS).
+          This  can  help  prevent  incompatibilities between GDOS and some
+          older (pre-GDOS) programs.  On the  other hand,  including it can
+          cause other  problems.   It is  suggested you leave it out unless
+          absolutely necessary.
+
+
+          EDITING/CREATING ASSIGN.SYS
+
+               Now, why would you  want  to  change  your  ASSIGN.SYS file?
+          Well, if  you have  just one program which uses GDOS, and you are
+          happy with the fonts you have, then there is no  reason to change
+          it.   But, now  that GDOS is beginning to be used more on the ST,
+          many of us are  acquiring a  collection of  GDOS applications and
+          fonts.  By editing or creating a new ASSIGN.SYS, you could create
+          a "universal" ASSIGN.SYS and font/driver folder  to be  used with
+          all of these programs!
+               Luckily, the ASSIGN.SYS file is a standard text (ASCII) file
+          which may be edited with most  text editors  and word processors.
+          The  only  requirement  is  that  the  file  does not contain any
+          formatting codes.   This  can usually  be accomplished  in a word
+          processor  by  turning  document  mode off, or selecting "Save as
+          text" (check  your word  processor manual  for exact instructions
+
+
+
+
+
+          for  doing  this).    If  you  are  using  a text editor, such as
+          MicroEmacs or  Tempus,  there  shouldn't  be  any  special saving
+          techniques.
+               Starting at  the top, the first thing you may want to change
+          is the PATH= line at the  beginning of  the ASSIGN.SYS  file.  By
+          changing this line, you can put your fonts and printer drivers on
+          another disk or hard drive partition (instead of your boot disk).
+          If  you  are  using  floppies,  keep  in mind that this directory
+          (folder) must be present when an application accesses  any of the
+          GDOS devices.   Also,  to speed booting, this directory should be
+          present when GDOS is loaded.
+               Below is a list  of my  recommended configurations  based on
+          what arrangement of disk drives is being used.
+
+               One floppy drive:
+                    Boot disk (drive A) with:
+                         AUTO folder containing GDOS.PRG
+                         GDOS.SYS folder containing the fonts and drivers
+                         ASSIGN.SYS with PATH=A:\GDOS.SYS
+                         Any  GDOS  application(s)  (you may wish to create
+                              separate   boot   disks    for    each   GDOS
+                              application)
+
+               Two floppy drives:
+                    Boot disk (drive A) with:
+                         AUTO folder containing GDOS.PRG
+                         ASSIGN.SYS with PATH=B:\GDOS.SYS
+                    Font/driver disk (drive B) with:
+                         GDOS.SYS folder containing fonts and drivers
+                    Application disk (drive A after booting GDOS) with:
+                         Any  GDOS  application(s)  (you may wish to create
+                              separate  application  disks  for  each  GDOS
+                              application)
+
+               Hard drive (booting from floppy):
+                    Boot disk (drive A) with:
+                         AUTO folder containing hard drive boot program and
+                              GDOS.PRG
+                         ASSIGN.SYS with PATH=C:\GDOS.SYS
+                    Hard drive partition C with:
+                         GDOS.SYS folder containing fonts and drivers
+                    Any hard drive partition with:
+                         Any GDOS application(s) (may be on any partition)
+
+               Hard drive (autobooting):
+                    Hard drive partition C with:
+                         AUTO folder containing GDOS.PRG
+                         GDOS.SYS folder containing fonts and drivers
+                         ASSIGN.SYS with PATH=C:\GDOS.SYS
+                    Any hard drive partition with:
+                         Any GDOS application(s) (may be on any partition)
+
+               Of  course,   these   are   only   suggestions,   and  other
+          configurations   may   be   better  for  different  applications.
+
+
+
+
+
+          Hopefully you should now be able to create  other set-ups without
+          too much  difficulty.   There are  a few  "musts" that have to be
+          observed:
+               1.   GDOS.PRG must be in the AUTO folder of the boot disk.
+               2.   ASSIGN.SYS must be in  the root  directory of  the boot
+          disk.
+               3.   The PATH=  line in the ASSIGN.SYS file must contain the
+          complete pathname of the folder containing the fonts  and drivers
+          (GDOS.SYS  is  Atari's  current name for this folder--previously,
+          Atari called it GEMSYS.  You may, of course, choose  any name you
+          like).
+               4.   The fonts  and drivers  must be in the right place when
+          an application tries to open a device.
+
+               Adding a new device driver or new fonts is very simple.  All
+          you  have  to  do  is  put  the device driver and/or fonts in the
+          correct folder (as defined  by PATH=)  then add  the filenames to
+          the ASSIGN.SYS file.
+
+
+          A BIT ABOUT FONTS
+
+               One question  about GDOS fonts that people ask is, "when are
+          the fonts loaded?"  Many people are under the impression that all
+          the fonts  are loaded when GDOS is initially loaded.  This is not
+          true (and cannot be done).   An "r"  load flag  in the ASSIGN.SYS
+          file  will  cause  GDOS  to  load only the device driver, not the
+          fonts.  Fonts are loaded only after an application opens a device
+          and asks  for the  fonts to  be loaded.   At that time, GDOS will
+          attempt to load all the fonts for that  device.   If there  is an
+          error (can't  find the  find, not  enough memory, etc.) GDOS will
+          skip over  that font  and continue  with the  next one.   When an
+          application is  through with the fonts, it can "unload" the fonts
+          to free up that memory.
+               Another fact that many people don't  understand is  that the
+          font filename  is irrelevant   to GDOS.  Each font has a "header"
+          consisting of various parameters, some of these are:  point size,
+          font name,  and a  font ID which is used to identify fonts of the
+          same type (i.e. all swiss fonts have the same ID).  Another thing
+          to  note  is  that  GDOS  does  not  handle line spacing, this is
+          handled by  the application  regardless of  the actual  size of a
+          given font.   Some  programs use the point size to determine line
+          spacing, and others use the actual height of  the font  (yes, the
+          point size can be set different from the actual size).
+               For  those  of  you  creating  your  own fonts (with GEMFED,
+          FONTZ!, or any other way), you must assign a unique font ID (from
+          0 to 32,767) to each of your fonts, and all font of the same type
+          (i.e. Times), but of different size, must have the same  ID.  You
+          should also  note that  some GDOS applications can only use fonts
+          with an ID between 0 and 255.  Because of  this, it  is advisable
+          to keep your font IDs in that range.
+               Another thing you must know when creating your own fonts, is
+          the resolution  of the  devices you  are creating  the fonts for.
+          The  following  is  a  list  of  most  of the currently available
+
+
+
+
+
+          devices and their resolution.
+
+               Low resolution screen    45 x 45 (horizontal  dpi x vertical
+          dpi)
+               Medium resolution screen  91 x 45
+               High resolution screen  91 x 91
+               9-pin dot-matrix printer  120 x 144
+               24-pin printer  180 x 180 or 360 x 360 (NEC P-series only)
+               Laser printer  150 x 150 (some) or 300 x 300
+
+               (dpi figures for the screen are approximate)
+
+               As you  can see,  most of  these devices have square (round)
+          pixels.  This allows for sideways  printing using  the same fonts
+          as for  vertical (normal)  printing.  A notable exception to this
+          is  with  the  9-pin  dot-matrix  printers,  which  will  distort
+          characters when printing them sideways.  Different drivers handle
+          this  differently,  they  either  ignore  the   fact  (and  print
+          distorted characters  sideways), or they print the left and right
+          sides of a horizontal page on two separate  vertical pages, which
+          must then be taped together.  The first method is the easier (and
+          faster) of the two,  but the  second method  will produce correct
+          characters,  and  the  taping  isn't  too bad if you are going to
+          photocopy the final product.
+               It would be possible to create  separate fonts  for sideways
+          printing. but  so far  this has  not been done.  Also, some Epson
+          printers have a 144 x 144  dpi mode  (double plotter  mode) which
+          could  be  utilized.    This  would  not only allow non-distorted
+          sideways printing, but offers  slight  higher  resolution  in the
+          horizontal axis.
+
+
+          FONT FILENAMES
+
+               As I  stated earlier,  font filenames  are not used by GDOS.
+          To us humans, though,  consistent filenames  can greatly simplify
+          things.   With the  official release  of GDOS  (late 1987), Atari
+          adopted a standardized way  of naming  font files.   Here  I will
+          explain Atari's idea and add a few extensions.
+               A font  filename like  ATSS10EP.FNT may  look meaningless to
+          someone who doesn't know how the filename was derived, but is, in
+          fact, very functional.
+               The   first   and   second  characters  (AT)  indicates  the
+          creator/distributor of the font (in this case Atari).   Atari has
+          suggested that these characters be "AT" for all fonts used on the
+          Atari; this seems meaningless to me,  as I  don't have  any fonts
+          for any  other computers  on my  ST disks (why would I?).  I feel
+          these two characters can be put  to  better  use  to  specify the
+          creator or distributor of the font.
+               The third  and fourth characters (SS) identify the typestyle
+          (in  this  case  sans  serif).    These  should  be  unique  to a
+          particular rendition of a typeface.
+               The fifth  and sixth  characters (10) specify the point size
+          of the font.  This should  be the  point size  as printed  on the
+
+
+
+
+
+          device the  font was  designed for,  not the pixel height.  Also,
+          sizes less than 10  should  have  a  leading  zero  (i.e.  06) to
+          maintain the overall structure.
+               The seventh  and eighth  characters (EP)  specify the device
+          for which the font  was designed  (in this  case the  Epson 9-pin
+          driver).  If there are no seventh and eighth characters, the font
+          is assumed to be for the high-resolution screen.
+               The filename extender on all fonts will be .FNT.
+               Although not  many companies/individuals  have produced GDOS
+          fonts  for  the  ST  (yet),  I  recommend that all font filenames
+          follow this convention to avoid confusion.  I also suggest  a few
+          standard identifiers:
+
+          Creator/distributor:
+               AT - Atari
+               MG - Migraph*
+               TW - Timeworks*
+               NC - Neocept*
+
+          Typestyles:
+               SS - Sans Serif (Atari's Swiss)
+               TR - Times Roman (Atari's Dutch)
+               TP - Typewriter (Atari)
+               DB - Dingbats (Timeworks' Bullets)*
+               DL - Drury Lane (Timeworks)*
+               MA - Madison (Timeworks)*
+               RK - Rockface (Timeworks)*
+               RA - Ravinia (Timeworks)*
+               CL - Camelot (Neocept)*
+
+          Device:
+               (none) - Monochrome graphics (high/low resolution screen)
+               CG - Color graphics (medium resolution screen)
+               EP - Epson 9-pin dot-matrix printer (120 x 144)
+               SP - Star NB-15 24-pin dot-matrix printer (180 x 180)
+               LB - Atari SMM804 9-pin dot-matrix printer (120 x 144)
+               LS - Standard laser printer (300 x 300)
+               MF - Metafile
+               MG - Monochrome graphics (high/low resolution)*
+               NC - NEC P-series 24-pin dot-matrix printer (360 x 360)*
+               LL - Low resolution laser printer (150 x 150)*
+               LQ - Epson LQ-series 24-pin printers (180 x 180)*
+
+               * indicates unofficial representations which I suggest in an
+          effort to standardize font filenames, and  to simplify  the whole
+          matter.
+
+               In many  cases, the creator/distributor is not important, in
+          which  case  the  first  four  characters  can  be  used  for the
+          typestyle.   You will  also notice  that I have listed typestyles
+          from various companies, I have done this because I recommend that
+          you rename  all of the font you currently have to match the above
+          conventions, this will save you a lot of confusion in  the future
+          when you  may have ten times as many fonts.  One thing to note if
+
+
+
+
+
+          you  create  a  master  ASSIGN.SYS  file,  is  that  although the
+          Timeworks Swiss  and Dutch fonts are different from Atari's, they
+          use the same font IDs.  GDOS could get very confused if  you have
+          two  fonts  with  the  same  ID  and  point  size.    My personal
+          recommendation is to replace Timeworks' Swiss and Dutch  fonts in
+          the 10, 12, 18, and 24 point sizes with the ones from Atari, as I
+          feel these are much  more professional  and true  to the original
+          Helvetica and Times Roman typefaces.
+               Because the  font filename convention has changed since GDOS
+          was first made available, it is  helpful to  know the  old format
+          (which  is  still  being  used  in  many  cases).    The old font
+          filenames were laid out as follows:
+
+               cccrttpp.FNT
+
+               ccc  -    Creator/distributor (for screen fonts,  i.e. MIG =
+          Migraph)  or  Device  (for  other  fonts,  i.e. EPS = Epson 9-pin
+          printer)
+               r    -    Resolution (i.e. L = low res, H=high res)
+               tt   -    Typeface (i.e. SS = sans serif, as above)
+               pp   -    Point size (as above)
+
+
+          METAFILES
+
+               Metafiles are theoretically ideal graphics files (keeping in
+          mind that text is represented graphically) which can be exchanged
+          between different GDOS applications.   Metafiles  are those files
+          with a  .GEM extender.  Metafiles are "ideal" in the respect that
+          they are  resolution independent.   They  are simply instructions
+          for the  computer to recreate a page on any output device at that
+          device's highest resolution.   This  is  accomplished  by storing
+          commands  for  drawing  lines,  circles,  rectangles, text, etc.,
+          unlike most picture files (.NEO, PI?, etc.) which  store the dots
+          making up an image.
+               Unfortunately,  the  metafile  standard  is  not  being used
+          consistently yet.   This  results in  programs not  being able to
+          read metafiles  created by  another application.   In most cases,
+          the fault lies with the program trying to load the  metafile, not
+          the creator.   Many  different parameters  may be  present in the
+          header of a metafile, but only a few of these are required.
+               Many applications expect (and  need)  some  of  the optional
+          parameters to  be present  to properly  represent the  image.  As
+          such, they have difficulty loading files  which don't  have these
+          parameters.    Currently  Easy-Draw  (version  2.3)  is  the most
+          capable of the available GDOS  applications,  and  can  read just
+          about any metafile.
+               Some of  the more  recent GDOS applications are allowing the
+          use of GEM  image  files  (those  ending  in  .IMG).    These are
+          bit-mapped  images  similar  to  those  created by the various ST
+          paint  programs  (but  without  the  screen  size  and resolution
+          limitations).    As  is  the  case  with other paint files, these
+          images may be jagged or blocky when printed on a  high resolution
+          device.
+
+
+
+
+
+               A very  important fact about images in metafiles is that the
+          metafile does not actually contain a  copy  of  the  image.   The
+          metafile only  contains the  filename of the image on disk.  This
+          means that you must not remove the disk containing an image while
+          the  metafile  is  being  printed,  and every time you print that
+          metafile, the image must be in the same disk (or you will have to
+          change your  file).   If GDOS  can't find the image, it will just
+          skip over it.  Be warned.
+               For all  you programmers,  currently some  programs (such as
+          OUTPUT.PRG and  OUTPRINT.PRG) have  difficulty handling metafiles
+          with large coordinates.  Try  to  keep  the  coordinate  space as
+          small as  possible while still maintaining enough for good output
+          quality.
+
+
+          MISCELLANEOUS COMMENTS
+
+               If you are using the Timeworks Desktop Publisher  ST (TDTP),
+          you must  run the  FONTWID.APP program  each time  you modify the
+          ASSIGN.SYS file.  Another important  fact  is  that  the relative
+          widths  of  the  Timeworks  fonts  are not the same for different
+          devices.  What this means is that if  you create  a document with
+          TDTP installed for use with an Epson 9-pin printer, then load the
+          file into TDTP installed for use with a  laser printer,  the text
+          will be  re-flowed.   This may  result in  different page breaks,
+          lost text, extra white  space, etc.   The  best solution  to this
+          problem is  to create  the document with a TDTP installed for the
+          device which will create the final copy.  Another idea  is to use
+          Atari's fonts  (if you have them--they are not public domain), as
+          the relative sizes between devices is very close (there still may
+          be a few differences, but can be fixed readily).
+               It should  also be noted that Timeworks' ASSIGN.SYS files is
+          a mess.  Apparently they list all the  fonts they  have available
+          for all  their device  drivers in one ASSIGN.SYS file.  I suggest
+          you create your own based on the information presented here.
+
+               For those of you  who have  seen a  lot of  DEGAS Elite GDOS
+          fonts floating around, don't get too excited.  For those to print
+          properly (even blocky), you must have matching printer  fonts for
+          the  screen  fonts.    GEMFED  or  FONTZ!  greatly  simplify this
+          process, but if you intend to create a  complete set  of fonts in
+          four or five sizes, you will have a lot of work ahead of you.
+
+               Anyone  creating   fonts  for  the  general  public  (either
+          commercial or public domain), try to  remember that  not everyone
+          is using  the same kind of monitor or printer you are.  If at all
+          possible, create fonts for all the devices I have listed above.
+
+               For those of you creating fonts  with FONTZ!,  you should be
+          aware  that  scaling  fonts  may  change  the aspect ratio of the
+          characters.  I'll say it again:  Creating high quality fonts is a
+          lot of work.  Period.
+
+               One thing  I didn't  mention are  metafile fonts.  These are
+
+
+
+
+
+          not really  fonts,  but  merely  width  tables  designed  to keep
+          correct character spacing in a file when used with different GDOS
+          applications.  They are rarely used  and, in  most cases,  can be
+          eliminated without any loss of quality.
+
+               Because GDOS  has gone through many revisions, there is some
+          confusion over which is the  latest.    When  GDOS  is  loaded, a
+          message is  displayed on  the screen  saying it is installed, and
+          the  version  number.    The  original   GDOS  displayed  "GEMVDI
+          Installed".    After  that,  it  switched  to  "GDOS  Version 1.x
+          Installed".  The most common were  1.1, 1.2,  1.3, 1.5,  and 1.8.
+          The  newest   revisions  of   GDOS  display   "GDOS  RELEASE  1.x
+          Installed", with 1.1 being the newest (1.0 is still widely used).
+          As you  can see, it is very important to read the boot-up message
+          when determining which  revision  you  are  using.    Also,  as a
+          sidenote, if  you can't get RELEASE 1.0 or 1.1, you should try to
+          avoid Version 1.8, which had some problems.
+
+               To  prevent  problems  with  some  of   the  device  drivers
+          available,  fonts  should  be  listed  in  the ASSIGN.SYS file in
+          ascending order by font ID.   Some device  drivers will  not find
+          fonts which are listed out of ID order.
+
+               Some  of  the  GDOS  fonts  available  have  the  entire  ST
+          character  set  defined,  including  greek,  hebrew,   and  other
+          character (most  are unused by the average person).  As you might
+          imagine, these take up space, usually, more than 50% of  the font
+          file!   So, if  you're running  out of  memory (especially with a
+          Mega ST2 and SLM804), you can use FONTZ!  to strip  out the upper
+          characters.  Do this by setting the upper ASCII value to 127.
+
+               Many  people  who  have  seen  printouts  of  GDOS text have
+          complained that the text is blocky.   This  blockiness is usually
+          the result  of font  scaling.  If a device driver does not have a
+          font available in  the  requested  size,  it  will  use  the next
+          smaller size, or it may double the size of a smaller font.  It it
+          uses the next smaller size, the  text will  look strange, because
+          it  will  have  the  spacing  of  the  requested  size,  with the
+          character size of  the  actually  used  size.    When  doubling a
+          smaller font, blockiness will occur, and even then, the requested
+          size may not be obtained.  The best  solution to  this problem is
+          to be  aware of what size fonts are available, and only use those
+          in your files.
+
+               Currently there are rumors of a future version of GDOS which
+          supports scalable  outline (or  vector) fonts.  It's important to
+          realize that  GDOS does  not create  the characters.   The device
+          drivers are  responsible for  creating the actual characters, and
+          could be rewritten to support outline fonts without  any (or very
+          minor) changes to GDOS.
+
+               Ever since  GDOS was  released for  the ST, people have been
+          complaining, saying that GDOS  was supposed  to be  included with
+          the ST.   While  Atari may  have planned that originally, I don't
+
+
+
+
+
+          believe Atari ever stated publicly that GDOS was  to be included.
+          Keep in mind that much of the early ST documentation was based on
+          the IBM version of GEM, and reflects DRI's handling of  GDOS, not
+          Atari's.
+               Also, at  this time,  Atari has no plans to incorporate GDOS
+          into the TOS ROMs.
+
+
+          GLOSSARY
+
+               Aspect Ratio - The relation of width to height.  Maintaining
+          a constant  aspect ratio  ensures the same proportions regardless
+          of size.
+
+               Device (Graphics Device) - Anything used to create some form
+          of output, usually on a video screen or printed on paper or film.
+
+               Device Driver  - A computer program used to control a device
+          as specified by a "master" application.
+
+               Font - A typeface of a given style and point size.
+
+               GDOS - Graphics Device Operating System; an extension to the
+          Atari ST's operating system allowing for the use of various fonts
+          and graphics devices.
+
+               GEM - Graphics Environment Manager; the portion of  the ST's
+          operating  system  which  is  responsible  for most of the visual
+          aspects of the ST.
+
+               Header - A portion of  a  file  (usually  at  the beginning)
+          containing various parameters describing the file.
+
+               Line Spacing - The distance between successive line of text,
+          usually measured in points.
+
+               Parameter -  A number  or other  symbol used  to represent a
+          given attribute (dimension, color, direction, size, mode, etc.)
+
+               Pixel -  Picture element;  a single dot, usually one of many
+          used to create a complete image on a  video screen  or printed on
+          paper or film.
+
+               Point  -  A  typographical  unit  of  measure; approximately
+          1/72".
+
+
+          COPYRIGHTS, TRADEMARKS, ETC.
+
+               This document is copyright 1988 by  Douglas N.  Wheeler, all
+          rights reserved.
+
+               This  document  may  be  reproduced  for  non-commercial use
+          without further permission.  For commercial  reproduction, please
+
+
+
+
+
+          contact the author.
+
+               Any  questions  or  comments  about  this  document  can  be
+          directed to:
+
+               Douglas N. Wheeler
+               PSC 3 Box 6096
+               Travis AFB, CA  94535
+               (707) 437-3786
+               GEnie address D.N.WHEELER.
+
+               This   document   mentions   several  commercial/copyrighted
+          products.   In each  case, it  is to be understood that the names
+          are trademarks of their  respective companies  and are  used here
+          only as  references.   I am  in no  way connected, either through
+          employment or otherwise, to any of these companies.
+
+               I cannot be held responsible for any damages  resulting from
+          the use  or misuse of the information contained in this document.
+          This  document   was  created   for  the   purpose  of  providing
+          information, it is up  to the reader to accept responsibility for
+          the results of the use of this information.
+
+               I'd like  to  thank  Paul  Mazurek,  from  Migraph,  for his
+          comments and suggestions for this document.
+
+

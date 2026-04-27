@@ -1,0 +1,100 @@
+Date: 3 May 88 11:21:48 GMT
+Comment:  Extracted from Info-Atari16 (INFO-A16) digest number 88-235
+From: mcvax!philmds!leo@uunet.uu.net  (Leo de Wit)
+Subject: lasterr.c Bomb lister
+To: info-atari16@score.stanford.edu
+
+Having recieved a few enthousiastic reactions for the Bomb detector program,
+here is it. You can run it afterwards whenever a bombing has taken place.
+The main pre is that it does not have to be resident and that it is an
+ordinary C program (what is ordinary C? :=).
+
+The program is called LASTERR and compiles succesfull on a Lattice-C compiler,
+so note that int == 4 bytes, and short == 2 bytes!
+It could be cleaned up a bit, replacing the 'magic numbers' by macro's etc.
+It is mainly self-explainatory; the data referenced (addresses 0x380 etc.)
+have already been filled in by the standard error routine (the one that also
+throws bombs).
+
+------------------------------- CUT HERE --------------------------------------
+
+/* lasterr.c: report last occured error and stack dump.
+ * Copyright L.J.M. de Wit, 1988.
+ * This source and the generated code may be freely distributed, if not used
+ * commercially.
+ */
+
+#define PEEKB(a)  (*(unsigned char  *)(a))
+#define PEEKW(a)  (*(unsigned short *)(a))
+#define PEEKL(a)  (*(unsigned long  *)(a))
+
+main()
+{
+    int ssp, i;
+
+    ssp = gemdos(0x20,0);    /* switch to supervisor mode, save stack pointer */
+
+    if (PEEKL(0x380) != 0x12345678) { /* magic marker */
+        printf("No error occured since last reset\n");
+    } else {
+        static char *errmsg[] = {
+            "Reset", "Reset",
+            "Bus error",
+            "Address error",
+            "Illegal instruction",
+            "Division by zero",
+            "CHK",
+            "TRAPV",
+            "Privilege violation",
+            "Trace"
+        };
+        short excepno, offset;
+
+        excepno = PEEKB(0x3c4);
+        offset = ((excepno == 2) || (excepno == 3)) ? 8 : 0;
+
+        printf("Exception no. %d (%s)\n",excepno,
+            (excepno >= sizeof(errmsg)/sizeof(errmsg[0]))
+            ? "Unassigned" : errmsg[excepno]);
+
+        for (i = 0; i < 8; i++) {
+            printf(D%d : %8x\tA%d : %8x\n",
+                i, PEEKL(0x384 + 4 * i), i, PEEKL(0x3a4 + 4 * i));
+        }
+        printf(PC : %8x\tUSP: %8x\nSR : %8x\n",
+            PEEKL(0x3ce + offset), PEEKL(0x3c8), PEEKW(0x3cc + offset));
+
+        if (offset == 8) { /* exceptions 2 and 3 */
+            short status = PEEKW(0x3cc);
+            static char *accmode[] = {
+                "unassigned",
+                "user mode data reference",
+                "user mode program reference",
+                "unassigned",
+                "unassigned",
+                "supervisor mode data reference",
+                "supervisor mode program reference",
+                "interrupt acknowledge"
+            };
+
+            printf("\nRead/Write  : %s\n",
+                (status & 16) ? "read" : "write");
+            printf("In-/Extern  : %s\n",
+                (status & 8) ? "extern" : "intern");
+            printf("Access mode : %s\n",accmode[status & 7]);
+            printf("Address     : %8x\n", PEEKL(0x3ce));
+            printf("Instruction : %8x\n", PEEKW(0x3d2));
+        }
+    }
+    gemdos(0x20,ssp);
+}
+
+------------------------------- CUT HERE --------------------------------------
+
+I hope no errors have crept into the source while I was typing it over; but
+then, you could use this program to see what bomb was produced ( :=)).
+Have fun!
+
+        leo.    (What you C is what you get).
+
+

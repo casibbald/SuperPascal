@@ -1,0 +1,55 @@
+Terraforming
+---------------
+The Plasma Algorithm
+
+The plasma algorithm is relatively simple, and I'll try to explain it in
+psuedocode; to begin with, taking an arbitrary rectangle, _clear_ the
+entire thing (usually 0 is used to indicate an 'unset' pixel), put random
+colours at the four corners, and call plasma(x1,y1,x2,y2).
+
+Variables:
+        float entropy = chaos component (0 = no chaos, infinity = static)
+
+Functions:
+        colour(int x, int y) = colour of pixel at (x, y)
+        average(int a, int b) = integer halfway between (a) and (b)
+        averageColour (colour c1, colour c2) = colour halfway between (c1) and
+                (c2) in each dimension of the colourspace used
+        randomColour (float a) = additive value in each dimension of the
+                colourspace used, in the range (dimensionSize * a)
+                (if a is 0, returns zero in each dimension,
+                 if a is 1, returns completely random value in each dimension)
+
+plasma(int x1, int y1, int x2, int y2) {
+        if rectangle (x1,y1) (x2,y2) is too small (no more pixels to set)
+                return;
+        if pixel (average(x1, x2), y1) isn't already set, set it to {
+                if (entropy = 0) averageColour(colour(x1, y1), colour(x2, y1);
+                else averageColour(colour(x1, y1), colour(x2, y1))
+                     +/- randomColour (
+                         0.5 * ((x2 - x1) / (maxX - minX)) ^ (1 / entropy));
+         }
+        (repeat for pixels at midpoint of each side, and a similar routine for
+                the pixel in the middle)
+        (call plasma() for each of the four quadrant sub-rectangles)
+ }
+
+Using differend randomColour() and averageColour() routines, this can be
+implemented in an arbitrary colourspace, although a single dimension space
+is usually used because it doesn't give the multi-layered effect and many
+people enjoy rotating the palette on their plasma for 'animation'.
+
+This should be relatively direct to translate to C or the language of your
+choice (C++ or another OOL is nice because you can have a generic Colour
+class and use the same plasma routine in an arbitrary colourspace using a
+derived class). Hope it helps...
+
+-Sean Cier (scier@thor.tjhsst.edu)
+---------------------------------------------------------------------------
+
+Other Related Links
+
+   * GIS Home Page
+   * Digital Relief Map
+
+Terraforming

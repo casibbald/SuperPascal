@@ -1,0 +1,176 @@
+Date: 18 Aug 87 17:56:59 GMT
+From: imagen!atari!apratt@ucbvax.Berkeley.EDU  (Allan Pratt)
+Subject: Allan Pratt's Pexec cookbook!
+Comment: Extracted from digest info-atari16 87-313
+To: info-atari16@score.stanford.edu
+
+This is in response to a request from Christian Kaernbach which I got
+from  BITNET: I can't reply directly to BITNET, but I'm sure other people
+will find this interesting, too: it's a preliminary version of the
+long-awaited Pexec cookbook!
+
+In broad terms, the things you have to know about Pexec are that it
+starts up a process, lets it execute, then returns to the caller
+when that process terminates.  The "caller" -- the process which used Pexec
+in the first place -- has some responsibilities: it has to make memory
+available to the OS for allocation to the child, and it has to build
+up the argument string for the child.
+
+All GEMDOS programs are started with the largest block of OS memory
+allocated to them.  Except in very rare circumstances, this block
+is the one stretching from the end of the accessories and resident
+utilities to the beginning of screen memory. The point is that your
+program has probably been allocated ALL of free memory.  In order to
+make memory available for a child process, you have to SHRINK the
+block you own, returning the top part of it to GEMDOS.  The time to
+do this is when you start up.
+
+If you use Alcyon C (from the developer's kit), you know that you
+always link with a file called GEMSTART.  If you've been paying
+attention, you should have gotten the *new* GEMSTART from Compuserve
+(or from somebody else who got it): I wrote that GEMSTART.  In
+GEMSTART.S, there is a lot of discussion about memory models, and then
+a variable you set telling how much memory you want to keep or give back
+to the OS.  Make your choice (when in doubt, use STACK=1), assemble
+GEMSTART.S, call the result GEMSEXEC.O (or something), and link the
+programs which Pexec with that file rather than the normal GEMSTART.
+
+Now here's a discussion of what GEMSTART has to do with respect to
+keeping or returning memory:
+
+Your program is invoked with the address of its own basepage as
+the argument to a function (that is, at 4(sp).l).  In this basepage
+is the structure you can find in your documentation.  The interesting
+fields are HITPA (the address of first byte NOT in your TPA),
+BSSBASE (the first address of your bss) and BSSLEN (the length of
+your BSS).
+
+Your stack pointer starts at HITPA-8 (because 8 is the length of the
+basepage argument and the dummy return PC on the stack).  The space from
+BSSBASE+BSSLEN to your SP is the "stack+heap" space.  Library malloc()
+calls use this space, moving a pointer called the "break" (in the
+variable __break, or the C variable _break if you use Alcyon C) up as it
+uses memory.  Your stack pointer moves down from the top as it uses
+memory, and if the sp and _break ever meet, you're out of memory.  In
+fact, if they ever come close (within a "chicken factor" of about 512
+bytes or 1K), malloc() will fail because it doesn't want your stack to
+overwrite good data.
+
+When a process starts, it gets *all* of memory allocated to it: from the
+end of any accessories or resident utilities up to the default screen
+memory.  If you want to use Pexec, you have to give some memory back to
+the OS.  You do this with the Mshrink call.  Its arguments are the
+address of the memory block to shrink (your basepage address) and the
+new size to shrink it to.  You should be sure to leave enough room above
+your BSS for a reasonable stack (at least 2K) plus any malloc() calls
+you expect to make.  Let's say you're writing "make" and you want to
+leave about 32K for malloc() (for your dependency structures).  Also,
+since make is recursive, you should leave lots of space for the stack -
+maybe another 16K.  The new top of memory that your program needs is:
+
+    newtop = your bss base address + your bss size + 16K stack + 32K heap
+
+Since your stack pointer is at the top of your CURRENT TPA, and you're about
+to shrink that, you'd better move your stack:
+
+    move.l    newtop,sp
+
+Now you want to compute your new TPA size and call Mshrink:
+
+    move.l    newtop,d0
+    sub.l    basepage,d0    ; newtop-basepage is desired TPA size
+    move.l    d0,-(sp)    ; set up Mshrink(basepage,d0)
+    move.l    basepage,-(sp)
+    move.w    #$4a        ; fn code for Mshrink
+    trap    #1
+    add.l    #10,sp        ; clean up args
+
+Now that you've shrunk your TPA, the OS can allocate this new memory to
+your child.  It can also use this memory for Malloc(), which is used
+occasionally by GEM VDI for blt buffers, etc.  Note that you only
+have to do this once, when you start up: after that, you can do as much
+Pexec'ing as you want.
+
+When you want to exec a child, you build its complete filespec into one
+string, and its arguments into another.  The argument string is a little
+strange: the first character of the argument string is the length of the
+rest of the string!
+
+Here is a simple system call: pass it the name of the file to execute
+and the argument string to use.
+
+    long system(cmd,args)
+    char *cmd, *args;
+    {
+        char buf[128];
+
+        if (strlen(args) > 126) {
+        printf("argument string too long\n");
+        return -1;
+        }
+        strcpy(buf+1,args);            /* copy args to buffer+1 */
+        buf[0] = strlen(args);        /* set buffer[0] to len */
+        return Pexec(0,cmd,buf,0L);
+    }
+
+The first zero in the Pexec call is the Pexec function code: load and
+go.  The cmd argument is the full filespec, with the path, file name,
+and file type.  The third argument is the command-line argument string,
+and the fourth argument is the environment pointer.  A null environment
+pointer means "let the child inherit A COPY OF my environment."
+
+This call will load the program, pass the arguments and environment to
+it, and execute it.  When the program terminates, the call returns the
+exit code from the program.  If the Pexec fails (not enough memory, file
+not found, etc.) a negative code is returned, and you should deal with
+it accordingly.  Note that error returns from Pexec are always negative
+LONGS, while return codes from the child will have zeros in the upper 16 bits.
+
+EXIT CODES:
+
+GEMDOS, like MS-DOS before it, allows programs to return a 16-bit exit
+code to their parents when they terminate.  This is done with the
+Pterm(errcode) call.  The value in errcode is passed to the parent
+as the return value of the Pexec system call.  The C library function
+exit(errcode) usually uses this call.
+
+Unfortunately, the people who wrote the startup file for the Alcyon C
+compiler didn't use this.  The compiler calls exit() with an error code,
+and exit() calls _exit(), but _exit always uses Pterm0(), which returns
+zero as the exit code.  I fixed this by rewriting GEMSTART.S, the file
+you link with first when using Alcyon.
+
+Even though new programs return the right exit code, the compiler
+itself still doesn't.  Well, I have patched the binaries of all the
+passes of the compiler so they DO.  It isn't hard, and I will post
+instructions at a later date for doing it.  IF YOU DO THIS, PLEASE
+DON'T BOTHER OUR CUSTOMER SUPPORT PEOPLE IF IT DOESN'T WORK.  THEY
+DON'T KNOW ANYTHING ABOUT IT.
+
+I hope that this little cookbook makes Pexec less mysterious.  I haven't
+covered such topics as the critical-error and terminate vectors, even though
+they are intimately connected with the idea of exec'ing children.  A more
+complete cookbook should be forthcoming.
+
+If there are any errors or gross omissions in the above text, please
+let me know BY MAIL so I can correct them coherently.  Landon isn't
+here to check my semantics, so I may have missed something.  [Landon
+is on vacation in France until early September.]
+
+********************************************************************
+
+C. Kaernbach's question was why his accessory, which basically did
+a Pexec from a file selector, didn't always work.  The answer is that
+it works when used within a program which has returned enough memory to
+the OS for the child.  Why might it bomb?  Because if a program has
+returned a *little* memory to the OS (only about 2K), a bug in Pexec
+shows up that breaks the memory manager.  Accessories are strange beasts
+anyway, so for the most part combining two strange beasts (Accessories
+and Pexec) is bad news.
+
+/----------------------------------------------\
+| Opinions expressed above do not necessarily  |  -- Allan Pratt, Atari Corp.
+| reflect those of Atari Corp. or anyone else. |     ...lll-lcc!atari!apratt
+\----------------------------------------------/    (APRATT on GEnie)
+
+

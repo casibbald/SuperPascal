@@ -1,0 +1,516 @@
+                           Texture Mapping Howto
+
+---------------------------------------------------------------------------
+
+WARNING: this document contains hazardous information and should be used
+with great caution! Also the code contained herein is of the c/c++ breed.
+
+Definitions:
+
+   (u, v) coordinates: the (x, y) coordinates of a texture
+
+   interpolation: (x2 - x1) / (y2 - y1) or (y2 - y1) / (x2 - x1).  X
+   and y don't have to be points, they could be colors.
+
+   screen space: flat 2d space (3d space projected onto the sceen.
+
+   scanline: a horizontal line, joining two opposite edges of a
+   triangle.
+
+
+Affine Texture Mapping:
+
+        Affine texture mapping is the easiest method to map a texture
+onto a triangle (or any polygon for that matter).  I want to focus on
+texture mapping triangles because they are easier to render and squares
+don't cut it in 3d.  I also want to use floating point numbers so it's
+easier to understand what's going on.  Each vertex of the triangle has a
+(x, y, z), a (u, v), a (sx, sy, sz), and a (su, sv):
+
+        struct vertex {
+           float x, y, z;       // (x, y, z) coords. in 3d space
+           float u, v;          // (u, v) texture coordinates
+           float sx, sy, sz;    // (x, y, z) projected into screen space
+           float su, sv;        // (u, v) projected texture coords.
+        };
+
+Each triangle has a pointer to a texture and of course 3 vertices:
+
+        struct triangle {
+           vertex v[3];
+           unsigned char* tPtr;
+        };
+
+To render our triangle, we draw it top-down, left-right, interpolating
+(sx, sy) and (u, v).  We won't need sz, su, and sv until perspective
+texture mapping.
+
+        void DrawAffineTriangle(const triangle& tri) {
+
+         // Affine texture map a triangle
+         // if there are any bugs in here don't get pissed, just email me :)
+
+         int top = 0;                       // index to top vertex
+         int a, b;                          // other 2 vertices
+
+         // interpolants
+
+         float dx_A,                    // change in sx with respect to sy
+               dx_B,
+               du_A,                    // change in u with respect to sy
+               du_B,
+               dv_A,                    // change in v with respect to sy
+               dv_B;
+
+         for(int i = 1; i < 3; i++) {           // find top vertex
+
+            if(tri.v[i].sy < tri.v[top].sy) top = i;
+
+         }
+
+         a = top + 1;
+         b = top - 1;
+         if(a > 2) a = 0;
+         if(b < 0) b = 2;
+
+         int    y = int(tri.v[top].sy);
+         float x1 = tri.v[top].sx;
+         float x2 = x1;
+         float u1 = tri.v[top].u;
+         float u2 = u1;
+         float v1 = tri.v[top].v;
+         float v2 = v1;
+
+         int height_A = int(tri.v[a].sy - tri.v[top].sy);
+         int height_B = int(tri.v[b].sy - tri.v[top].sy);
+
+         if(height_A) {                     // avoid divide by zero
+
+         // calculate the interpolants
+
+            dx_A = (tri.v[a].sx - tri.v[top].sx) / height_A;
+            du_A = (tri.v[a].u  - tri.v[top].u)  / height_A;
+            dv_A = (tri.v[a].v  - tri.v[top].v)  / height_A;
+
+         }
+
+         if(height_B) {                     // avoid divide by zero
+
+         // calculate the interpolants
+
+            dx_B = (tri.v[b].sx - tri.v[top].sx) / height_B;
+            du_B = (tri.v[b].u  - tri.v[top].u)  / height_B;
+            dv_B = (tri.v[b].v  - tri.v[top].v)  / height_B;
+
+         }
+
+         // start drawing
+
+         for(int i = 2; i > 0;) {
+
+            while(height_A && height_B) {
+
+               DrawAffineScanline(x1, x2, u1, u2, v1, v2, y, tri.tPtr);
+
+               y++;
+               height_A--;
+               height_B--;
+
+               x1 += dx_A;                     // add the interpolants
+               x2 += dx_B;
+               u1 += du_A;
+               u2 += du_B;
+               v1 += dv_A;
+               v2 += dv_B;
+
+            }
+
+            if(!height_A) {
+
+            // new edge
+
+               int na = a + 1;
+               if(na > 2) na = 0;
+
+               height_A = int(tri.v[na].sy - tri.v[a].sy);
+
+               if(height_A) {                     // avoid divide by zero
+
+               // recalculate the interpolants for the new edge
+
+                  dx_A = (tri.v[na].sx - tri.v[a].sx) / height_A;
+                  du_A = (tri.v[na].u  - tri.v[a].u)  / height_A;
+                  dv_A = (tri.v[na].v  - tri.v[a].v)  / height_A;
+
+               }
+
+               x1 = tri.v[a].sx;
+               u1 = tri.v[a].u;
+               v1 = tri.v[a].v;
+
+               i--;                               // one less vertex
+               a = na;
+
+            } // end if
+
+            if(!height_B) {
+
+            // new edge
+
+               int nb = b - 1;
+               if(nb < 0) nb = 2;
+
+               height_B = int(tri.v[nb].sy - tri.v[b].sy);
+
+               if(height_B) {                     // avoid divide by zero
+
+               // recalculate the interpolants for the new edge
+
+                  dx_B = (tri.v[nb].sx - tri.v[b].sx) / height_B;
+                  du_B = (tri.v[nb].u  - tri.v[b].u)  / height_B;
+                  dv_B = (tri.v[nb].v  - tri.v[b].v)  / height_B;
+
+               }
+
+               x2 = tri.v[b].sx;
+               u2 = tri.v[b].u;
+               v2 = tri.v[b].v;
+
+               i--;                               // one less vertex
+               b = nb;
+
+            } // end if
+
+         } // end for loop
+
+        } // end function
+
+This next function is to draw a scanline:
+
+        DrawAffineScanline(float x1, float x2, float u1, float u2,
+                           float v1, float v2, int y,
+                           unsigned char* tPtr) {
+
+         // we are assuming the texture is 64 units wide, it can be any
+         // size though.
+
+         if(x2 < x1) {                            // swap coordinates so we
+                                                  // can draw left-to-right
+
+            float tmp = x1; x1 = x2; x2 = tmp;
+                  tmp = u1; u1 = u2; u2 = tmp;
+                  tmp = v1; v1 = v2; v2 = tmp;
+
+         }
+
+         float width = x2 - x1;
+         float du, dv;                            // more interpolants
+         int u, v;
+
+         if(width) {                              // avoid divide by zero
+
+            du = (u2 - u1) / width;
+            dv = (v2 - v1) / width;
+
+         }
+
+         // draw the scanline
+         for(int x = int(x1); x < int(x2); x++) {
+
+            u = int(u1);
+            v = int(v1);
+
+            screen[y * 320 + x] = tPtr[v * 64 + u];
+
+            u1 += du;
+            v1 += dv;
+
+         }
+
+        } // end function
+
+That's it, you got yourself an affine texture mapped triangle. Affine
+Mapping is very fast but it has two flaws, it warps when using triangles
+and doesn't exactly look right with large triangles at sharp angles.
+It doesn't warp if you use squares, but you can't use squares very well
+to make complex 3d objects.  To fix this problem, you have to take the
+z axis into account when texture mapping.  Notice in affine mapping sz,
+su, and sv wasn't used.  Now we are going to use them in Perspective
+Correct Texture Mapping.
+
+
+Perspective Correct Texture Mapping:
+
+        Perspective Correct Texture Mapping is how the world really
+looks, none of this fake texture mapping.  The problem is that it is
+pretty slow relative to affine mapping. Fortunately, it can be speeded up a
+lot.  Ok, when we project 3d space onto screen space, we divide (x, y) and
+(u, v) by z:
+
+        sx = x / z;
+        sy = y / z;
+        su = u / z;
+        sv = v / z;
+
+We get these new coordinates (sx, sy) and (su, sv).  Notice (su, sv),
+before we didn't project the (u, v) coordinates into screen space. We also
+need to project the z coordinate into screen space to give us
+
+        sz = 1 / z
+
+Now since (sx, sy, sz) and (su, sv) are in screen space they are linear!
+We can just interpolate these values along the edges and across scanlines.
+But we need the original (u, v) coordinates, not the (su, sv) coordinates.
+That's were interpolating sz comes in.  To get (u, v), we divide su by sz
+and sv by sz:
+
+        u = (su / sz) = (u / z) / (1 / z)
+        v = (sv / sz) = (v / z) / (1 / z)
+
+The DrawPerspective function is nearly the same as the DrawAffineTriangle
+function except you need to interpolate (su, sv) and sz instead of just
+(u, v):
+
+        void DrawPerspectiveTriangle(const triangle& tri) {
+
+         // Perspective texture map a triangle
+
+         int top = 0;                       // index to top vertex
+         int a, b;                          // other 2 vertices
+
+         // interpolants
+
+         float dx_A,                    // change in sx with respect to sy
+               dx_B,
+               du_A,                    // change in su with respect to sy
+               du_B,
+               dv_A,                    // change in sv with respect to sy
+               dv_B,
+               dz_A,                    // change in sz with respect to sy
+               dz_B;
+
+         for(int i = 1; i < 3; i++) {           // find top vertex
+
+            if(tri.v[i].sy < tri.v[top].sy) top = i;
+
+         }
+
+         a = top + 1;
+         b = top - 1;
+         if(a > 2) a = 0;
+         if(b < 0) b = 2;
+
+         int    y = int(tri.v[top].sy);     // all of the interpolants
+         float x1 = tri.v[top].sx;          // start at the top vertex
+         float x2 = x1;
+         float u1 = tri.v[top].su;
+         float u2 = u1;
+         float v1 = tri.v[top].sv;
+         float v2 = v1;
+         float z1 = tri.v[top].sz;
+         float z2 = z1;
+
+         int height_A = int(tri.v[a].sy - tri.v[top].sy);
+         int height_B = int(tri.v[b].sy - tri.v[top].sy);
+
+         if(height_A) {                     // avoid divide by zero
+
+         // calculate the interpolants
+
+            dx_A = (tri.v[a].sx - tri.v[top].sx) / height_A;
+            du_A = (tri.v[a].su - tri.v[top].su) / height_A;
+            dv_A = (tri.v[a].sv - tri.v[top].sv) / height_A;
+            dz_A = (tri.v[a].sz - tri.v[top].sz) / height_A;
+
+         }
+
+         if(height_B) {                     // avoid divide by zero
+
+         // calculate the interpolants
+
+            dx_B = (tri.v[b].sx - tri.v[top].sx) / height_B;
+            du_B = (tri.v[b].su - tri.v[top].su) / height_B;
+            dv_B = (tri.v[b].sv - tri.v[top].sv) / height_B;
+            dz_B = (tri.v[b].sz - tri.v[top].sz) / height_B;
+
+         }
+
+         // start drawing
+
+         for(int i = 2; i > 0;) {
+
+            while(height_A && height_B) {
+
+               DrawPerspectiveScanline(x1, x2, u1, u2, v1, v2, z1, z2,
+                                       y, tri.tPtr);
+
+               y++;
+               height_A--;
+               height_B--;
+               x1 += dx_A;                     // add the interpolants
+               x2 += dx_B;
+               u1 += du_A;
+               u2 += du_B;
+               v1 += dv_A;
+               v2 += dv_B;
+               z1 += dz_A;
+               z2 += dz_B;
+
+            }
+
+            if(!height_A) {
+
+            // new edge
+
+               int na = a + 1;                    // next vertex
+               if(na > 2) na = 0;
+               height_A = int(tri.v[na].sy - tri.v[a].sy);
+
+               if(height_A) {                     // avoid divide by zero
+
+               // recalculate the interpolants for the new edge
+
+                  dx_A = (tri.v[na].sx - tri.v[a].sx) / height_A;
+                  du_A = (tri.v[na].su - tri.v[a].su) / height_A;
+                  dv_A = (tri.v[na].sv - tri.v[a].sv) / height_A;
+                  dz_A = (tri.v[na].sz - tri.v[a].sz) / height_A;
+
+               }
+
+               x1 = tri.v[a].sx;
+               u1 = tri.v[a].su;
+               v1 = tri.v[a].sv;
+               z1 = tri.v[a].sz;
+
+               i--;                               // one less vertex
+               a = na;
+
+            } // end if
+
+            if(!height_B) {
+
+            // new edge
+
+               int nb = b - 1;                    // next vertex
+               if(nb < 0) nb = 2;
+
+               height_B = int(tri.v[nb].sy - tri.v[b].sy);
+
+               if(height_B) {                     // avoid divide by zero
+
+               // recalculate the interpolants for the new edge
+
+                  dx_B = (tri.v[nb].sx - tri.v[b].sx) / height_B;
+                  du_B = (tri.v[nb].su - tri.v[b].su) / height_B;
+                  dv_B = (tri.v[nb].sv - tri.v[b].sv) / height_B;
+                  dz_B = (tri.v[nb].sz - tri.v[b].sz) / height_B;
+
+               }
+
+               x2 = tri.v[b].sx;
+               u2 = tri.v[b].su;
+               v2 = tri.v[b].sv;
+               z2 = tri.v[b].sz;
+
+               i--;                               // one less vertex
+               b = nb;
+
+            } // end if
+
+         } // end for loop
+
+        } // end function
+
+And here is the perspective scanline function:
+
+        DrawPerspectiveScanline(float x1, float x2, float u1, float u2,
+                                float v1, float v2, float z1, float z2,
+                                int y, unsigned char* tPtr) {
+
+         // remember that x1, x2, u1, u2, v1, v2, z1, and z2 are projected
+         // coordinates.
+
+         // we are assuming the texture is 64 units wide, it can be any
+         // size though.
+
+         if(x2 < x1) {                            // swap coordinates so we
+                                                  // can draw left-to-right
+
+            float tmp = x1; x1 = x2; x2 = tmp;
+                  tmp = u1; u1 = u2; u2 = tmp;
+                  tmp = v1; v1 = v2; v2 = tmp;
+                  tmp = z1; z1 = z2; z2 = tmp;
+
+         }
+
+         float width = x2 - x1;
+         float du, dv, dz;                        // more interpolants
+         int u, v;
+
+         if(width) {                              // avoid divide by zero
+
+            du = (u2 - u1) / width;
+            dv = (v2 - v1) / width;
+            dz = (z2 - z1) / width;
+
+         }
+
+         // draw the scanline
+         for(int x = int(x1); x < int(x2); x++) {
+
+            u = int(u1 / z1);                     // u = (u / z) / (1 / z)
+            v = int(v1 / z1);                     // v = (v / z) / (1 / z)
+
+            screen[y * 320 + x] = tPtr[v * 64 + u];
+
+            u1 += du;
+            v1 += dv;
+            z1 += dz;
+
+         }
+
+        } // end function
+
+Now you have a perspective correct texture mapped triangle!
+
+Afterthoughts
+
+        The code above is to get the basic idea across, and is not a
+good way to rasterize polygons.  It will produce "grainy" artifacts along
+with wobbly textures.  Actually you can notice some of these things in a
+lot of current game engines, but I really suggest getting Chris Hecker's
+articles in Game Developer magazine to see what goes into a perfect
+rasterizer.  It is a five article series in all:
+
+*  April/May 1995     Perspective Texture Mapping Part I: Foundations
+
+*  June/July 1995     Part II:  Rasterization
+
+*  August/Sept 1995   Part III: Endpoints and Mapping
+
+*  Dec 1995/Jan 1996  Part IV:  Approximations
+
+*  April/Map 1996     Part V:   It's About Time
+
+It's around $8 an issue, but I think it's worth it and you can order back
+issues from Game Developer. It is the best information I found on texture
+mapping by far.
+
+Other references and information:
+
+* Pcgpe (Pc game programming encyclopedia) has a document on texture
+mapping. I thought it was hard to understand and had some bugs in it.
+
+* Milo's Home Page A pretty cool page on 3d programming, check it out.
+
+I want to thank Mark Feldman for pointing out some bugs in my code. He has
+also written a new document on texture mapping for Win95GPE (which isn't
+expected to be out until early '97). Fortunately, you can check it out HERE
+. Go to the Win95GPE Home Page and you'll find it. It discusses many
+different methods of texture mapping.
+
+I would like to hear some feed back so why don't you email me?
+
+Last modified or fixed: 2/2/97, 4:06pm
+
+5301 hits since 9/22/96, 10:42am

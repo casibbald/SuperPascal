@@ -1,0 +1,245 @@
+<HTML><HEAD><TITLE>myStiC bYTeS - atari fALcoN demoCREW</TITLE>
+<META http-equiv=content-type content=text/html;charset=ISO-8859-2>
+<STYLE>
+A {
+COLOR: #001f6f; TEXT-DECORATION: none
+}
+</STYLE>
+</HEAD>
+<BODY bgColor=FFEFD5 align=center>
+<br clear=all>
+<TABLE cellSpacing=0 cellPadding=0 width=640 height=100% valign=middle rules=none align=center border=0 frame=void>
+<tbody>
+<tr>
+<td bgColor=FFEFD5 align=justify><font size="3" face=Courier color=black><pre>
+- -- - ------------------------------------------------------------------------    
+<center><h2>3D Rotations
+in Mathematics & Demos</center></h2>
+--------------------------------------------------------------------- ---- -- -
+
+Strange title, isn't it? :-) I  just  finished  my exploration of matrices & 3D
+(yeah, after 3/4 year of using it  :-))  so  why  not to write some lines about
+it...
+
+
+Everyone knows it
+=================
+
+We want to rotate a point in 2D space (at first) :
+
+new x := x*cos(phi) - y*sin(phi)
+new y := x*sin(phi) + y*cos(phi)
+
+That means if we have a point  in Carthesian Coordinate System (CCS), our point
+with coordinates (x,y)  will  be  anticlockwise  rotated  around  (0,0) in this
+system. Graphically:
+
+      ^ +y
+      |
+      |
+      |   . <- rotated point with new (x,y)
+      |  /
+      | / _. <- point (x,y)
+      |/--
+--------------> +x
+      |(0,0)
+      |
+      |
+      |
+      |
+      |
+      |
+
+Clear. But! As you probably know,  computer  screen  doesn't look like this. We
+can  do  two  things  if  we   want  correct  rotations:  "convert"  carthesian
+coordinates to computer ones or derive new rotation formulas.
+
+
+
+1. Carthesian vs Computer Coordinates
+=====================================
+
+Our situation looks like this:
+
+
+(0,0)
+  -----------> +x
+  |\--_. <- point (x,y)
+  | \
+  |  \
+  |   \. <- rotated point with new (x,y)
+  |
+  |
+  |
+  |
+  v +y
+
+
+
+We see two differences: y-direction and anti/clock- wise rotation.
+
+
+
+In 2D, both differences can be solved by a simple equation y := (yres-1) - y
+
+In 3D, it isn't so easy. Remember  we're rotating around 3 axes, firstly around
+Z (gama angle), then Y (beta) and finally X (alpha)
+
+
+
+     ( +cosG +sinG 0 )       ( +cosB 0 +sinB )       ( 1 +cosA +sinA )
+MZ = ( -sinG +cosG 0 )  MY = (   0   1   0   )  MX = ( 0 -sinA +cosA )
+     (   0     0   1 )       ( -sinB 0 +cosB )       ( 0   0     0   )
+
+
+
+So, we derive our new point by new [P] = [x y z] * MZ*MY*MX, right?
+
+
+
+In my short  coder's  life  I've  seen  as  many  rotation  matrices as sources
+released by coders =) After multiplying you will get:
+
+
+
+    ( +cosBcosC +cosAsinC-sinAsinBcosC +sinAsinC+cosAsinBcosC )
+    ( -cosBsinC +cosAcosC+sinAsinBsinC +sinAcosC-cosAsinBsinC )
+    ( -sinB     -sinAcosB              +cosAcosB              )
+
+
+
+Believe me, this is the  one  and  only  correct  solution :-) BUT. This matrix
+works in CCS, but not in computer  space.  So,  what's wrong? Let's look at our
+two problems:
+
+
+a) y-direction: here there aren't any changes, we use y := (yres-1) - y
+
+b) if you run your 3D engine now,  you'll get the feeling everything is alright
+(as I did for about 3/4 year ;-))  But  there's that clockwise problem - if our
+engine has to be correct (that means it respects a lefthand rule since we're in
+lefthanded CCS = z-axis goes away from us)
+
+a rotation around y-axis has to switch to another direction:
+
+
+      ^ +z
+      |
+      |
+      |   /
+      |  /  . <- out rotated point (we're breaking the lefthand rule)
+      | /
+      |/___--. <- our point (x,y)
+------*-------> +x
+     /|
+    / |
+   /  |
+  /   |
+ /+y  |
+
+
+So, we need to change from anticlockwise  to  clockwise rotation.. How do we do
+it? Simply ;) Just imagine how we define x  & y coordinates on circle in 2D. If
+we're going  "up"  with  our  point,  the  y-value  is  increased.  This  is an
+anticlockwise rotation. And we  want  a  clockwise  one.  And  its as simple as
+negating the y coordinate! And  y  coordinate  =  r*sin(phi) -> every sin(beta)
+becomes -sin(beta). Remember "beta" is an angle we're rotating around y-axis.
+
+
+Our matrix becomes:
+
+
+    ( +cosBcosC +cosAsinC+sinAsinBcosC +sinAsinC-cosAsinBcosC )
+    ( -cosBsinC +cosAcosC-sinAsinBsinC +sinAcosC+cosAsinBsinC )
+    ( +sinB     -sinAcosB              +cosAcosB              )
+
+
+And our rotation will look like:
+
+
+    [rotate point using matrix above]
+    [calculate projected coordinates]
+    [center on screen: x := x + xres/2; y := (yres/2 - 1) -y ]
+    [write pixel to screen]
+
+
+Now you've got a mathematically correct  rotation  in  2D and 3D... but there's
+one stupid thing and that is a  need  of one more instruction in the projection
+loop - you can't do for example "119 - y" in one instruction since you need the
+value 119 for the next use => at  least two instructions are needed, that's bad
+if you want to  rotate  about  1000  points...  ok,  DSP  has  a  +/- option in
+multiplying, but the solution above is a bit stupid ;-)
+
+A better solution is :
+
+
+2. Deriving New Rotation Formulas
+===================================
+
+What does this mean? When I began with 3D stuff I thought programs like Neon or
+3DS use CCS instead of computer screen for calculating their y-coordinates. But
+this isn't true of course -  why  give  coders  some additional work? :-) So we
+have some 3d objects saved in a computer  space system and we want to rotate it
+in mathematically correct way (ie. not breaking the lefhand-rule)
+
+
+When you try to use original matrix with:
+
+x := x + xres/2
+y := y + yres/2
+
+you'll get quite strange result ;-) Where's the problem? The original matrix is
+"built" for CCS. And... the difference  between  CCS  and computer screen is in
+the y coordinate.  In  the  sign  of  y  coordinate.  And  what  affects the y-
+coordinate in 3D? Rotation around x & z axis.  So the only thing you have to do
+is negate the sin(alpha) and sin (gama) values:
+
+
+    ( +cosBcosC -cosAsinC+sinAsinBcosC +sinAsinC+cosAsinBcosC )
+    ( +cosBsinC +cosAcosC+sinAsinBsinC -sinAcosC+cosAsinBsinC )
+    ( -sinB     +sinAcosB              +cosAcosB              )
+
+
+So people, this is the one and only matrix for correct rotation in a lefthanded
+coordinate system ! For sure, we're in the system which looks like this:
+
+
+       |                   ^ +x          ^ +z              ^ +y
+       |                   |             |                 |
+       |    /|+z           |             |                 |
+       |   /               |   /| +z     |   /| +y         |   /| +x
+       |  /                |  /          |  /              |  /
+       | /                 | /           | /               | /
+       |/                  |/            |/                |/
+-------*-------> +x        *-----> +y    *-----> +x        *-----> +z
+      /|
+     / |                anticlockwise    anticlockwise    anticlockwise
+    /  |                rotation around  rotation around  rotation around
+   /   |                z-axis           y-axis           x-axis
+  /    |
+       v +y
+
+
+And here it is... you see  all  rotations  are correct, the lefthand rule stays
+unbroken, simply... this is what I like  ;-)  But  beware! If you use this way,
+your  vertices  will  be  swapped  in  comparison  with  classic  "conversion"!
+(clockwise->anticlockwise and vice versa) So  you  need to modify your backface
+culling routine (ble -> bge) and maybe  some  other things (for example, if you
+use realtime interpolation, right and left side  will be swapped since the next
+point in anticlockwise order = the  previous  point in clockwise one) So, don't
+be stupid and use this way from  the  start  and  you'll save yourself a lot of
+work ;-)
+
+                                                                     MiKRO
+
+<b>-------------------------------------------------------------------------------
+   MiKRO              XE/XL/MegaSTE/Falcon/CT60              <a href=http://mikro.atari.org>mikro.atari.org</a>
+-------------------------------------------------------------------------------</b>
+
+</pre> 
+</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

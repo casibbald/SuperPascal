@@ -1,0 +1,25 @@
+Mikro Documentation Archive Scrape Report
+============================================================
+
+Base URL: https://mikro.naprvyraz.sk/docs/
+Output Directory: SuperPascal/docs/mikro_docs_archive
+Date: 2025-12-13 13:08:28
+
+Pages Visited: 34
+Files Downloaded: 273
+Failed URLs: 11
+
+Failed URLs:
+------------------------------------------------------------
+  https://mikro.naprvyraz.sk/docs/Coding/AUTHOR.HTM
+  https://mikro.naprvyraz.sk/docs/Coding/COPYRITE.HTM
+  https://mikro.naprvyraz.sk/docs/Coding/Hardware/ISDN.HTM
+  https://mikro.naprvyraz.sk/docs/Coding/Hardware/ISDNIDEA.HTM
+  https://mikro.naprvyraz.sk/docs/Coding/Hardware/STRTSTOP.HTM
+  https://mikro.naprvyraz.sk/docs/mikro/menutext.html#18
+  https://mikro.naprvyraz.sk/docs/mikro/menutext.html#30
+  https://mikro.naprvyraz.sk/docs/mikro/menutext.html#51
+  https://mikro.naprvyraz.sk/docs/mikro/menutext.html#59
+  https://mikro.naprvyraz.sk/docs/ucm.html
+  mailto:mk20432%40decef%2Eelf%2Estuba%2Esk
+

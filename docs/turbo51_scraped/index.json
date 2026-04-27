@@ -1,0 +1,42 @@
+{
+  "base_url": "https://turbo51.com",
+  "total_pages": 9,
+  "pages": {
+    "https://turbo51.com/search/optimizations": {
+      "title": "Search for OPTIMIZATIONS | Free Pascal Compiler For 8051",
+      "filename": "search/optimizations"
+    },
+    "https://turbo51.com/search/byte": {
+      "title": "Search for BYTE | Free Pascal Compiler For 8051",
+      "filename": "search/byte"
+    },
+    "https://turbo51.com/search/lcall": {
+      "title": "Search for LCALL | Free Pascal Compiler For 8051",
+      "filename": "search/lcall"
+    },
+    "https://turbo51.com/search/data": {
+      "title": "Search for DATA | Free Pascal Compiler For 8051",
+      "filename": "search/data"
+    },
+    "https://turbo51.com/search/procedure": {
+      "title": "Search for PROCEDURE | Free Pascal Compiler For 8051",
+      "filename": "search/procedure"
+    },
+    "https://turbo51.com/search/boolean": {
+      "title": "Search for BOOLEAN | Free Pascal Compiler For 8051",
+      "filename": "search/boolean"
+    },
+    "https://turbo51.com/search/debugging": {
+      "title": "Search for DEBUGGING | Free Pascal Compiler For 8051",
+      "filename": "search/debugging"
+    },
+    "https://turbo51.com/search/var": {
+      "title": "Search for VAR | Free Pascal Compiler For 8051",
+      "filename": "search/var"
+    },
+    "https://turbo51.com/search/type": {
+      "title": "Search for TYPE | Free Pascal Compiler For 8051",
+      "filename": "search/type"
+    }
+  }
+}

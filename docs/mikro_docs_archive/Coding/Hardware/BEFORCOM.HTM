@@ -1,0 +1,67 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+
+<html>
+
+<head>
+<title>The Storm Before the COM</title>
+<meta name="GENERATOR" content="Microsoft FrontPage 1.1">
+</head>
+
+<body>
+<p><em>11 Aug 1996</em></p>
+<h1><a name="@The_Storm_Before_the_COM">The Storm Before the COM </a></h1>
+<h2>PC Communcations over Modems and ISDN</h2>
+<p><img src="tornado.gif" align=bottom width=232 height=127> </p>
+<p>You have a big problem when, at the start, you don't even know what to call the main subject
+of an article. DOS gave the names <strong>COM1</strong>, COM2, ... to the devices. In other contexts, they
+are called <strong>serial ports</strong> because they transmit bits one at a time (in contrast to the &quot;parallel port&quot;
+which sends data one byte at a time to the printer or Zip drive). When you plug an internal
+modem card inside the machine, it behaves like a COM2 or COM3 port. However, it is also
+possible to connect serial mice to one of these ports. Initially the COM port was used by
+terminal emulators, but today it is used by the Dial Up Networking support to connect a home
+or laptop computer to the corporate network.</p>
+<p>The people who designed the first IBM PC did not set out to establish a standard that would
+last for decades. They selected the chips that were cheapest or easiest to find. Programs were
+then written to use those specific chips, and subsequent generations of hardware found that it
+was easier to emulate the earlier hardware rather than try and change things.</p>
+<p>The chip IBM selected for its COM port was made by a company called National
+Semiconductor. There was nothing special about the chip, except perhaps that it was cheap
+enough that the optional serial port card could be sold for $35. In those days, modems
+transferred data at 2400 baud (bits per second). Today there are modems that run ten times
+faster, and the effective data transfer rate can be doubled again by compression. Yet the COM
+port in a PC still duplicates the programming interface of the original 1981 chip.</p>
+<p>DOS originally provided no meaningful support for the COM chip. Communications programs
+(which in those days emulated some type of computer terminal) were written to manipulate the
+serial port chip directly. However, direct use of hardware devices is regarded as bad form
+under Windows 95, OS/2, and other modern operating systems. Windows provides a rich set
+of communications services, including &quot;telephony&quot; and fax modem support, that modern
+application programs are forced to use. In Windows 95, the operating system is configured
+with all the special characteristics of a particular modem. Then application programs do not
+have to figure out what special sequence and options should be used to dial the phone.</p>
+<p>Although modem speeds have increased every few years, the current generation of 28800
+baud modems is close to the end of the line. The phone system itself has an internal speed limit
+of 64000 bits per second, and because data is converted into sound and then back into data
+without synchronizing your computer to the phone company, the best that is available in data
+transfer is half that speed. This is a mathematical limit and cannot be broken by advances in
+chip manufacture.</p>
+<p>However, ten years after the digital Compact Disk replace old phonograph records, traditional
+voice telephones are an obsolete technology. Internally, the local phone companies, long
+distance, and international carriers have converted to digital service. There is an international
+standard for digital phone service to the home or business. It is called ISDN and is just
+beginning to be widely offered in the US. With ISDN, computers can transfer data at the full
+internal phone company speed of 64000 bits per second on each phone line, and higher
+effective data rates can be achieved by using two or more phone lines in parallel. </p>
+<p>In the new deregulated environment, customers have to purchase their own phone equipment.
+This has not been a problem for traditional phone service, because everyone went to the store
+and bought phones that looked and worked just like the units that the phone company used to
+install. However, ISDN requires new types of unfamiliar equipment. This article will also
+introduce the most general and least expensive ISDN equipment and will provide an outline of
+the steps to exploit this new service. </p>
+<p>Contents: </p>
+<p><a href="ISDNIDEA.HTM">How Modems and ISDN Work</a> </p>
+<p><a href="STRTSTOP.HTM">Modems and Asynchronous Communication</a> </p>
+<p><a href="ISDN.HTM">Installing ISDN</a> </p>
+Universal Serial Bus (USB)<p><a href="../COPYRITE.HTM">Copyright 1995 PCLT</a> -- <i>The Storm Before the COM</i> -- <a href="../AUTHOR.HTM">H. Gilbert </a></p>
+</body>
+
+</html>

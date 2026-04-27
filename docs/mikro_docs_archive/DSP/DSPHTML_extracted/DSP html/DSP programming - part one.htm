@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0038)http://tomas.nocrew.org/DSP/DSP-1.html -->
+<HTML><HEAD><TITLE>DSP programming - part one</TITLE>
+<META content="text/html; charset=windows-1250" http-equiv=Content-Type>
+<META content="MSHTML 5.00.2614.3500" name=GENERATOR></HEAD>
+<BODY>
+<H1 align=center>The basic structure of DSP56001</H1>
+<P>In this first part I will now try and explain a little about what a DSP is 
+and what a thing like that is doing in Atari Falcon. 
+<P>DSP stands for "Digital Signal Processor", not Digital Sound Processor, even 
+if it's designed for controlling digital sound. The DSP has instructions that 
+are specially optimised to perform very fast digital filters, FFT, speech 
+recognition and a lot more. I wont go very deep into the mathematics of these 
+things, mainly because I myself don't understand it. But don't worry, the DSP 
+can be used for a lot more than just sound processing. Because it is very fast 
+with mathematical instructions it may also be used for image processing, such as 
+MPEG viewers, 3D calculations and more. The DSP is simply useful for just about 
+anything. 
+<P>The DSP in Falcon030 is a DSP56001 made by Motorola, who also makes the 68K 
+processors which all Atari 16/32 bit computers are based on. The similarities 
+between the two processors are therefore many but the differences are probably 
+more. 
+<P><A name=components></A>
+<H3>Major components of the DSP56001</H3>
+<UL>
+  <LI>4 Data buses 
+  <LI>3 Address buses 
+  <LI>1 Program controller 
+  <LI>1 Data ALU 
+  <LI>2 AGUs 
+  <LI>1 X data memory 
+  <LI>1 Y data memory 
+  <LI>1 Program memory 
+  <LI>3 I/O ports </LI></UL>
+<P><A name=memories></A>
+<H3>X, Y och P memory</H3>
+<P>Those of you who have programmed 68K assembly with immediately notice a great 
+difference in the way the DSP handles its memory. The DSP doesn't count its 
+memory in amount of bytes but in amount of DSP words. On the DSP56001, one DSP 
+word is 24 bit wide (3 bytes). Be sure not to mix up the DSP word with 68K word 
+(16 bit). To keep compatibility with future versions of Atari computers with 
+different DSPs there is an XBios call, DSP_WordSize(), to find out how large a 
+DSP word is in the DSP that is in the computer. Here I will only talk about 
+DSP56001 and therefore only about 24 bit DSP words. 
+<P>What's important with this is that the DSP does not address byte addresses 
+when using the memory, but DSP word addresses. This means that the address 0 
+(zero) points to the first word, and the address 1 (one) points to the second 
+word. 
+<P>Another difference is the memory size. Internally, the DSP has three 
+different memory areas, X, Y and P memory. The X and Y memory areas (Data 
+memory) are 256 words each and the P memory (Program memory) is 512 words. In 
+Falcon030 there is also an external 32K word memory, which is 96Kb. There's not 
+room for a lot of demos, but remember that the DSP is made as a coprocessor and 
+not as a CPU. This 32K memory is divided into two 16K memory banks, one 
+connected as external X memory, and one as external Y memory. In the Falcon 
+these 16K memory banks together is also used as external P memory. This means 
+that the external P memory is the same physical memory as the external X and Y 
+memory. A better explanation of this will follow. 
+<P><A name=buses></A>
+<H3>Address and data buses</H3>The fact that there are two separate memory 
+areas, X and Y, might in the beginning seem a bit unnecessary and difficult, but 
+thanks to that there are also different address and data buses makes it possible 
+for the DSP to use both memories in the same instruction. You are able to move 
+two words to/from different places in memory at the same time, but with some 
+restrictions. These address and data buses is called XAB, YAB, XDB and YDB. The 
+P memory has its own buses, PAB and PDB, where instructions are transferred to 
+the program controller, something I'll get into later. The fourth data bus is a 
+global data bus, GDB, which is used for the I/O ports among other things. 
+<P><A name=AGU></A>
+<H3>The AGU</H3>AGU stands for "Address Generation Unit" and is the part that 
+handles the address registers and generates the addresses for the address buses 
+using these. The AGU contains eight address registers, R0-R7, eight offset 
+registers, N0-N7 and eight modifier registers, M0-M7. Each register is 16 bit 
+wide which makes it possible to generate 65536 memory positions for either XAB, 
+YAB or PAB. I wrote earlier that there were two AGUs in the DSP, which isn't 
+quite true. There are two address generators in the AGU which makes it possible 
+to generate two addresses at the same time. All 24 registers may be used as 16 
+bit data storage registers if you want and the data is the read/written through 
+GDB. 
+<P><A name=ALU></A>
+<H3>The ALU</H3>ALU stands for "Arithmetic Logic Unit" and this is where all the 
+action in the DSP takes place. This is the part that does all its calculations. 
+The ALU har four 24-bit registers, X0, X1, Y0 and Y1 plus two 56-bit 
+accumulators, A and B. All calculations are done to the accumulators. In some 
+instructions, for example ADD and SUB, the 24-bit registers may be joined two by 
+two, to be used as two 48-bit registers, X and Y. The accumulators may also be 
+devided into two 24-bit and one 8-bit register each, A0, A1, A2 and B0, B1, B2. 
+<P><A name=prgcontrol></A>
+<H3>The Program Controller</H3>The program controller handles the execution of 
+instructions, hardware loops and interrupts, among other things. It has six 
+16-bit registers: Program Counter (PC), Loop Address (LA), Loop Counter (LC), 
+Status Register (SR), Operating Mode Register (OMR) and Stack Pointer (SP). The 
+program controller also contains an internal 15 levels 32-bit stack, where PC, 
+SR, LA and LC are saved at different occasions. This stack is divided into two 
+parts, System Stack High (SSH) and System Stack Low (SSL) with 15 16-bit values 
+each. 
+<P>PC points at the address in the P memory where your program is being 
+executed. 
+<P>SP points to the place in the stack where it should write its next value. 
+<P>SR consists of two 8-bit parts, MR and CCR. MR contains bits which control if 
+interrupts shall be run, if the DSP is in trace mode, if a hardware loop is 
+active etc. CCR contains the condition flags used with the Jump-If instructions 
+(Jcc = 68K's Bcc). The flags, starting from bit 0 is: Carry (C), Overflow (V), 
+Zero (Z), Negative (N), Unnormalized (U), Extension (E) and Limit (L). The use 
+of these will be explained further on. Some of the flags, C, V, Z and N is 
+recognised from 68K assembler and work in similar way. 
+<P>OMR is used to control how the memory should be arranged, something that can 
+be changed a little. I myself have never used this very much, but just let it 
+stay as is. Bit 2 in OMR is called Data ROM Enable (DE) and when set, the 
+addresses $0100-$01ff will change into special internal ROMs. In the X memory 
+will be a Mu-Law and an A-law table on 128 words each. These are used in 
+telecommunications. In the Y memory at the same addresses, is a 256 words four 
+quadrant sinustable useful for among other things FFT (Fast Fourier Transform). 
+If DE is cleared, which it is on reset, these memory addresses will be the 
+external RAM. 
+<P>LA and LC will be explained later. 
+<P>Those registers, except for PC, may be changed with the MOVEC instruction. 
+MR, CCR and OMR may also be altered with ANDI and ORI. 
+<P>The DSP56001 operates in a way called pipelining which basically means that 
+it is busy working with three instructions at the same time. The execution of an 
+instruction is made in three steps, line up, aim and fire. In the world of DSP 
+also called: fetching, decoding and executing. With the use of pipelining, the 
+program controller first fetches the first instruction. When that instruction is 
+being decoded, the second instruction is being fetched and when the first 
+instruction is executing, the send is decoded and the third is fetched, a.s.o. 
+This is a great difference from 68K processors, even if they have the same 
+steps, they are all done with one instruction at a time. Due to the use of 
+pipelining in the DSP, one must watch out with the use of address registers. If 
+a value is moved to an address register, this value will not be able to be used 
+in the next instruction. Most assemblers warn for this, so that nothing 
+unexpected should happen. 
+<P><A name=IOports></A>
+<H3>I/O ports</H3>I'm not going to get very deep in these right now, but some 
+overview of them can be made. There are three I/O ports on the DSP56001, called 
+Port A, Port B and Port C. 
+<P>Port A is used to handle the external memory and this manage its own business 
+in the Falcon so that we don't have to worry about it. 
+<P>Port B is the port used for Host communication with the CPU, 68030. This is 
+the most common way to communicate with the DSP. 
+<P>Port C consists of two parts, SCI and SSI. SCI is a network interface used to 
+communicate with other DSPs and is not used in Falcon. The SSI is connected with 
+the Matrix in the Falcon that can connect the DMA, DSP, CODAC and the external 
+DSP port. The SSI is used by WinRec and similar applications to add effects to 
+the sound in real time. It is also possible to send data between the DSP and CPU 
+through the SSI, which is faster than sending through the host, but it is also 
+just about as complicated. 
+<P>
+<P>Those of you who know of the 68K processors notice that the arrangements is 
+quite unlike that of the DSP. The DSP has different parts that takes care of 
+different things and each part has its own registers. Though it add some 
+limitations, it is also much faster since the different things can be done at 
+the same time. The <A href="http://tomas.nocrew.org/DSP/DSP-1.html#ALU">ALU</A> 
+does a calculation and at the same time data may be moved from and/or to the 
+memory. This is what is called parallel moving and is the greatest optimisation 
+when programming the DSP. 
+<P>Ok, that's it for this part! 
+<HR>
+<A href="http://tomas.nocrew.org/DSP/DSP-2.html">Next part - Fixpoint numbers 
+and ALU registers</A> 
+<P><A href="http://tomas.nocrew.org/DSP/DSP-main.html">Back to DSP main page</A> 
+
+<P><A href="http://tomas.nocrew.org/index.html">Back to Index page</A> 
+<HR width="40%">
+
+<P align=center><I>Accessed <BR clear=all><PRE>RXML parse error: This tag doesn't handle content - it probably should end with "/&gt;".
+ | &lt;accessed/&gt;
+</PRE></I></BODY></HTML>

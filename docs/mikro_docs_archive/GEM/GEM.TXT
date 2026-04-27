@@ -1,0 +1,217 @@
+                                All at C?
+
+                   Roland Waddilove provides a guiding hand
+                  through the tangled GEM programming jungle
+
+WELCOME to the first part of a new series exploring GEM from a programmer's
+viewpoint. If you have ever wondered how dialog and alert boxes pop up and
+windows zoom out and fill the desktop, and wanted to produce these objects
+yourself, then read on. This series is for you.
+    I'll make the programming examples as simple as possible, but inevitably
+there will be some quite complex looking functions and devious code. This will
+be kept to a minimum and thoroughly explained as we progress and build up our
+GEM programming knowledge.
+    Ideally you'll have a C compiler ready to hand when following this series,
+but don't despair if you are a Pascal programmer, Forth fanatic or even a BASIC
+boffin as the GEM functions we'll be using have the same names and use the same
+parameters whatever the language.
+    I'll be writing most of the example programs using Digital Wizdom C, and
+also providing corresponding HiSoft BASIC listings, too. This month in the
+LISTINGS folder you'll find GEM1.C and GEM1.BAS - two programs that perform
+identical tasks, one written in C and the other in BASIC. Let's see how they
+work.
+    GEM can be split up into two parts, the AES and the VDI. The AES
+(applications environment services) is responsible for creating, displaying and
+manipulating windows, dialog boxes and menu bars. The VDI (virtual device
+interface) has the task of handling all the graphic output for GEM. Of the two,
+the VDI is the easiest to use so that is where we will start our journey
+through the tangled jungle of GEM functions. Once we have mastered the VDI then
+we'll move on to the AES and create windows and dialog boxes.
+    GEM is capable of an amazing variety of graphic and text output - just
+think of a paint package like Degas Elite or a DTP Package like Fleet Street
+Publisher. Dozens of fill patterns, line types, text styles and point sizes can
+easily be output to the screen so GEM needs to keep track of what effects are
+currently in use and their settings. This information is stored in five integer
+arrays and you'll find them at the start of most C programs:
+
+short    control[12],
+         intin[128],
+         ptsin[128],
+         intout[128],
+         ptsout[128];
+
+    These arrays need to be defined, but you shouldn't need to access them from
+a high level language. Just define them, then forget about them. Once these
+have been defined your application (program) can ask GEM to initialise them by
+calling the appl_init() function. This returns an application identification
+number which you may need later on so it's a good idea to remember it:
+
+short app_id;
+app_id = appl_init();
+
+    When a program has finished and you want to go back to the desktop you must
+tell GEM by calling the appl_exit() function. This performs some tidying up
+operations, releases the memory reserved for the arrays and so on.
+    Two more arrays need to be defined and these tell GEM whether you are using
+a monitor or printer, solid lines or dashes, patterned or solid fills and so
+on. The vast majority of programs use the following startup code:
+
+short    work_in[11],
+         work_out[57];
+
+short    i;
+
+for ( i=0; i<10; ++i )
+     work_in[i] = 1;
+work_in[10] = 0;
+
+    This sets the various parameters GEM requires to suitable default values.
+Here is a list of the work_in[11] array's functions and the possible values
+each item may take (notice that a value of one is useually a good default):
+
+------------------------------------------------------------------------------
+work_in[0]    Device id number:   1 = screen          11 = plotter
+                                 21 = printer         31 = metafile
+                                 41 = camera          51 = tablet
+------------------------------------------------------------------------------
+work_in[1]    Linetype:           1 = solid            2 = long dashes
+                                  3 = dots             4 = dashes+dots
+                                  5 = short dashes     6 = dash, dot, dot
+                                  7 = user defined    >7 = device dependent
+------------------------------------------------------------------------------
+work_in[2]    Polyline color      0 = white            8 = white
+                                  1 = black            9 = black
+                                  2 = red             10 = light red
+                                  3 = green           11 = light green
+                                  4 = blue            12 = light blue
+                                  5 = cyan            13 = light cyan
+                                  6 = yellow          14 = light yellow
+                                  7 = magenta         15 = light magenta
+------------------------------------------------------------------------------
+work_in[3]    Marker type         1 = dot              5 = diagonal cross
+                                  2 = plus sign        6 = diamond
+                                  3 = asterisk         7 = device dependent
+                                  4 = square
+------------------------------------------------------------------------------
+work_in[4]    Polymarker colour   See Polyline colour
+------------------------------------------------------------------------------
+work_in[5]    Text face
+------------------------------------------------------------------------------
+work_in[6]    Text colour         See polyline colour
+------------------------------------------------------------------------------
+work_in[7]    Fill interior style 0 = hollow           1 = solid
+                                  2 = patterned        3 = cross hatched
+                                  4 = user defined
+------------------------------------------------------------------------------
+work_in[8]    Fill style index    (37 different fill styles)
+------------------------------------------------------------------------------
+work_in[9]    Fill colour         See Polyline colour
+------------------------------------------------------------------------------
+work_in[10]   Coordinate system   0 = map normalised device coordinates to
+                                      raster coordinates
+                                  1 = reserved
+                                  2 = use raster coordinates
+------------------------------------------------------------------------------
+
+    Unfortunately, I haven't the space here to list the contents of the 57
+work_out[] array elements so you'll need a reference manual if you're
+interested in the information in that array. It contains data like the number
+of colours available, the width and height of characters, the number of fill
+patterns on offer and so on.
+    Fortunately, you can forget work_out[57] for the moment and simply set
+work_in[0] to work_in[9] to one and work_in[10] to zero. Once this has been
+done you then ask GEM to open a virtual workstation.
+    A VDI graphic environment is called a workstation which has an associated
+number called a handle. The GEM Desktop opens a workstation for the screen and
+since all programs are run from the Desktop a program can't open another
+workstation for the screen as only one is allowed for each device. The problem
+is solved by opening a virtual workstation that inherits all the features of
+the currently open workstation. A new handle is returned for the virtual
+workstation. Here is the function to open it:
+
+v_opnvwk(work_in, &handle, work_out);
+
+    It requires the address of the work_in[] and work_out[] arrays and also the
+address of a variable in which it can store the virtual workstation handle.
+    Now that we have initialised the various GEM arrays, got our application id
+and opened a virtual workstation what can we do now? The first task is to clear
+the screen and this is performed by the v_clrwk(handle) function. Notice that
+it requires the handle of the virtual workstation to clear as there can be more
+than one at a time.
+    It would be nice to display a simple message on the screen and we can
+easily do this with v_gtext(x,y,string) like:
+
+v_gtext(handle, 16, 16,"This is a test...");
+v_gtext(handle, 16, 48,"Click the mouse button...");
+
+    Again, notice that the handle is passed as the first parameter. Then comes
+the x and y coordinates and the text string. The origin (0,0) is in the top
+left corner of the screen and y increases down the screen and x increases
+across the screen.
+    We need time to read the message we are displaying so let's wait until the
+mouse button is pressed. The function vq_mouse() reports the coordinates of the
+mouse and the state of its buttons:
+
+short x, y, button;
+do {
+    vq_mouse(handle, &button, &x, &y);
+} while ( button==0 );
+
+    The value of button is one if the left mouse button is pressed, two if the
+right button is pressed and three if both are pressed. This do{ ... } while()
+loop waits until any or both buttons are pressed.
+    When the program has finished the virtual workstation must be closed down
+with v_clsvwk(handle) before calling appl_exit() to tell GEM we've finished.
+
+    That is quite enough for one month as there is a lot of information here to
+get to grips with. Part two of this series will be on the August Atari ST User
+Cover Disc and will document some useful VDI functions. Don't miss it!
+
+------------------------------------------------------------------------------
+A:\LISTINGS\GEM1.C      (HiSoft BASIC version - A:\LISTINGS\GEM1.BAS)
+------------------------------------------------------------------------------
+/* Using the VDI: Program I */
+/*     By R.A.Waddilove     */
+/*     Digital Wizdom C     */
+
+/* short is a 16-bit integer and is    */
+/* equivalent to most C compilers' int */
+
+short    control[12],             /* These arrays are used by  */
+         intin[128],              /* GEM and you don't need to */
+         ptsin[128],              /* worry about them. Define  */
+         intout[128],             /* them, then forget them.   */
+         ptsout[128];
+
+short    handle,                  /* virtual workstation handle */
+         app_id;                  /* application's id number */
+
+short    work_in[12],        /* holds various parameters which set the */
+         work_out[57];       /* line type, fill pattern, text style etc. */
+
+main()
+{
+     short i;                     /* loop counter, nothing important */
+     app_id = appl_init();        /* initialise GEM AES arrays, return id */
+     for ( i=0; i<10; ++i )       /* set line type, text style, fill style */
+          work_in[i] = 1;         /* text style and other parameters */
+     work_in[10] = 0;             /* raster coordinates ie. pixels */
+     v_opnvwk(work_in, &handle, work_out);  /* open virtual workstation */
+
+     v_clrwk(handle);             /* clear the screen */
+     v_gtext(handle, 16, 16,"This is a test..."); /* print some text */
+     v_gtext(handle, 16, 32,"Click the mouse button..."); /* more text */
+     wait();                      /* wait for mouse click */
+
+     v_clsvwk(handle);            /* close virtual workstation */
+     appl_exit();                 /* tell GEM we've finished */
+}
+
+wait()
+{
+     short x, y, button;
+     do {
+          vq_mouse(handle, &button, &x, &y); /* get mouse x,y,button state */
+     } while ( button==0 );       /* wait until a button is pressed */
+}
+------------------------------------------------------------------------------

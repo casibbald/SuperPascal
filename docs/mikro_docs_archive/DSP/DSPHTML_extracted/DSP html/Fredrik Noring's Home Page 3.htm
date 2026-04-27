@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0048)http://www.lysator.liu.se/~noring/DSPHostEx.html -->
+<SPML><HTML><HEAD><TITLE>Fredrik Noring's Home Page</TITLE>
+<META content="text/html; charset=windows-1250" http-equiv=Content-Type>
+<META content="MSHTML 5.00.2614.3500" name=GENERATOR></HEAD>
+<BODY aLink=#ff0000 background="Fredrik Noring's Home Page 3.files/yellow_w.gif" 
+bgColor=#c0c0c0 link=#0000f0 text=#000000 vLink=#500000>
+<TABLE>
+  <TBODY>
+  <TR>
+    <TD vAlign=top>
+    <TD vAlign=top>
+    <TD vAlign=top>
+  <TR>
+    <TD vAlign=top>
+    <TD vAlign=top><IMG alt=DSP 
+      src="Fredrik Noring's Home Page 3.files/dsp.gif">
+    <TD vAlign=top>
+      <H1>DSP 56001 Host Communication Example</H1>
+      <P>This example illustrates a typical DSP Host communication program. 
+      <BLOCKQUOTE><PRE>; DSP Host Port IO
+: Author: Fredrik Noring, 1994
+
+M_HSR   EQU     $FFE9        ; Host Status Register
+M_HRX   EQU     $FFEB        ; Host Receive Data Register
+M_HTX   EQU     $FFEB        ; Host Transmit Data Register
+
+          org    p:$0
+          jmp    &lt;start
+
+          org    p:$40
+start     jsr    &lt;Host_get   ; Receive Host data
+          move   #0.27,A     ; Move value to the 56-bits A register
+          move   #0.31415,y0 ; Move value to the 24-bits y0 register
+          mac    x0,y0,A     ; Multiply x0 and y0 and accumulate to A
+          move   A,x0        ; Move the A1 portion of A to x0
+          jsr    &lt;Host_send  ; Send Host data
+
+          jmp    &lt;start      ; Continue
+
+; Host I/O routines.
+Host_get  jclr    #0,X:&lt;&lt;M_HSR,&lt;Host_get
+          movep   X:&lt;&lt;M_HRX,x0  ; Move 24-bits Host data to x0
+          rts
+Host_send jclr    #1,X:&lt;&lt;M_HSR,&lt;Host_send    ; 
+          movep   x0,X:&lt;&lt;M_HTX  ; Move x0 to 24-bits Host data
+          rts
+
+</PRE></BLOCKQUOTE>
+      <P><A href="http://www.lysator.liu.se/~noring">Back</A> to <B>Fredrik 
+      Noring</B>'s Home Page.
+      <P><I><A href="http://www.lysator.liu.se/~noring/">Fredrik Noring</A> <A 
+      href="mailto:noring@lysator.liu.se">mailto:noring@lysator.liu.se</A> </I>
+      <P></P></TR></TBODY></TABLE></SPML></BODY></HTML>

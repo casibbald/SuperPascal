@@ -1,0 +1,60 @@
+
+                               BIOS SYSTEM CALLS
+                                       
+   
+   
+   The BIOS calls in numerical order 
+   
+     * Bconin [2, 0x2] - Read a character from a device 
+     * Bconout [3, 0x3] - Send a character to a peripheral unit 
+     * Bconstat [1, 0x1] - Get input status of a peripheral unit 
+     * Bcostat [8, 0x8] - Get status of a standard output device 
+     * Drvmap [10, 0xA] - Get information about attached devices 
+     * Getbpb [7, 0x7] - Get address to the bios parameter block of a
+       unit 
+     * Getbpb [0, 0x0] - Copy memory parameter block 
+     * Kbshift [11, 0xB] - Fetch/set status of the shift keys 
+     * Lrwabs [12, 0xC] 
+     * Mediach [9, 0x9] - Ask if the media has been changed 
+     * Rwabs [4, 0x4] - Direct read/write operation on a unit 
+     * Setexc [5, 0x5] - Set interrupt vector 
+     * Tickcal [6, 0x6] - Get time difference between two timer calls 
+       
+   Latest update of the Bios manual pages, dated Oct 25, '94  
+     _________________________________________________________________ 
+   
+   Back to the main menu 
+   
+   Last modified Oct 30, '94 by Christer Gustavsson 
+
+
+
+                               BIOS SYSTEM CALLS
+                                       
+   
+   
+   The BIOS calls in alphabetical order 
+   
+     * Getbpb [0, 0x0] - Copy memory parameter block 
+     * Bconstat [1, 0x1] - Get input status of a peripheral unit 
+     * Bconin [2, 0x2] - Read a character from a device 
+     * Bconout [3, 0x3] - Send a character to a peripheral unit 
+     * Rwabs [4, 0x4] - Direct read/write operation on a unit 
+     * Setexc [5, 0x5] - Set interrupt vector 
+     * Tickcal [6, 0x6] - Get time difference between two timer calls 
+     * Getbpb [7, 0x7] - Get address to the bios parameter block of a
+       unit 
+     * Bcostat [8, 0x8] - Get status of a standard output device 
+     * Mediach [9, 0x9] - Ask if the media has been changed 
+     * Drvmap [10, 0xA] - Get information about attached devices 
+     * Kbshift [11, 0xB] - Fetch/set status of the shift keys 
+     * Lrwabs [12, 0xC] 
+       
+   Latest update of the Bios manual pages, dated Oct 25, '94  
+     _________________________________________________________________ 
+   
+   Back to the main menu 
+   
+   Last modified Oct 30, '94 by Christer Gustavsson 
+
+

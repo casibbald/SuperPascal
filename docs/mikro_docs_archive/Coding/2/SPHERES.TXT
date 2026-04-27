@@ -1,0 +1,689 @@
+
+
+
+
+Subject: Texturing, Bumpmapping of Spheres in Realtime
+
+Date: 23 Apr 1995 20:27:07 GMT
+
+
+
+
+
+
+
+
+FAST TEXTURING OF SPHERES 
+
+
+Two weeks ago I posted an article that outlined a method for the
+
+fast texture mapping of parallel projected spheres. In this article
+
+I asked if this method is something new. I got two letters from
+
+people who had developed their own algorithms for the fast texturing
+
+of spheres, though both didn't publish them. There was no letter that
+
+said that this algorithm has been published somewhere.
+
+
+In this article I will try to give a better explanation of the
+
+method I used, and I will describe some extensions, like
+
+diffuse shading, bump mapping and specular shading of spheres in
+
+realtime.
+
+
+If you think that drawing spheres is a stupid thing to do,
+
+read this article even though. Some of the techniques described can
+
+be used in other algorithms as well.
+
+
+All algorithms are scanline-orientated and require only
+
+table-lookups, additions and some logical operations in the
+
+interior loops. I implemented the algorithms in this article.
+
+
+The basic idea of all algorithms is to store both points on the
+
+sphere's surface and vectors in spherical coordinates, and to
+
+convert this coordinates always into that spherical coordinate
+
+system (SCS), in which the thing that you want to to is
+
+particulary easy.
+
+The conversion between different SCS can be done fast using
+
+a lookup-table.
+
+
+SPHERICAL COORDINATES (SC)
+
+
+Sperical coordinates appear in a lot of math textbooks,
+
+though I will give a short description, since SC are essential
+
+for the algorithms below.
+
+
+To describe a point in space using SC, you need two angles,
+
+alpha e [0..2Pi[ and beta e [-Pi/2..Pi/2[, and the distance r
+
+of the point to the origin. Since I use only points on spheres
+
+and normalized vectors, r is always constant, and I don't have
+
+to regard it any further.
+
+A exemplary SCS is that of the earth, with the longitude as the
+
+first angle alpha, and the latitude as the second angle beta.
+
+Every SCS has a special axis, the polar axis. The polar axis is
+
+the line were beta = -Pi/2 or beta = Pi/2, e.g. the polar axis
+
+of the earth's SCS just connects the two poles of the earth.
+
+To convert SC given in a SCS with the y-axis as polar-axis into
+
+kartesian coordinates, take the following formula:
+
+x = r*cos(alpha)*cos(beta)
+
+y = r*sin(beta)
+
+z = r*sin(alpha)*cos(beta)
+
+
+For my purposes, the most important property of SCS's is, that
+
+it is very easy to rotate a point given in SC around the polar
+
+axis of the SCS. You just have to add the desired angle to the
+
+alpha-coordinate of the point. Nevertheless, it is very difficult
+
+to rotate a point in SC around any other axis.
+
+But if you want to move a texture or anything else into an arbitrary
+
+position, you have to rotate it at least around 3 axis. Why this is so
+
+is discussed in many physic textbooks (any rigid body with a single
+
+fixed point has three degrees of freedom).
+
+
+To solve this problem, I convert the SC from the first SCS into a
+
+second SCS with a polar axis identical to the second axis of rotation.
+
+In physics the second axis of rotation is choosen perpendicular to the
+
+first. I will do the same.
+
+
+Our problem at the moment is the conversion between the two SCS's:
+
+We have a fixed point in a first SCS, and want to compute the SC of
+
+that point in a second SCS.
+
+I will derive the formula that does this for a first SCS with the
+
+y-axis as polar axis and a second SCS with the z-axis as polar axis: 
+
+
+First, I convert the point from the first SCS into kartesian
+
+coordinates:
+
+x = cos(alpha1)*cos(beta1)
+
+y = sin(beta1)
+
+z = sin(alpha1)*cos(beta1)
+
+Then, I convert the point from kartesian coordinates into the
+
+second SCS:
+
+beta2 = arcsin(z)
+
+w = x/cos(beta2)
+
+alpha2 = arccos(w)
+
+if (y/cos(beta2) < 0) alpha2 = Pi*2 - alpha2
+
+This is just the inverse of the mapping above, with y and z exchanged.
+
+
+To compute this formula during rendering, I store the mapping in
+
+a large 2D-lookuptable. How this is done is described below.
+
+
+Now I can rotate the point in this second SCS. But I still have
+
+to rotate the point around a third axis. To do this, I go in
+
+a third SCS, that's polar axis is perpendicular to the second axis.
+
+I can use the same mapping for the conversion from the second
+
+SCS to the third SCS as I used for the conversion from the first to
+
+the second SCS. Note, that the third SCS is different from the first!
+
+For illustrations, what happens to a 3D-object when it is rotated
+
+in this way, see a physics textbook that deals with 'rigid bodies' or
+
+'euler angles'.
+
+
+DOING IT FAST
+
+
+To do this stuff fast during rendering, you first have to convert the
+
+spherical coordinates into unsigned integers.
+
+I do this in a straighforward way:
+
+alpha_int = alpha/(2*pi)*S
+
+beta_int = (beta+Pi/2)/Pi*S
+
+where 0..S is the range of the integer-SC
+
+(0 <= alpha_int < S, 0 <= beta_int < S)
+
+I will store the two SC in a single integer, using the first
+
+n bits for alpha_int, and the second n bits for beta_int (n = log2(S)):
+
+alpha_beta_int = alpha + beta*S.
+
+If you choose S=256, 16 bit are sufficent for storing a SC.
+
+
+The lookuptable for the converting between the two SCS's in then a
+
+array of short int's of the size S*S.
+
+
+Here's pseudo-code, how to compute it:
+
+for alpha_int1 = 0 to S-1
+
+ for beta_int1 = 0 to S-1
+
+  (alpha1,beta1) = convert_to_double(alpha_int1,beta_int1)
+
+  (x,y,z) = convert_to_kartesian(alpha1,beta1)     (1) 
+
+  (alpha2,beta2) = convert_to_spherical(x,y,z)     (2) 
+
+  (alpha_int2,beta_int2) = convert_to_int(alpha2,beta2)
+
+  LOOKUPTABLE[alpha_int1 + beta_int1*S] = alpha_int2 + beta_int2*S
+
+ next
+
+next
+
+
+The function in line (1) uses a SCS with the x-axis as polar axis,
+
+while the function in line (2) uses a SCS with z-axis as polar axis.
+
+
+TEXTURING
+
+
+The parallel projected textured sphere is drawn scanline by scanline
+
+and pixel by pixel.
+
+In every scanline I first have to compute the width of the sphere
+
+in that scanline (scanconvert the contour of the projected sphere).
+
+Then, compute the color of every pixel in this horizonal span that
+
+is covered by the sphere.
+
+I will use a kartesian koordinate system with the z-axis
+
+perpendicular to the screen, and that has a origin that lies in the
+
+center of the sphere.
+
+
+At first, I have to map each pixel (x,y) onto the sphere, and
+
+convert this point on the sphere into the SC (alpha,beta).
+
+For this purpose, I use a initial SCS, so that this mapping is
+
+particulary easy and I can do both, the mapping onto the sphere and
+
+the conversion into SC, in a single step.
+
+The SCS that fulfills this requirements has a polar axis that is
+
+identical to the y-axis. (again, if you take the SCS of the earth,
+
+you would look towards the equator).
+
+The formula to do the mapping with a sphere of radius r is :
+
+beta1 = asin(y/r)
+
+alpha1 = acos(x/sqrt(r^2-y^2))
+
+(2*sqrt(r^2-y^2) is the width of the sphere in scanline y)
+
+This formula is computed during rendering using lookuptables.
+
+
+Now I can rotate this point around the three axis, as described above.
+
+The texture is stored also in SC so that the only thing remaining
+
+is to look up the color. (the texture is an array of color-values
+
+of the size S*S).
+
+
+Here's the algorithm in pseudo-code:
+
+
+for x = -r to r
+
+ for y = -sqrt(r*r-y*y) to sqrt(r*r-y*y)
+
+   beta1 = ARCSIN_TABLE[x*S/(r*2)+S/2]
+
+   alpha1 = ARCCOS_TABLE[y*S/(2*sqrt(r*r-y*y))+S/2] + phi
+
+   alpha_beta_2 = LOOKUPTABLE[alpha1 + beta1*S] + theta
+
+   alpha_beta_3 = LOOKUPTABLE[alpha_beta_2] + psi
+
+   putpixel(x,y,TEXTURE[alpha_beta_3])
+
+ next
+
+next
+
+
+where
+
+ ARCSIN_TABLE[i] = arcsin(i*2/S-1)*S/PI+S/2 , (i=0..S)
+
+ ARCCOS_TABLE[i] = arccos(i*2/S-1)*S/(PI*2) , (i=0..S)
+
+ phi, theta and psi are the angles used in the three rotations
+
+  
+
+In this pseudo-code I ignored the problem, that e.g. alpha_beta_2
+
+may become greater than S*S, but the 2D-lookuptable has only the
+
+size S*S.
+
+To solve this problem, you can either use masking-operations, or
+
+use a 2D-lookuptable and a texture of the size S*S+S.
+
+(LOOKUPTABLE[S*S+i] = LOOKUPTABLE[i] , i = 0..S)
+
+You may have noticed, that the programm contains still squareroots
+
+and multiplications/divisions. It isn't too hard to remove these
+
+using another lookuptable and fixed-point forward-differencing.
+
+
+DIFFUSE SHADING
+
+
+The intensity-distribution on a sphere that is lit by a lightsource
+
+is also a texture. So, you can use the techniques in the chapter
+
+above for diffuse shading of spheres. The only thing you have to
+
+adapt is the preprocessing.
+
+Here's a pseudocode to compute a intensity-texture :
+
+
+for alpha = 0 to S
+
+ for beta = 0 to S
+
+  (x,y,z) = convertSCtokartesian(alpha,beta)
+
+  INTENSITY_TEXTURE[alpha+beta*S] = shade_sphere(x,y,z)
+
+ next
+
+next
+
+
+This method can be used to draw spheres that are lit by more than
+
+one lightsource.
+
+
+BUMP-MAPPING
+
+
+A bump-map is similiar to a texture, with the difference that it does
+
+not map color-values to points on the sphere, but surface-normals.
+
+If you use bump-maps, you use the normal you found in the bump-map to
+
+shade a given point on the sphere, and not the true normal of the
+
+sphere at this point.
+
+I store surface-normals in SC, too. So, I use a array of short int's
+
+of the size S*S to store the bump-map.
+
+Once I got the surface-normal I have to compute the intensity.
+
+If the incident light is parallel, this can be done using
+
+intensity-textures, too. Note, that a intensity-texture then can be
+
+seen as a mapping from surface-normals to intensities.
+
+You can rotate surface-normals in the same way as you rotated points
+
+on the sphere.
+
+
+a pseudo-code for bump-mapping follows :
+
+
+for each pixel (x,y)
+
+ (alpha1,beta1) = converttoSC(x,y)
+
+ alpha1 = alpha1 + phi1
+
+ alpha_beta2 = LOOKUPTABLE[alpha1+beta1*S]+theta1
+
+ alpha_beta3 = LOOKUPTABLE[alpha_beta2]+psi1
+
+ normal1 = BUMPMAP[alpha_beta3]+phi2
+
+ normal2 = LOOKUPTABLE[normal1]+theta2
+
+ normal3 = LOOKUPTABLE[noraml2]+psi2
+
+ putpixel(x,y,INTENSITY_TEXTURE[normal3])
+
+next
+
+
+Note, that this algorithm involves 6 rotations:
+
+first, I rotate the bump-map, using 3 rotations, then
+
+I rotate the light-vector/surface-normal, using again 3 rotations.
+
+The first few lines in this pseudo-code would be identical to
+
+the code for the texture-mapping, so I abbreviated them.
+
+
+SPECULAR SHADING
+
+
+Specular shading is harder to do than diffuse shading.
+
+For specular shading, I have to compute the direction of the ray
+
+coming from the eye of the viewer, after it has been reflected on the
+
+spheres surface. To do this, I go into that SCS, where the computing
+
+of the reflected ray is particulary easy. This is the
+
+SCS with the polar axis parallel to the direction of view.
+
+In this SCS, the direction of the reflected ray can be computed by
+
+multiplying the (integer-) beta-coordinate of a given
+
+point by 2 (draw it!!!).
+
+Again, all incident light should be parallel, so that the intensity
+
+of the point depends only on the direction of the reflected ray.
+
+The actual computation of the intensity is done using a
+
+intensity-texture, that contains a intensity-value for every direction
+
+of the ray.
+
+
+here's the pseudo-code for specular shading:
+
+
+for each pixel (x,y)
+
+  (alpha1,beta1) = converttoSC(x,y)
+
+  alpha_beta2 = LOOKUPTABLE[alpha1+beta1*S]           (1)
+
+  alpha2 = alpha_beta2 and (S-1)                      (2)
+
+  beta2 =  alpha_beta2/S
+
+  beta2 = beta2*2
+
+  alpha2 = alpha2 + phi
+
+  alpha_beta3 = LOOKUPTABLE[alpha2+beta2*S] + theta
+
+  alpha_beta4 = LOOKUPTABLE[alpha_beta3] + psi
+
+  putpixel(x,y,INTENSITY_TEXURE[alpha_beta4]
+
+next
+
+
+The 'and' in line (2) is a bitwise and, that is used
+
+to extract alpha2 out of alpha_beta2.
+
+In line (1), LOOKUPTABLE[] is used to convert SC from
+
+a SCS with the y-axis as polar axis to a SCS with the z-axis as
+
+polar axis.
+
+This has to be regared while initializing the 2d-lookuptable.
+
+
+To compute the intensity-texture during preprocessing, use
+
+the formula for specular shading that can be found e.g. in
+
+Foley/VanDam:
+
+I = I0*cos(delta)^e
+
+'delta' is the angle between the reflected ray and the incident light.
+
+'e' is a constant (e.g. 12).
+
+Again, you can use this method to texture spheres that are lit by
+
+more than one lightsource. 
+
+
+Note, that this algorithm does not test, if the light does really
+
+reach a point on the sphere. This is a serious flaw of this
+
+algorithm, which has the effect that a lightsource behind
+
+the sphere causes a lit circle at the margin of the sphere.
+
+At least if you use only one lightsource, there should be
+
+a efficent way to do a appropriate test.
+
+
+
+THINGS I DIDN'T DO
+
+
+The things in this chapter were neither tested nor implemented.
+
+
+If a sphere is illuminated by a single lightsource, you can
+
+use the symetry of the intensity-distribution to
+
+reduce either the number of table-lookups or the size of the
+
+intensity-texture (a one-dimensional texture is then sufficent).
+
+
+The use of spherical coordinates can be fruitful for other realtime-
+
+graphic-algorithms as well. In the chapter 'Specular Shading'
+
+I computed the direction of a reflected ray without multiplications.
+
+It should be possible to do other calculations with normalized vectors
+
+in spherical coordinates and without multiplications as well,
+
+e.g. the computing of normalized vector-products or dot-products.
+
+Remember the basic idea of the algorithms in this article :
+
+To do something, go into that SCS, in which the thing you want to
+
+do is particulary easy.
+
+
+The method I used to bump-map spheres can be used to bump-map
+
+polygons as well.
+
+
+If you want to texture planets in a flight-simulator, the
+
+rotation that has to be applied to the planets before drawing is given
+
+in the form of an orthogonal matrix. But the texturing-algorithm
+
+uses 3 angles to describe such a rotation. So, you have to
+
+convert the orthogonal matrix into the three angles.
+
+
+
+MISCELLANEOUS
+
+
+Using assembler language the programs above can be optimized highly.
+
+I achieved 17 fps at texturing a sphere of 100 pixel diameter
+
+on a 286/12Mhz.
+
+
+Of course, the algorithms described can be used free of royalities.
+
+This article may be redistributed.
+
+
+Here's a short summary of some of the mail I got about the first
+
+article:
+
+Joe Lee and Mike Currington have developed their own algorithms for
+
+the fast texture mapping of spheres with diffuse shading.
+
+Diana Gruber send me some suggestions for improving the
+
+C++-source. My code wasn't really well optimized.
+
+Steve Metke suggested the extension of this algorithm to
+
+ellipsoids. I agree, that this should be possible, though it
+
+will not be easy.
+
+
+Here's a list of books that might help you to implement or
+
+understand the algorithms:
+
+* Foley/vanDam (shading, introduction to 3D-graphics)
+
+* PCGPE, Mark Feldmann et al.
+
+  (fixed-point math, assembler coding, shading,
+
+   introduction to 3D-graphics, planar texture mapping)
+
+  (the PCGPE can be found on a lot of ftp-servers)
+
+* Classical Mechanics, H.Goldstein, (euler angles)
+
+
+I will post a source for Watcom/Turbo C++ that does the things
+
+above to comp.sys.ibm.pc.demos.
+
+
+Please, don't ask for executables. Maybe I make a demo about
+
+spheres in the next few months and upload it to a ftp-server.
+
+
+I am a student of computer science at the university in
+
+Erlangen/Germany.
+
+
+Thanks for reading this, 
+
+
+Hans Kopp,  4.22.1995
+
+  
+
+
+

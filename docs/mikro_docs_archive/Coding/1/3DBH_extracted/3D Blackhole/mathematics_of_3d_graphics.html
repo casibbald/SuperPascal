@@ -1,0 +1,548 @@
+<html>
+
+<head>
+<title>Mathematics of 3D Graphics</title>
+</head>
+
+<body BGCOLOR="#000000" TEXT="#0088FF" LINK="#00FFFF" VLINK="#008080" ALINK="#000080">
+
+<h1>Mathematics of 3D Graphics</h1>
+
+<h2>First part of <a href="http://pages.infinit.net/jstlouis/3dbhole"><i>The 3D Coding
+Blackhole</i></a> tutorial series</h2>
+
+<ul>
+  <li><a HREF="#Intro">An Introduction to 3D</a> </li>
+  <li><a HREF="#Vectors">Vectors</a> </li>
+  <li><a HREF="#Matrices">Matrices</a> </li>
+  <li><a HREF="#Operations">Operations on Vectors &amp; Matrices</a> </li>
+  <li><a HREF="#Transformations">Transformations</a> </li>
+  <li><a HREF="#Planes">Planes &amp; Normals</a> </li>
+</ul>
+<a NAME="Intro">
+
+<h1><font color="#FFFFFF">An introduction to 3D</font></h1>
+</a>
+
+<p>Ok so here it starts... with the coordinate system. You probably know that in 2-D, we
+usually use René Descartes's Cartesian System to identify a point on a flat surface. We
+use two coordinates, that we put in parentheses to refer to the point: (x, y) where <i>x</i>
+is the coordinate on the horizontal axe and <i>y</i> on the vertical one. In 3 dimensions,
+we add an axe called <i>z</i>, and usually we assume it represents the depth. So to
+represent a point in 3D, we use three numbers: <i>(x, y, z)</i>. Different cartesian 3D
+systems can be used. But they are all either <i>Left-Handed</i> or <i>Right-Handed</i>. A
+system is <i>Right-Handed</i> when pointing your index in the positive Y direction and
+your thumb in the positive X direction, your fingers are curled toward the positive Z
+direction. On the other hand, (hehe) a system is Left-Handed when your fingers are curled
+toward the negative Z direction. Actually, you can rotate these systems in any directions
+and they will keep these caracteristics. In computer graphics, the typical system is the
+Left-Handed so we'll use it too. So for us: <b>
+
+<ul>
+  <li>X is positive to the right </li>
+  <li>Y is positive going up </li>
+  <li>Z is positive disappearing into the screen </li>
+</ul>
+</b>
+
+<p align="center"><img SRC="axes.jpg" BORDER="0" width="128" height="128"> <a
+NAME="Vectors"></p>
+
+<h1><font color="#FFFFFF">Vectors</font></h1>
+</a>
+
+<p align="left">What is a vector exactly? In a few words, it's a set of coordinates... But
+if you get into more specific details, a vector can be a lot more. Let's start with a 2D
+vector, of the form (x, y): so let's talk about the vector P (4,5). (Usually, we put some
+weird arrow with only one side on top of the P, so it looks more like a hook). We can say
+that the vector P represent the point (4,5), or more likely that it is an arrow pointing
+from the origin to the point (4,5), having a specific direction and length. By the way,
+when we're talking about the length of a vector (also called the module), we talk about
+the distance from the origin to the point, and it's noted | P |. We compute the length of
+a 2D vector with the formula:</p>
+
+<p align="center"><font SIZE="+1"><i><b>| P | = sqrt( x<sup>2</sup> + y<sup>2</sup> )</b></i></font></p>
+
+<p align="left">Here's an interesting fact: In 1D (where a point is on a single axe), the
+square root of the square of a number corresponds to its absolute value, whence the | |
+symbol for the absolute value's notation.</p>
+
+<p align="left">Now let's jump to 3D vectors: our friend will be P(4, -5, 9). The length
+will be:<a NAME="Matrices"></p>
+
+<p align="center"></a><font SIZE="+1"><i><b>| P | = sqrt( x<sup>2</sup> + y<sup>2</sup> +
+z<sup>2</sup> )</b></i></font></p>
+
+<p align="left">and it is represented by a point in Cartesian 3D space, or rather by an
+arrow pointing from the origin of the system to the point. We'll learn more about vectors
+when we'll talk about operations.<a NAME="Matrices"></p>
+
+<h1><font color="#FFFFFF">Matrices</font></h1>
+</a>
+
+<p align="left">I'll try to make this clear and simple at first: a matrix is a
+two-dimensional array of numbers Probably all matrices we'll use in this site we'll be 4
+by 4. Why 4 by 4? Because we are in <b>3 </b>dimension and because we need an additional
+column and an additional row to make the calculations work. In 2D we would need 3x3
+matrices. This means that in 3D, you have 4 numbers horizontally, and 4 vertically, 16 in
+total. Look at a sample matrix:<br>
+</p>
+<div align="center"><center>
+
+<table CELLPADDING="5" CELLSPACING="0" WIDTH="0" BORDER="3" ALIGN="MIDDLE">
+  <caption>A 4x4 identity matrix </caption>
+  <tr>
+    <td ALIGN="MIDDLE" WIDTH="30">1</td>
+    <td ALIGN="MIDDLE" WIDTH="30">0</td>
+    <td ALIGN="MIDDLE" WIDTH="30">0</td>
+    <td ALIGN="MIDDLE" WIDTH="30">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">1</td>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">1</td>
+    <td ALIGN="MIDDLE">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">1</td>
+  </tr>
+</table>
+</center></div>
+
+<p align="left">It's called the identity matrix, because when another matrix is multipled
+by this one, it isn't changed in any way. Now, just for fun, here's another example of
+what a matrix can look like:</p>
+<div align="center"><center>
+
+<table CELLPADDING="5" CELLSPACING="0" WIDTH="0" BORDER="3" ALIGN="MIDDLE">
+  <caption>A weird sample matrix </caption>
+  <tr>
+    <td ALIGN="center" WIDTH="30">10</td>
+    <td ALIGN="center" WIDTH="30">-7</td>
+    <td ALIGN="center" WIDTH="30">22</td>
+    <td ALIGN="center" WIDTH="30">45</td>
+  </tr>
+  <tr>
+    <td ALIGN="center">sin(a)</td>
+    <td ALIGN="center">cos(a)</td>
+    <td ALIGN="center">34</td>
+    <td ALIGN="center">32</td>
+  </tr>
+  <tr>
+    <td ALIGN="center">-35</td>
+    <td ALIGN="center">28</td>
+    <td ALIGN="center">17</td>
+    <td ALIGN="center">6</td>
+  </tr>
+  <tr>
+    <td ALIGN="center">45</td>
+    <td ALIGN="center">-99</td>
+    <td ALIGN="center">32</td>
+    <td ALIGN="center">16</td>
+  </tr>
+</table>
+</center></div><a NAME="Operations">
+
+<h1><font color="#FFFFFF">Operations on Vectors &amp; Matrices</font></h1>
+</a>
+
+<p align="left">So you've found all you've read here pretty easy and are wondering when
+you will learn something? Or you're even asking yourself what is the link between all this
+information and 3D graphics? Here everything changes, you will now learn facts that are
+the foundation of 3D transformations and of a lot of other concepts. It's still
+mathematical stuff though... We'll talk about operations on Vectors and Matrices: the sum
+and different type of products. Let's start with the addition of two vectors:<font
+SIZE="+1"><i><b></p>
+
+<p align="center">( x<sub>1</sub> , y<sub>1</sub> , z<sub>1</sub> ) + ( x<sub>2</sub> , y<sub>2</sub>
+, z<sub>2</sub> ) = ( x<sub>1</sub> + x<sub>2</sub> , y<sub>1</sub> + y<sub>2</sub> , z<sub>1</sub>
++ z<sub>2</sub> )</p>
+
+<p align="left"></b></i></font>Quite simple heh? Now the product of a scalar by a vector:<font
+SIZE="+1"><i><b></p>
+
+<p align="center">k · ( x, y, z ) = ( kx, ky, kz )</p>
+
+<p align="left"></b></i></font>Now a trickier one, called the dot product, doesn't get a
+vector as a result: ( x<sub>1</sub> , y<sub>1</sub> , z<sub>1</sub> ) · ( x<sub>2</sub> ,
+y<sub>2</sub> , z<sub>2</sub> ) = x<sub>1</sub>x<sub>2</sub> + y<sub>1</sub>y<sub>2</sub>
++ z<sub>1</sub>z<sub>2</sub> Actually, the dot product of two vectors divided by the
+product of their modules, corresponds to the cosine of the angle between the vectors. So:<font
+SIZE="+1"><i><b></p>
+
+<p align="center">cos (V ^ W) = V · W / ( | V |* | W | )</p>
+</b></i></font>
+
+<p>Note that the &quot;^&quot; doesn't mean exponent this time, but the angle between the
+vectors! This application of the dot product can be used to compute the angle of a light
+with a plane so it will be discussed in greater details in the section about Shading.<br>
+</p>
+
+<p>Now a very weird one, the cross product.</p>
+
+<p align="center"><font SIZE="+1"><i><b><br>
+<img SRC="crossprod.jpg" BORDER="0" width="128" height="128"><br>
+</b></i></font></p>
+
+<p align="center"><font SIZE="+1"><i><b>( x<sub>1</sub> , y<sub>1</sub> , z<sub>1</sub> )
+X ( x<sub>2</sub> , y<sub>2</sub> , z<sub>2</sub> ) = ( y<sub>1</sub>z<sub>2</sub> - z<sub>1</sub>y<sub>2</sub>
+, z<sub>1</sub>x<sub>2</sub> - x<sub>1</sub>z<sub>2</sub> , x<sub>1</sub>y<sub>2</sub> - y<sub>1</sub>x<sub>2</sub>
+) <br>
+</b></i></font></p>
+
+<p align="left">The cross product is very useful to compute the normal of a plane. <font
+SIZE="+1"><i><b><br>
+</b></i></font></p>
+
+<p align="left">Ok, we've finished with the vectors. I'll begin with the sum of two
+matrices. It's pretty straightforward and similar to the sum of two vectors, so I won't
+write a big formula here. For every i which is a row in the matrices, and for every j
+which is a column in the matrices, you simply add the term (i, j) of the second matrix to
+the term (i, j) of the first one. I could write some big formula with weird looking big
+sigma symbols but I don't want to... We'll rather move to the most important principle in
+matrices, concerning 3D transformations: the product of two matrix. I will point right now
+the fact that M x N <strong><b><i><font SIZE="+1">* DOESN'T *</font></i></b></strong>
+equal N x M. So here is the equation for multiplying two matrices, this time with the
+sigmas. You probably won't understand anything if you don't already know the principle,
+but it will get clear when you'll see the code in the tutorial about 3D transformations.
+Here it is:<br>
+</p>
+
+<p align="center">A 4x4 matrix multiplication formula<br>
+If <b>A</b>=(a<sub>ij</sub>)<sub>4x4</sub> and <b>B</b>=(b<sub>ij</sub>)<sub>4x4</sub>,
+then<br>
+<b>A x B</b>= </p>
+<div align="center"><center>
+
+<table CELLPADDING="5" CELLSPACING="0" WIDTH="257" BORDER="3" ALIGN="MIDDLE" height="268">
+  <tr>
+    <td ALIGN="MIDDLE" WIDTH="64" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>1j</sub>b<sub>j1</sub><br>
+    <sup>j=1</sup></td>
+    <td ALIGN="center" WIDTH="64" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>1j</sub>b<sub>j2</sub><br>
+    <sup>j=1</sup></td>
+    <td ALIGN="center" WIDTH="64" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>1j</sub>b<sub>j3</sub><br>
+    <sup>j=1</sup></td>
+    <td ALIGN="center" WIDTH="65" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>1j</sub>b<sub>j4</sub><br>
+    <sup>j=1</sup></td>
+  </tr>
+  <tr align="center">
+    <td ALIGN="MIDDLE" width="64" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>2j</sub>b<sub>j1</sub><br>
+    <sup>j=1</sup></td>
+    <td ALIGN="center" width="64" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>2j</sub>b<sub>j2</sub><br>
+    <sup>j=1</sup></td>
+    <td ALIGN="center" width="64" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>2j</sub>b<sub>j3</sub><br>
+    <sup>j=1</sup></td>
+    <td ALIGN="center" width="65" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>2j</sub>b<sub>j4</sub><br>
+    <sup>j=1</sup></td>
+  </tr>
+  <tr align="center">
+    <td ALIGN="MIDDLE" width="64" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>3j</sub>b<sub>j1</sub><br>
+    <sup>j=1</sup></td>
+    <td ALIGN="center" width="64" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>3j</sub>b<sub>j2</sub><br>
+    <sup>j=1</sup></td>
+    <td ALIGN="center" width="64" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>3j</sub>b<sub>j3</sub><br>
+    <sup>j=1</sup></td>
+    <td ALIGN="center" width="65" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>3j</sub>b<sub>j4</sub><br>
+    <sup>j=1</sup></td>
+  </tr>
+  <tr align="center">
+    <td ALIGN="MIDDLE" width="64" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>4j</sub>b<sub>j1</sub><br>
+    <sup>j=1</sup></td>
+    <td ALIGN="center" width="64" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>4j</sub>b<sub>j2</sub><br>
+    <sup>j=1</sup></td>
+    <td ALIGN="center" width="64" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>4j</sub>b<sub>j3</sub><br>
+    <sup>j=1</sup></td>
+    <td ALIGN="center" width="65" height="67"><p align="center"><sub>4</sub><br>
+    <font FACE="Symbol">S</font> a<sub>4j</sub>b<sub>j4</sub><br>
+    <sup>j=1</sup></td>
+  </tr>
+</table>
+</center></div>
+
+<p align="left">And if <b>AxB</b>=(c<sub>ik</sub>)<sub>4x4</sub> then we can write this on
+one line:</p>
+
+<p align="center"><font SIZE="+1"><i><b>c<sub>ik</sub> = <font FACE="Symbol">S</font><sub>4,
+j=1 </sub>a<sub>ij</sub>b<sub>jk</sub></b></i></font> </p>
+
+<p align="left">Now you should be able to try multiplying some matrix by an identity
+matrix to understand how it works. Then after all these separated discussions about
+vectors and matrices, we's multiply them together! So here's the formula to multiply a 3D
+vector by a 4x4 matrix (you should already have guessed that the result will be another 3D
+vector), if <b>B</b>=(b<sub>ij</sub>)<sub>4x4</sub>:</p>
+
+<p align="center"><font SIZE="+1"><i><b>( a<sub>1</sub>, a<sub>2</sub>, a<sub>3</sub> ) x
+B = (<font FACE="Symbol">S</font>a<sub>i</sub>b<sub>i1</sub> + b<sub>4,1</sub>, <font
+FACE="Symbol">S</font>a<sub>i</sub>b<sub>i2</sub> + b<sub>4,2</sub>, <font FACE="Symbol">S</font>a<sub>i</sub>b<sub>i3</sub>
++ b<sub>4,3</sub> )</b></i></font></p>
+
+<p align="left">with <b><i>3, i=1</i></b> as parameters for the sums.<br>
+</p>
+
+<p>That's it for the operations on vectors and matrices! It's getting harder, heh? From
+now on, the link between the code and the maths will be more visible, with
+transformations... <a NAME="Transformations"></p>
+
+<h1><font color="#FFFFFF">Transformations</font></h1>
+</a>
+
+<p align="left">You've surely already seen formulas like:</p>
+
+<p align="center"><font SIZE="+1"><b><i>t<sub>( tx, ty )</sub>: ( x, y ) ==&gt; ( x + tx,
+y + ty )</i></b></font></p>
+
+<p align="left">This was the equation of a translation in a 2D Cartesian system. Now let's
+check the scaling equation:</p>
+
+<p align="center"><font SIZE="+1"><b><i>s<sub>( k )</sub>: ( x, y ) ==&gt; ( kx, ky )</i></b></font></p>
+
+<p align="left">Makes sense heh? A much harder one, the rotation, where trigonometry makes
+its entry in 3D graphics:</p>
+
+<p align="center"><font SIZE="+1"><b><i>r( </i><font FACE="Symbol">q</font><i> ): ( x, y )
+==&gt; ( x cos(</i><font FACE="Symbol">q</font><i>) - y sin(</i><font FACE="Symbol">q</font><i>),
+x sin(</i><font FACE="Symbol">q</font><i>) + y cos(</i><font FACE="Symbol">q</font><i>) )</i></b></font></p>
+
+<p align="left">These were for 2D, but in 3D they stay pretty much the same. You simply
+add the coordinate <i><b>z</b></i> and the parameter tz for the translation. For the
+scaling, you simply multiply <i><b>z</b></i> by <b><i>k</i></b> (or you can use three
+diffrent scalings for every coordinates, like in the scaling matrix below). For the
+rotation, you keep the same formula, let <b><i>z</i></b> stays the same, and it gives you
+the rotation around the <b><i>z axis</i></b>. Because two other rotations are added in 3D
+(around the <b><i>x</i></b> and <b><i>y axis</i></b>). I could write all this 3D
+transformation the same way I did in 2D, but instead we'll use a much cleaner way, (that
+will show you the point of all this chapter) vectors and matrices! So you have your vector
+( x, y, z ) as above in 2D, and several matrices of trasformation, one for each type. Then
+we will multiply the matrices by the vector and the resulting vector will be pointing to
+the transformed point. (In the next chapter, we will multiply every matrices together, to
+get what we will called the global transformation matrices, then multiply it by the source
+vector to get the destination in only one operation!). So let's show you all these 3D
+transformation matrices: </p>
+<div align="center"><center>
+
+<table CELLPADDING="5" CELLSPACING="0" WIDTH="0" BORDER="3" ALIGN="MIDDLE">
+  <caption>Matrix for a 3D translation of (tx, ty, tz) </caption>
+  <tr>
+    <td ALIGN="MIDDLE" WIDTH="30">1</td>
+    <td ALIGN="MIDDLE" WIDTH="30">0</td>
+    <td ALIGN="MIDDLE" WIDTH="30">0</td>
+    <td ALIGN="MIDDLE" WIDTH="30">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">1</td>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">1</td>
+    <td ALIGN="MIDDLE">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="MIDDLE">tx</td>
+    <td ALIGN="MIDDLE">ty</td>
+    <td ALIGN="MIDDLE">tz</td>
+    <td ALIGN="MIDDLE">1</td>
+  </tr>
+</table>
+</center></div><div align="center"><center>
+
+<table CELLPADDING="5" CELLSPACING="0" WIDTH="0" BORDER="3" ALIGN="MIDDLE">
+  <caption>Matrix for a 3D scaling of (sx, sy, sz) </caption>
+  <tr>
+    <td ALIGN="MIDDLE" WIDTH="30">sz</td>
+    <td ALIGN="MIDDLE" WIDTH="30">0</td>
+    <td ALIGN="MIDDLE" WIDTH="30">0</td>
+    <td ALIGN="MIDDLE" WIDTH="30">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">sy</td>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">sx</td>
+    <td ALIGN="MIDDLE">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">0</td>
+    <td ALIGN="MIDDLE">1</td>
+  </tr>
+</table>
+</center></div><div align="center"><center>
+
+<table CELLPADDING="5" CELLSPACING="0" WIDTH="0" BORDER="3" ALIGN="MIDDLE">
+  <caption>Matrix for a 3D rotation around the x axis of <font FACE="Symbol">q</font> </caption>
+  <tr>
+    <td ALIGN="center" WIDTH="30">1</td>
+    <td ALIGN="center" WIDTH="30">0</td>
+    <td ALIGN="center" WIDTH="30">0</td>
+    <td ALIGN="center" WIDTH="30">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="center">0</td>
+    <td ALIGN="center">cos(<font FACE="Symbol">q</font>)</td>
+    <td ALIGN="center">sin(<font FACE="Symbol">q</font>)</td>
+    <td ALIGN="center">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="center">0</td>
+    <td ALIGN="center">-sin(<font FACE="Symbol">q</font>)</td>
+    <td ALIGN="center">cos(<font FACE="Symbol">q</font>)</td>
+    <td ALIGN="center">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="center">0</td>
+    <td ALIGN="center">0</td>
+    <td ALIGN="center">0</td>
+    <td ALIGN="center">1</td>
+  </tr>
+</table>
+</center></div><div align="center"><center>
+
+<table CELLPADDING="5" CELLSPACING="0" WIDTH="116" BORDER="3" ALIGN="MIDDLE" height="126">
+  <caption>Matrix for a 3D rotation around the y axis of <font FACE="Symbol">q</font> </caption>
+  <tr>
+    <td ALIGN="center" WIDTH="51" height="31">cos(<font FACE="Symbol">q</font>)</td>
+    <td ALIGN="center" WIDTH="26" height="31">0</td>
+    <td ALIGN="center" WIDTH="77" height="31">-sin(<font FACE="Symbol">q</font>)</td>
+    <td ALIGN="center" WIDTH="28" height="31">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="center" height="32" width="51">0</td>
+    <td ALIGN="center" height="32" width="26">1</td>
+    <td ALIGN="center" height="32" width="77">0</td>
+    <td ALIGN="center" height="32" width="28">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="center" height="32" width="51">sin(<font FACE="Symbol">q</font>)</td>
+    <td ALIGN="center" height="32" width="26">0</td>
+    <td ALIGN="center" height="32" width="77">cos(<font FACE="Symbol">q</font>)</td>
+    <td ALIGN="center" height="32" width="28">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="center" height="32" width="51">0</td>
+    <td ALIGN="center" height="32" width="26">0</td>
+    <td ALIGN="center" height="32" width="77">0</td>
+    <td ALIGN="center" height="32" width="28">1</td>
+  </tr>
+</table>
+</center></div><div align="center"><center>
+
+<table CELLPADDING="5" CELLSPACING="0" WIDTH="0" BORDER="3" ALIGN="MIDDLE">
+  <caption>Matrix for a 3D rotation around the z axis of <font FACE="Symbol">q</font> </caption>
+  <tr>
+    <td ALIGN="center" WIDTH="30">cos(<font FACE="Symbol">q</font>)</td>
+    <td ALIGN="center" WIDTH="30">sin(<font FACE="Symbol">q</font>)</td>
+    <td ALIGN="center" WIDTH="30">0</td>
+    <td ALIGN="center" WIDTH="30">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="center">-sin(<font FACE="Symbol">q</font>)</td>
+    <td ALIGN="center">cos(<font FACE="Symbol">q</font>)</td>
+    <td ALIGN="center">0</td>
+    <td ALIGN="center">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="center">0</td>
+    <td ALIGN="center">0</td>
+    <td ALIGN="center">1</td>
+    <td ALIGN="center">0</td>
+  </tr>
+  <tr>
+    <td ALIGN="center">0</td>
+    <td ALIGN="center">0</td>
+    <td ALIGN="center">0</td>
+    <td ALIGN="center">1</td>
+  </tr>
+</table>
+</center></div>
+
+<p>So this concludes the part about transformations. You can apply any transformation to a
+3D point with these matrices. In the next chapter, we will implement the code for
+matrices, vectors and for transforming 3D points. But before moving to the coding part, I
+want to discuss a bit planes and normals... <a NAME="Planes"></p>
+
+<h1><font color="#FFFFFF">Planes &amp; Normals</font></h1>
+</a>
+
+<p align="left">A plane is a flat, infinite surface, oriented in a specific direction. You
+can define a plane with the famous equation:</p>
+
+<p align="center"><font SIZE="+1"><b><i>Ax + By + Cz + D = 0</i></b></font></p>
+
+<p align="left">where A, B, C are what we called the <b><i>normals</i></b> of the plane,
+and D is the distance from the plane to the origin. So what is a normal? It's a vector
+perpendicular to a plane. We compute the normal of a plane by doing the cross products of
+the two edges of the plane. To define these edges, we need three points. If <b>P<sub>1</sub></b>
+is our fisrt point, <b>P<sub>2</sub></b> our second, and <b>P<sub>3</sub></b> our third,
+and if they are counter-clockwise, treating them as vectors we can write:</p>
+
+<p align="center"><font SIZE="+1"><b><i>Edge<sub>1</sub> = P<sub>1</sub> - P<sub>2</sub></i></b></font><br>
+and<br>
+<font SIZE="+1"><b><i>Edge<sub>2</sub> = P<sub>3</sub> - P<sub>2</sub></i></b></font></p>
+
+<p align="left">and then compute the normal:</p>
+
+<p align="center"><font SIZE="+1"><b><i>Normal = Edge<sub>1</sub> X Edge<sub>2</sub></i></b></font></p>
+
+<p align="left">What about the D component of the equation? We simply isolate D, plot the
+values of any of the three point in the equation, and we get it:</p>
+
+<p align="center"><font SIZE="+1"><b><i>D = - (Ax + By + Cz)</i></b></font><br>
+or<br>
+<font SIZE="+1"><b><i>D = - (A·P<sub>1</sub>.x + B·P<sub>1</sub>.y + C·P<sub>1</sub>.z)</i></b></font><br>
+or even trickier:<br>
+<font SIZE="+1"><b><i>D = - Normal · P<sub>1</sub></i></b></font></p>
+
+<p align="left">But to compute the A, B, C components (because sometimes, we need
+themselves, not the normals), you can simplify all these operations with these equations:</p>
+
+<p align="center"><b><i><font SIZE="+1">A = y<sub>1</sub> ( z<sub>2</sub> - z<sub>3</sub>
+) + y<sub>2</sub> ( z<sub>3</sub> - z<sub>1</sub> ) + y<sub>3</sub> ( z<sub>1</sub> - z<sub>2</sub>
+)<br>
+B = z<sub>1</sub> ( x<sub>2</sub> - x<sub>3</sub> ) + z<sub>2</sub> ( x<sub>3</sub> - x<sub>1</sub>
+) + z<sub>3</sub> ( x<sub>1</sub> - x<sub>2</sub> )<br>
+C= x<sub>1</sub> ( y<sub>2</sub> - y<sub>3</sub> ) + x<sub>2</sub> ( y<sub>3</sub> - y<sub>1</sub>
+) + x<sub>3</sub> ( y<sub>1</sub> - y<sub>2</sub> )<br>
+D = - x<sub>1</sub> ( y<sub>2</sub>z<sub>3</sub> - y<sub>3</sub>z<sub>2</sub> ) - x<sub>2</sub>
+( y<sub>3</sub>z<sub>1</sub> - y<sub>1</sub>z<sub>3</sub> ) - x<sub>3</sub> ( y<sub>1</sub>z<sub>2</sub>
+- y<sub>2</sub>z<sub>1</sub> )</font></i></b> </p>
+<a href="MAILTO:jerstlouis@videotron.ca">
+
+<p></a><em>Copyright © 1996-1998 Jerome St-Louis</em></p>
+
+<p><a href="MAILTO:jerstlouis@videotron.ca">jerstlouis@videotron.ca</a></p>
+</body>
+</html>

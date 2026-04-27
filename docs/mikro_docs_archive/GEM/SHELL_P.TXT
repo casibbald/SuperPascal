@@ -1,0 +1,108 @@
+Date: 18 May 87 22:54:38 GMT
+From: imagen!atari!apratt@ucbvax.Berkeley.EDU  (Allan Pratt)
+Subject: Testing _shell_p.  C source and some tutorial
+Comment: Extracted from digest info-atari16 87-225
+To: info-atari16@score.stanford.edu
+
+> [Simon Poole:]
+>
+> OK, I admit I was probaly wrong, I did some more research into how GEMBOOT
+> uses _shell_p: it seems that the only reason Konrad Hahn uses it, is so
+> that SETPATH can be used to change the path, the AES actually uses
+> $XXXX to save the pointer to the enviroment string (have a look
+> at the code pointed to by exec_os ($4FE). One doesn't actually need _shell_p
+> to set the path at boot-time, so I suppose Konrad could make a version without
+> using this semi-documented location (maybe one day Atari will decide on
+> for what it actually is :-)).
+>
+>                             Simon Poole
+>                             K538915@CZHRZU1A.BITNET
+
+Thank you, Simon.  Yes, you were wrong.  Whoever posted the note to the
+effect that the ROMs don't contain the word $04f6 was right.  Whoever
+posted the note to the effect that you can change the string pointed to
+by $04f6 (thanks to GEMBOOT) was right: the pointer at $04f6 is surely
+the SAME as some other pointer (e.g.  the one used by the Desktop for
+the environment of its children).  Finally, addresses like the one
+I X'ed out above should not be published, because they change from
+ROM to ROM (even between countries for a given ROM release).
+
+Atari (i.e.  Landon) decided long ago what _shell_p was for (see below),
+just as I said in this group.  But even if we hadn't, it is not
+appropriate for you (or anybody else) to usurp system variables for your
+own use.  If you don't grok the description of a variable, consider it
+"Reserved for future use BY ATARI" and then yell at us to fix the
+documentation.
+
+Please remove references to _shell_p as a path pointer from your code.
+It is intended as a pointer to a shell routine for executing command
+lines.  At the end of this article is an example of how we hoped this
+would work, and how it does work in some shells (notably Gert
+Poltiek's).
+
+*********************
+
+Now for the big news:  if you put all your resource files in the root
+of your boot device (C: for hard disk users) the AES will find them
+no matter where the .PRG is started from!  This is because the environment
+the AES gets initially includes "PATH=;C:\;" and it looks in this path
+when you do the shell_find call (which rsrc_load uses).  Watch this space
+for a program which lets you put your resources in any directory!
+
+*********************
+
+/----------------------------------------------\
+| Opinions expressed above do not necessarily  |  -- Allan Pratt, Atari Corp.
+| reflect those of Atari Corp. or anyone else. |     ...lll-lcc!atari!apratt
+\----------------------------------------------/
+
+
+*************** CODE EXAMPLE FOR USE OF _shell_p VARIABLE *****************
+
+/*
+ * Example of use of _shell_p variable.
+ *
+ * The value at _shell_p is the address of a procedure which takes a
+ * string pointer as an argument, executes the string as if it were
+ * typed at the shell prompt, and returns the exit status of the command.
+ *
+ * This code checks to see of the value at _shell_p is null (no shell
+ * around) or points to the word "PATH" (adulterated by GEMBOOT).
+ */
+
+#include <osbind.h>
+
+main()
+{
+    long oldstack;
+    long *shell_p = (long *)0x4f6;
+    long (*shell)();
+    long status;
+    char buf[256];
+
+    oldstack = Super(0L);    /* get into Super mode */
+    shell = *shell_p;        /* get value of _shell_p */
+    Super(oldstack);        /* get back to user mode */
+
+    /* validate _shell_p */
+    if (shell == 0L) {
+    printf("No shell available to execute a command\n");
+    Pterm(-1);
+    }
+    if (strncmp(shell,"PATH",4) == 0) {
+    printf("_shell_p has been adulterated: it points to \"PATH\"\n");
+    Pterm(-1);
+    }
+
+    /* get a line from the keyboard using Cconrs() */
+    printf("Enter a command line for the shell to execute: ");
+    buf[0] = 253;
+    Cconrs(buf);
+    buf[2+buf[1]] = '\0';        /* null-terminate the line */
+
+    /* execute the command */
+    status = (*shell)(&buf[2]);
+    printf("Return status is %ld\n",status);
+    Pterm0();
+
+

@@ -1,0 +1,232 @@
+<html>
+
+<head>
+<title>3D Texture Mapping</title>
+</head>
+
+<body BGCOLOR="#000000" TEXT="#0080FF" LINK="#00FFFF" VLINK="#008080" ALINK="#000080">
+
+<h1>3D Texture Mapping</h1>
+
+<h2>Sixth part of <a href="http://pages.infinit.net/jstlouis/3dbhole"><i>The 3D Coding
+Blackhole</i></a> tutorial series</h2>
+
+<ul>
+  <li><a HREF="#Overview">Overview</a> </li>
+  <li><a HREF="#Magic">The Magic Numbers</a> </li>
+  <li><a HREF="#Correct">Perspective Correct Texture Mapping</a> </li>
+</ul>
+<a NAME="Overview">
+
+<h1><font color="#FFFFFF">Overview</font></h1>
+</a>
+
+<p>The first things you must think about when doing texture mapping, is having an array of
+textures and initializing 3D texture coordinates. The textures will be stored in: </p>
+
+<pre WRAP>
+#define MAXTEXTURES 16
+bitmap_t Textures[MAXTEXTURES];
+</pre>
+
+<p>We will allocate and load them from PCX files. I chosed to make all of them 64x64. We
+will use the texture coordinates of the <b><i>polygon_t</i></b> structure: </p>
+
+<pre WRAP>
+vertex_t P,M,N;
+</pre>
+
+<p>We will initialize them in a function that we will called after creating the polygons.
+P is the origin of the texture, M the horizontal end of the texture, and N the vertical
+end. </p>
+
+<pre WRAP>
+void TEX_Setup(Polygon_t * Polygon, Object_t *Object)
+{
+   Polygon-&gt;P.Local=P3D(Vert(1).Local.x,
+                        Vert(1).Local.y,
+                        Vert(1).Local.z);
+   Polygon-&gt;M.Local=P3D(Vert(0).Local.x,
+                        Vert(0).Local.y,
+                        Vert(0).Local.z);
+   Polygon-&gt;N.Local=P3D(Vert(2).Local.x,
+                        Vert(2).Local.y,
+                        Vert(2).Local.z);
+}
+</pre>
+
+<p>We need to transform them like any other vertices of the object, so we will create a <b><i>world</i></b>
+transforming and an <b><i>align</i></b> transforming function right now: </p>
+
+<pre WRAP>
+void TR_Object(Object_t *Object, float matrix[4][4])
+{
+   int v,p;
+   for(v=0; v&lt;Object-&gt;VertexCount; v++)
+      VEC_MultMatrix(&amp;Object-&gt;Vertex[v].Local,matrix,&amp;Object-&gt;Vertex[v].World);
+   for(p=0; p&lt;Object-&gt;PolygonCount; p++)
+   {
+      VEC_MultMatrix(&amp;Object-&gt;Polygon[p].P.Local,matrix,&amp;Object-&gt;Polygon[p].P.World);
+      VEC_MultMatrix(&amp;Object-&gt;Polygon[p].M.Local,matrix,&amp;Object-&gt;Polygon[p].M.World);
+      VEC_MultMatrix(&amp;Object-&gt;Polygon[p].N.Local,matrix,&amp;Object-&gt;Polygon[p].N.World);
+   }
+}
+void TR_AlignObject(Object_t *Object, float matrix[4][4])
+{
+   int v,p;
+   for(v=0; v&lt;Object-&gt;VertexCount; v++)
+      VEC_MultMatrix(&amp;Object-&gt;Vertex[v].World,matrix,&amp;Object-&gt;Vertex[v].Aligned);
+   for(p=0; p&lt;Object-&gt;PolygonCount; p++)
+   {
+      VEC_MultMatrix(&amp;Object-&gt;Polygon[p].P.World,matrix,&amp;Object-&gt;Polygon[p].P.Aligned);
+      VEC_MultMatrix(&amp;Object-&gt;Polygon[p].M.World,matrix,&amp;Object-&gt;Polygon[p].M.Aligned);
+      VEC_MultMatrix(&amp;Object-&gt;Polygon[p].N.World,matrix,&amp;Object-&gt;Polygon[p].N.Aligned);
+   }
+}
+</pre>
+<a NAME="Magic">
+
+<h1><font color="#FFFFFF">The Magic Numbers</font></h1>
+</a>
+
+<p align="left">Now that we have the transformed texture coordinates, our objective is to
+find what is the horizontal and the vertical coordinates of the pixel in the texture
+bitmap that should be drawn on the screen. These <i>texture coordinates</i> will be called
+<b><i>u</i></b> and <b><i>v</i></b>. And the equations that will give us these coordinates
+are:</p>
+
+<p align="center"><font SIZE="+1"><i><b>u = a * TEXTURE_SIZE / c</b></i></font></p>
+
+<p align="center">and</p>
+
+<p align="center"><font SIZE="+1"><i><b>v = b * TEXTURE_SIZE / c</b></i></font></p>
+
+<p align="left">Now these <b><i>magic coordinates</i></b> have equations for themselves:</p>
+
+<p align="center"><font SIZE="+1"><i><b>a = O<sub>x</sub> + V<sub>x</sub> j + H<sub>x</sub>
+i</b></i></font><br>
+<font SIZE="+1"><i><b>b = O<sub>y</sub> + V<sub>y</sub> j + H<sub>y</sub> i</b></i></font><br>
+<font SIZE="+1"><i><b>c = O<sub>z</sub> + V<sub>z</sub> j + H<sub>z</sub> i</b></i></font></p>
+
+<p align="left">These <b><i>O, H, V</i></b> numbers are the <b><i>magic numbers</i></b>.
+They are computed from the texture coordinates in the following way:</p>
+
+<p align="center"><font SIZE="+1"><i><b>O<sub>x</sub> = N<sub>x</sub>P<sub>y</sub> - N<sub>y</sub>P<sub>x</sub><br>
+H<sub>x</sub> = N<sub>y</sub>P<sub>z</sub> - N<sub>z</sub>P<sub>y</sub><br>
+V<sub>x</sub> = N<sub>z</sub>P<sub>x</sub> - N<sub>x</sub>P<sub>z</sub><br>
+O<sub>y</sub> = M<sub>x</sub>P<sub>y</sub> - M<sub>y</sub>P<sub>x</sub><br>
+H<sub>y</sub> = M<sub>y</sub>P<sub>z</sub> - M<sub>z</sub>P<sub>y</sub><br>
+V<sub>y</sub> = M<sub>z</sub>P<sub>x</sub> - M<sub>x</sub>P<sub>z</sub><br>
+O<sub>z</sub> = M<sub>y</sub>N<sub>x</sub> - M<sub>x</sub>N<sub>y</sub><br>
+H<sub>z</sub> = M<sub>z</sub>N<sub>y</sub> - M<sub>y</sub>N<sub>z</sub><br>
+V<sub>z</sub> = M<sub>x</sub>N<sub>z</sub> - M<sub>z</sub>N<sub>x</sub></b></i></font></p>
+
+<p align="left">I don't really know why it works, but it does! It seems to be some strange
+cross product... Anyway, now that you have the equations, let's implement the code! </p>
+
+<h1><a name="Correct"><font color="#FFFFFF">Perspective Correct Texture Mapping</font></a></h1>
+
+<p>The computation of the <b><i>O, H, V</i></b> numbers requires some modifications, so we
+will add the following to <b><i>ENG3D_SetPlane</i></b>: </p>
+
+<pre WRAP>
+   //Used to fix errors that happen when the numbers get too big
+   #define FIX_FACTOR 1/640
+
+   //Initialize texture vectors
+   P=Polygon-&gt;P.Aligned;
+   M=VEC_Difference(Polygon-&gt;M.Aligned,Polygon-&gt;P.Aligned);
+   N=VEC_Difference(Polygon-&gt;N.Aligned,Polygon-&gt;P.Aligned);
+
+   P.x*=Focal_Distance;
+   P.y*=Focal_Distance;
+
+   M.x*=Focal_Distance;
+   M.y*=Focal_Distance;
+
+   N.x*=Focal_Distance;
+   N.y*=Focal_Distance;
+
+</pre>
+
+<p>And here is the implementation of <b><i>VEC_Difference</i></b> (Not extremely
+complex...): </p>
+
+<pre WRAP>
+_3D VEC_Difference(_3D Vector1, _3D Vector2)
+{
+    return P3D(Vector1.x-Vector2.x,Vector1.y-Vector2.y,Vector1.z-Vector2.z);
+}
+</pre>
+
+<p>Then we can compute them. </p>
+
+<pre WRAP>
+_3D O, H, V;
+</pre>
+
+<p>In <b><i>ENG3D_SetPlane</i></b>: </p>
+
+<pre WRAP>
+   H.x=(N.y*P.z-N.z*P.y)*FIX_FACTOR;
+   V.x=(N.z*P.x-N.x*P.z)*FIX_FACTOR;
+   O.x=(N.x*P.y-N.y*P.x)*FIX_FACTOR;
+
+   H.z=(M.z*N.y-M.y*N.z)*FIX_FACTOR;
+   V.z=(M.x*N.z-M.z*N.x)*FIX_FACTOR;
+   O.z=(M.y*N.x-M.x*N.y)*FIX_FACTOR;
+
+   H.y=(M.y*P.z-M.z*P.y)*FIX_FACTOR;
+   V.y=(M.z*P.x-M.x*P.z)*FIX_FACTOR;
+   O.y=(M.x*P.y-M.y*P.x)*FIX_FACTOR;
+</pre>
+
+<p>Now it's time to change our <b><i>VID_HLine</i></b> for a <b><i>TEX_HLine</i></b> so
+that it uses texture mapping (the tough part). We must at first initialize our magic
+coordinates: </p>
+
+<pre WRAP>
+   a=-((long)O.x+((long)V.x*(long)j)+((long)H.x*(long)i))*64L;
+   b= ((long)O.y+((long)V.y*(long)j)+((long)H.y*(long)i))*64L;
+   c= ((long)O.z+((long)V.z*(long)j)+((long)H.z*(long)i));
+   long Hx,Hy,Hz;
+   int u,v;
+   BYTE color=0;
+   BYTE *mapping=Textures[texture].Picture;
+</pre>
+
+<p>Then we multiply <b><i>H.x</i></b> and <b><i>H.y</i></b> by 64 so we don't have to do
+it for every pixel. We use long variables instead of floats too: </p>
+
+<pre WRAP>
+   Hx=H.x*-64;
+   Hy=H.y*64;
+   Hz=H.z;
+</pre>
+
+<p>Then for each pixel, change the last parameter for texture and instead of plotting the
+old one do: </p>
+
+<pre WRAP>         if(c)
+         {
+            u=a/c;
+            v=b/c;
+            color=mapping[((v&amp;63)&lt;&lt;6)+(u&amp;63)];
+            if(color)
+            {
+               zbuffer[offset]=z;
+               SCREENBUFFER[offset]=LightTable[light][color];
+            }
+         }
+         a+=Hx;
+         b+=Hy;
+         c+=Hz;
+</pre>
+
+<p>And we've got ourselves a texture mapper! </p>
+
+<p><em>Copyright © 1996-1998 Jerome St-Louis</em></p>
+
+<p><a href="MAILTO:jerstlouis@videotron.ca">jerstlouis@videotron.ca</a></p>
+</body>
+</html>

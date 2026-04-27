@@ -1,0 +1,148 @@
+
+ÿÿf1THE BLOBS INVASIONÿÿf0
+
+ò      -------------- Ohh mighty blob - overlapping heaven -------------
+
+
+We've seen them quite a few times over the past few years, I've used them
+myself far too many times.
+If you dont know what I mean, keep reading.
+
+Blobs, what are they?
+Basicly, they consists of objects that overlap and seem to affect eachother
+in a sort of "slime" way. It usually comes in the shape of spheres, sliming
+together. To get the theory, read Tats article on blobs in maggie24, here I
+will explain how they are actually done and why they are so lovely.
+
+
+
+óThe way blobs work
+ò-------------------------------
+
+Its all about overlapping and setting a nice palette really. Overlapping
+means that for each pixel we calculate how much each blob "contributes".
+If we have three blobs we simple add each blobs contribution and use a
+lookuptable to find the correct color to use.
+This means we are not dealing with the final pixelcolor until all blobs have
+been calculated. I say calculated but it doesnt really describe it very good
+since all we do is a couple of additions.
+
+To do this we need a picture of a ball, this can be calculated in the code
+itself of drawn in an artpackage. Since I am using a falcon I prefer Apex
+Media to draw it. The centre of the ball will have the brightest color and
+thus needs to have the highest value, say 63. Then the rest of the ball
+is filled with a value depending on the pixeldistance from the centre of the
+ball. Seems a bit weird maybe but we need a nice gradient over the ball,
+all values ranging from 0 to 63 (in this case). Its convinient to use
+256colormode on the falcon and color "blue" since this will give us the values
+needed.
+The size of this ball (or whichever shape) shouldnt be made too big since we
+dont want to cover the whole screen when overlapping.
+The actual picturesize should be the same as the final output screen.
+
+
+We also need a palette, this one should hold the final colors of each pixel.
+This can range from black to white, with say, 64 entries.
+
+
+Next thing is the implementation, from here on I will assume we are using a
+falcon and truecolormode.
+In this example I use a 160*100pixel TC screen and two blobs.
+
+
+    section text
+   
+mainloop
+    lea.l     blob_data,a0             ; our blobpicture, 160*100 pixels big
+    move.l    a0,a1
+    add.l     blob_offset1,a0          ; change these two to move the blobs.
+    add.l     blob_offset2,a1          ; 
+    move.l    screen,a2
+    lea.l     blob_palette,a3          ; the TCpalette described above.
+
+    move.w    #160*100-1,d7
+
+blobloop
+    move.w    (a0)+,d0                 ; get contribution from blob1
+    add.w     (a1)+,d0                 ; add the contribution from blob2
+    ..
+    [here is the place to add more add.w if you want more than two blobs]
+
+    move.w    (a3,d0.w*2),(a3)+        ; use the lookuptable (palette) to
+                                       ; find correct color and set the
+                                       ; pixel.
+    dbra      d7,blobloop
+
+
+    jmp       mainloop
+
+    section data
+
+blob_data
+    incbin    blobpic.bin              ; the blobdata
+    
+
+As you can see, we go thru the screen, plotting every pixel, this means we
+dont have to clear the screen.
+
+There are two obvious problems with this implementation:
+
+- Changing the offsets of the blobdata means we will end up reading off the
+  actual data so we will have to add some space above and behind the blobdata.
+  This also means that the blobs will "wrap" horizontally.
+
+- Overflowing the color palette, this is best solved by adding enough words of
+  the topmost color after the palette.
+
+
+óOptimization
+ò-------------------------------
+
+Can it be made faster? Yep!
+As always there are as many optimizationtricks as there are coders but I will
+show you a couple here.
+
+- Fill the cache. As you can see the innerloop is really small and thus can be
+  unrolled a few times to fill up the cache.
+  Like this:
+
+    move.w    #160*100/8-1,d7
+
+blobloop
+    REPT      8
+    move.w    (a0)+,d0                 ; get contribution from blob1
+    add.w     (a1)+,d0                 ; add the contribution from blob2
+    ..
+    [here is the place to add more add.w if you want more than two blobs]
+
+    move.w    (a3,d0.w*2),(a3)+        ; use the lookuptable (palette) to
+                                       ; find correct color and set the
+                                       ; pixel.
+    ENDR
+    dbra      d7,blobloop
+
+  I've unrolled the loop eight 8 and divided d7 by 8. This will fill the
+  chache some more (not 100% though). Experiment!
+
+
+- Using movem to read more than one entry at the time. Read maybe 4 entris
+  at the time, this will save some bustime.
+
+- Make each blobdataentry only one byte and read more of them that way. We
+  dont really need to have 16bit just to store an offset in a palette.
+
+
+
+This is the easy way to make blobs, there are more ways ofcourse, including
+having pictures in the background that blends with the blobs etc.
+If you take a look at our 'Hardcore' demo from SV2000 you will see some blobs
+in the last part, these blend with the background, even though itis in
+greyscales.
+There are numerous ways to use blobs and overlapping in general, hopefully
+you will be able to watch some more advanced ones in the near future.
+
+ò/Fredrik Egeberg (deez) - fredrike@smartdog.co.uk - deez@atari.org
+
+ñ----------------------------------------------------------------------------
+mind-design 2000
+ñ----------------------------------------------------------------------------

@@ -1,0 +1,136 @@
+A Cheater's Form of Z Clipping
+By Ian Romanick, idr@cs.pdx.edu
+
+In the 3D graphics realm, it is neccessary to perform clipping to the Z
+plane. This operation is computationally expensive, not only because it
+typically involes a number of multiplies and divides and must be performed
+on a polygon to polygon basis, but also because it can degenerated triangles
+in to quadrilaterals. In systems that are based solely around triangles, the
+degeneration into quadrilaterals can cause an incredible increase in
+complexity and computation time. A very simple solution to this problem
+exists, that is perfectly acceptable in many cases. This paper will present
+concepts applicable to any Z clipping algorithm, a typical Z clipping
+algorithm, and a cheater's method for Z clipping.
+----------------------------------------------------------------------------
+Trivial Rejection
+
+The most important case in Z clipping is the trivial reject. A number of
+methods exist to perform a trivial rejection, but the method that I prefer
+can also be used to solve other 3D graphics problems. This method is based
+around the knowledge of the minimal bounding sphere for each object in the
+environment. Once an object has been transformed into view space, this
+sphere should be tested agains the view plane. If the sphere is totally in
+front of the view plane, no clipping need be performed and the object should
+be rendered. If the sphere is totally behind the view plane, the object is
+totally invisible and should be skipped. If the sphere intersects the view
+plane, there is a good chance that clipping will need to be performed on any
+given polygon in the object.
+
+Once it is established that some portion of the object needs to be clipped,
+a second trivial rejection pass needs to be made. This second step is
+functionally much like the first, with the exception that it works on at a
+polygon level. If all of the points of a given triangle are on the same side
+of the view plane, a trivial accept/reject decision can be made. If fixed
+point integers and two's complement math are used, this can be done using
+just a few logic operations.
+----------------------------------------------------------------------------
+Nontrivial Cases
+
+This is the point at which the task of Z clipping becomes complex. There are
+typically two stages to this phase. The first stage clips each individual
+line to Z = 0. The out codes of each clip must also be stored. There are
+three possible out codes for a given line, as shown in the folloing table.
+
+                Out code    Condition
+                   -1       Both points are in
+                    0       Both points are in
+                    1       One point is in
+
+With this information, the second stage may begin. This stage involes
+building the real triangle data from the clipped points. A level of
+complexity is added to this stage due to the fact that the clipped polygon
+might be a quadrilateral. Determining weather a quadrilateral resulted is
+actually quite simple. The following table shows how the line out codes
+relate to the shape of the polygon.
+
+            Sum of triples   Cases                      Notes
+                 -3          (0,0,0)                    All three are in.
+                 -2             -                       Error.
+                 -1             -                       Error.
+                  0          (2,2,2)                    All three are out.
+                  1          (1,1,0), (1,0,1), (0,1,1)  Two clips, one in.
+                  2          (1,1,2), (1,2,1), (2,1,1)  Two clips, one out.
+                  3             -                       Error.
+
+Technically the cases for -3 and 0 should also be errors, since they should
+have been filtered out by the trivial rejection tests. The case for 1
+results in a quadrilateral, and the case for 2 results in a triangle. By
+examining the clip cases with a bit more scrutiny, an exact picture of the
+resultant polygons is painted. If the out code sum is 1, there are three
+cases to look at, and the following diagrams show all three cases. The
+deciding factor between each of these cases is the line that is totally in.
+
+               1 /\ /             \ /\ 1               /\ 1
+                /XX/               \XX\               /  \
+               /XX/ \             / \XX\           __/____\__
+              /XX/   \           /   \XX\           /XXXXXX\
+            3 --/----- 2       3 -----\-- 2       3 -------- 2
+               /                       \
+            Case (1,1,0)       Case (0,1,1)       Case (1,0,1)
+
+A similar approach is taken if the out code sum is 2. As in the last case,
+there are only three possible polygon orientations. In this case, however,
+the deciding factor is the line that is totally out.
+
+               1 /\ /             \ /\ 1               /\ 1
+                /  /               \  \               /XX\
+               /  /X\             /X\  \           __/XXXX\__
+              /  /XXX\           /XXX\  \           /      \
+            3 --/----- 2       3 -----\-- 2       3 -------- 2
+               /                       \
+            Case (1,1,2)       Case (2,1,1)       Case (1,2,1)
+
+One additional factor that has gone as yet unmentioned, is how texture
+mapping and shading are handled. These values must also be clipped, just as
+the X and Y values are. This can result in a routine that effectivly must
+clip in seven dimensions for a texture mapped and Gouraud shaeded display.
+There are methods to reduce the computational compexity during the clip
+operation, but the result is added computation later in the rendering pipe
+line.
+----------------------------------------------------------------------------
+Cheaters Can Win
+
+It should be obvious at this point that Z clipping is not a shallow subject.
+The level of complexity and the amount computation time involved are
+extreemly high, in some cases even higher than actually rendering the
+objects! There is an obvious need for something better. The largest
+stumbling block surrounding Z clipping is the fact that it must be performed
+before perspective projection. Since perspective projection must be
+performed before scan conversion, a modified Z-buffer algorithm can't be
+used.
+
+A very simple method, that is perfectly acceptable in many cases does exist.
+The need for non-trivial clipping can be prevented by simply bounding the Z
+value to zero after the trivial rejection tests are completed. On some CPUs
+this operation can be performed with one instruction, which should execute
+significanly faster than the algorithm detailed above.
+
+This method is obviously far from perfect. When an object penetrates the
+view plane at a point that is on the screen, the object will appear to
+squish. However, in situations where 3D collsion algorithms are in use, this
+case will not occur. If an object penetrates the view plane at a point that
+is off the screen, the offending polygons will usually be removed by the 2D
+clipping routine. In any case, mutations that occur will be minor in most
+situations. These factors make this method a good choice for 3D games.
+----------------------------------------------------------------------------
+Bibliography
+
+    Computer Graphics: Principles and Practice (2nd Ed.),
+    J.D. Foley, A. van Dam, S.K. Feiner, J.F. Hughes, Addison-Wesley
+    1990, ISBN 0-201-12110-7
+
+    Computer Graphics Handbook: Geometry and Mathematics,
+    Michael E. Mortenson, Industrial Press, Inc., 1990, ISBN 0-8311-1002-3
+
+----------------------------------------------------------------------------
+Return to the Epsilon Graphics Page.

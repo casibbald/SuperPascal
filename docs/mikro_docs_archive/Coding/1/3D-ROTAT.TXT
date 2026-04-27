@@ -1,0 +1,103 @@
+
+	"Avatar's Guide To 3D-Rotations" 
+
+	StEP oNE!  - 12 muls / rotation
+	-------------------------------
+
+rotate around z-axis:
+
+	x'  = x*cos(A) + y*sin(A)
+	y'  = x*sin(A) - y*cos(A)
+
+rotate around y-axis:
+
+	x'' = x'*cos(B) + z*sin(B)
+	z'  = x'*sin(B) - z*cos(B)
+
+rotate around x-axis:
+
+	y'' = y'*cos(C) + z'*sin(C)
+	z'' = y'*sin(C) - z'*cos(C)
+
+after this the rotated vector is (x'',y'',z'')
+
+
+	StEP tWO!  - 9 muls / rotation + 14 muls init
+	---------------------------------------------
+
+If we evaluate the rotations from the first step we get
+
+	x'' = x * [cos(A)cos(B)] +
+	    + y * [sin(A)cos(B)] +
+	    + z * [sin(B)]
+
+	y'' = x * [sin(A)cos(C) + cos(A)sin(B)sin(C)] +
+	    + y * [-cos(A)cos(C) + sin(A)sin(B)sin(C)] +
+	    + z * [-cos(B)sin(C)]
+
+	z'' = x * [sin(A)sin(C) - cos(A)sin(B)cos(C)] +
+	    + y * [-cos(A)sin(C) - sin(A)sin(B)cos(C)] +
+	    + z * [cos(B)cos(C)]
+
+consisting of nine constants multiplied by the original x/y/z-coordinates.
+We precalculate these constants everytime we change an angle
+
+	xx = [cos(A)cos(B)]
+	xy = [sin(A)cos(B)]
+	xz = [sin(B)]
+
+	yx = [sin(A)cos(C) + cos(A)sin(B)sin(C)]
+	yy = [-cos(A)cos(C) + sin(A)sin(B)sin(C)]
+	yz = [-cos(B)sin(C)]
+
+	zx = [sin(A)sin(C) - cos(A)sin(B)cos(C)]
+	zy = [-cos(A)sin(C) - sin(A)sin(B)cos(C)]
+	zz = [cos(B)cos(C)]
+
+and the rotation becomes somewhat easier
+
+	x'' = x * xx + y * xy + z * xz
+	y'' = x * yx + y * yy + z * yz
+	z'' = x * zx + y * zy + z * zz
+
+
+	StEP tHREE!  - 6 muls / rotation + 17 muls init
+	-----------------------------------------------
+
+In this step we use the fact that
+
+	(a+y)(b+x) = ab + ax + by + xy
+
+which we can transform into
+
+	ax + by = (a+y)(b+x) - (ab + xy), and
+	ax + by + cz = (a+y)(b+x) + cz - (ab + xy)
+
+Doing that for each of the rotations x',y',z' gives us
+
+	x' = (xx + y)(xy + x) + z*zx - (xx*xy + x*y)
+	y' = (yx + y)(yy + x) + z*yx - (yx*yy + x*y)
+	z' = (zx + y)(zy + x) + z*zx - (zx*zy + x*y)
+
+If the object is kept intact then x*y is constant and can be
+precalced. Add this to the init and precalculate x_y = x*y
+for each vertice
+
+	xx_xy = xx*xy
+	yx_yy = yx*yy
+	zx_zy = zx*zy
+
+The rotation then becomes
+
+	x' = (xx + y)(xy + x) + z*xz - (xx_xy + x_y)
+	y' = (yx + y)(yy + x) + z*yz - (yx_yy + x_y)
+	z' = (zx + y)(zy + x) + z*zz - (zx_zy + x_y)
+				       ^^precalced^^
+
+This leaves us with 6 muls per rotation, quite an improvement
+compared to the initial 12.
+
+
+		Now go out and abuse this stuff!!
+
+			   Avatar 1995

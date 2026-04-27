@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0038)http://tomas.nocrew.org/DSP/DSP-2.html -->
+<HTML><HEAD><TITLE>DSP Programming - part two</TITLE>
+<META content="text/html; charset=windows-1250" http-equiv=Content-Type>
+<META content="MSHTML 5.00.2614.3500" name=GENERATOR></HEAD>
+<BODY>
+<H1 align=center>Fixpoint numbers and ALU registers</H1>In this second part of 
+my DSP programming pages, I will describe how the number representation in 
+DSP56001 works, some instructions, explainations of the ALU registers and how to 
+make use of the address registers and its offset and modulo registers. 
+<P>The DSP doesn't use integers as the 68K does. Instead it uses something 
+called fix point numbers. This is not to be mixed up with floating point 
+numbers. Floating point numbers consists of two part, one fractional part and 
+one exponential part, to form its numbers. Fix point numbers only use the 
+fractional part, numbers between -1 and +1. This is how the DSP uses its 
+numbers, 24-bit fix point. The largest value that can be represented with the 
+DSP is nealy one, hexadecimal $7FFFFF=0.99999988079 and the lowest value is 
+exactly -1=$800000. The MSB is the sign of the value and the 23 LSBs are the 
+fractional number. Follows is a list with a few examples of numbers and their 
+corresponding hexadecimal values. 
+<P>
+<DL compact>
+  <DT>0.0=$000000 
+  <DT>0.25=$200000 
+  <DT>0.5=$400000 
+  <DT>~1.0=$7FFFFF 
+  <DT>-1.0=$800000 
+  <DT>-0.5=$C00000 
+  <DT>-0.25=$E00000 </DT></DL>The ~ in front of 1.0 is because it is not exactly 
+equal to 1.0 but it is as near as it can get, using two complement 24-bit fix 
+point. Usually, the assembler accepts that you write 1.0 and uses $7FFFFF, but 
+may give a warning that you have used a number not representable. 
+<P>How the DSP uses the numbers is very important to know. If you want to move a 
+value of, say 42 into data register X0, you might write: 
+<DL compact>
+  <DD><CODE>MOVE #42,X0</CODE> </DD></DL>This will put the hexadecimal value 
+$2A0000 into X0 and NOT $00002A as you might have expected it to do. To tell the 
+assembler that you really want the integer 42 put in X0, you'll have to insert a 
+'&gt;', like this: 
+<DL compact>
+  <DD><CODE>MOVE #&gt;42,X0</CODE> </DD></DL>Believe me, this is a common source 
+of error, that isn't very easy to discover. 
+<P>Back to some fix points. 
+<P>When multiplying two numbers in DSP, you use the instruction MPY. This 
+multiplies two 24-bit values and results in a 48-bit value. Multiplications are 
+always two complemental. Let's give an example, we want to multiply 0.5 by 
+-0.25, which will of course be -0.125. The DSP will have the values $400000 and 
+$E00000, which will result in a 48-bit values of $F00000:000000. <BR>The 
+instruction for this could look like: 
+<DL compact>
+  <DD><CODE>MPY X0,Y0,A</CODE> </DD></DL>X0=$400000, Y0=$E00000 and after 
+execution: A=$FF:F00000:000000. Which directly leads us into the construct of 
+the accumulators. In part one, I mentioned that the accumulators could be 
+divided into three registers, A2, A1 and A0. In the example above these 
+registers would be: A2=$FF, A1=$F00000 and A0=$000000. A2, you might wonder, how 
+did that get its value. Simple, doing a multiplication, A2 will be the 
+signextension of the MSB of A1. Sounds complicated? It's not, if the result is 
+positive, &gt;=0, A2 will be $00 and if the result is negative, &lt;0 as in our 
+case, A2=$FF. This sign extension will also occur when a value is move to an 
+accumulator. For example, if we would do a: 
+<DL compact>
+  <DD><CODE>MOVE #$876543,A</CODE> </DD></DL>A would contain $FF:876543:000000 
+after execution. 
+<P>In this case, when we move a 24-bit value into the 56-bit accumulator, not 
+only is the value sign extended into A2, but A0 is also zeroed. The N flag in 
+CCR is also set according to MSB of A2. 
+<P>This takes us to another possible error in our programming. Say that the 
+accumulator A contains a value of $00:123456:789ABC and we want to move this 
+56-bit value to the other accumulator, B. A normal person would try: 
+<DL compact>
+  <DD><CODE>MOVE A,B</CODE> </DD></DL>But this will not do exactly what we 
+intended to do. This example would take the A1 part of A and put that in the B1 
+part of B, sign extend into B2 and zero B0, which would make 
+B=$00:123456:000000. Close to what we want, but not close enough. But no 
+worries, there is a specially made instruction for this 56-bit transfer, namely 
+TFR (Transfer Data ALU). <BR>This: 
+<DL compact>
+  <DD><CODE>TFR A,B</CODE> </DD></DL>will move the whole 56-bit value from A to B. 
+Ok, that's good, but what about when adding two numbers, that would make it 
+possible to produce a value larger than 1. Yes, that's correct. This is where we 
+get use of the 8-bit extension part of the accumulators, more than a sign 
+extension. We take two values, for example 0.75=$600000 and 0.5=$400000, which 
+will make a result of 1.25=$?, hard to represent with the usual two complement 
+24-bit fix point. The instruction would be: 
+<DL compact>
+  <DD><CODE>ADD X0,A</CODE> </DD></DL>Before execution: X0=$600000 (0.75), 
+A=$00:400000:000000 (0.5)<BR>After execution: X0=$600000 (0.75), 
+A=$00:A00000:000000 (1.25) 
+<P>We see here that A2 is still zeroed even if MSB of A1 is set. When using 
+56-bit values, it is MSB of A2 that decide if the value is negative. This means 
+that values from -128.0 to +127.999 can be represented in an accumulator, which 
+may be useful sometimes. When an accumulator results in a value greater than 1.0 
+or less than -1.0, the extension flag (E) of CCR is set. 
+<P>But, when we want to move this value from the accumulator to some other 
+place, memory or data register, we bump into some problems. Neither of them has 
+got this extra byte, and therefore cannot represent values below or above -1 - 
++1. If we do this: 
+<DL compact>
+  <DD><CODE>MOVE A,X0</CODE> </DD></DL>when A=$00:A00000:000000 (1.25) as after 
+the previous example, the value will be limited to be the closest representative 
+value, i.e. ~1.0 or $7FFFFF. This is called limiting in the DSP and when this 
+occurs, the L flag will be set in CCR. If we neccessarily does want to get 
+$A00000 into X0, this can be done by using: 
+<DL compact>
+  <DD><CODE>MOVE A1,X0</CODE> </DD></DL>
+<DD><CODE>MOVE A,X</CODE> 
+<DL></DL>Limiting will occur and X will be $7FFFFF:FFFFFF. When we use X as a 
+48-bit value, X1 is the MSW and X0 the LSW. This means that X1=$7FFFFF and 
+X0=$FFFFFF. As with above, we might not want limiting to occur. This is done 
+with: 
+<DL compact>
+  <DD><CODE>MOVE A10,X</CODE> </DD></DL>which directly copy the value in A1 to X1 
+and A0 to X0 without any change of the numbers and will give X=$A00000:000000. 
+<P>There is a third way of using 48-bit values, to combine the two accumulators. 
+We can do this two ways: 
+<DL compact>
+  <DD><CODE>MOVE AB,X</CODE> </DD></DL>or 
+<DL compact>
+  <DD><CODE>MOVE BA,X</CODE> </DD></DL>As said before, if a 24-bit value is move 
+to an accumulator, for example A, the value will come in A1, sign extend into A2 
+and A0 will be zeroed. But values can also be moved to and from parts of the 
+accumulator, A0, A1 or A2 and no sign extension or zeroing will happen. None of 
+the other parts are affected. 
+<P>Of course, in all of the examples above, no restriction are to that 
+perticularly the A accumulator is used, or that the X data register is used. 
+Both accumulators may be used the same. X and Y may also be used the same way. 
+<P>Let's now give a summary of the registers in the ALU and how they may be 
+used:<BR>
+<DL compact>
+  <DT>X1, X0 - 24 bits 
+  <DT>Y1, Y0 - 24 bits 
+  <DT>A2, A1, A0 A2 - 8 bits and A1, A0 - 24 bits 
+  <DT>B2, B1, B0 B2 - 8 bits and B1, B0 - 24 bits 
+  <DT>X = X1:X0 - 48 bits 
+  <DT>Y = Y1:Y0 - 48 bits 
+  <DT>A = A2:A1:A0 - 56 bits* 
+  <DT>B = B2:B1:B0 - 56 bits* 
+  <DT>AB = A1:B1 - 2x24 bits* 
+  <DT>BA = B1:A1 - 2x24 bits* 
+  <DT>A10 = A1:A0 - 48 bits 
+  <DT>B10 = B1:B0 - 48 bits </DT></DL>Those marked with * are those which makes 
+limiting occur when used as a source register. When they are used as 
+destinationregisters, sign extension and zeroing takes place. 
+<P>That was a little on limiting and the use of accumulators and the 
+dataregisters. The L flag is set every time limiting has occured. 
+<HR>
+<A href="http://tomas.nocrew.org/DSP/DSP-1.html">Prev part - The basic structure 
+of DSP56001</A><BR><A href="http://tomas.nocrew.org/DSP/DSP-3.html">Next part - 
+Addressing modes</A> 
+<P><A href="http://tomas.nocrew.org/DSP/DSP-main.html">Back to DSP main page</A> 
+
+<P><A href="http://tomas.nocrew.org/index.html">Back to Index page</A> 
+<HR width="40%">
+
+<P align=center><I>Accessed <BR clear=all><PRE>RXML parse error: This tag doesn't handle content - it probably should end with "/&gt;".
+ | &lt;accessed/&gt;
+</PRE></I></DD></BODY></HTML>

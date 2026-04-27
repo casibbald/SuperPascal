@@ -1,0 +1,540 @@
+Atari Profibuch ST-STE-TT           22. Mrz 1992          Fehler/Ergnzungen
+
+Profibuch, 10. und 11. Auflage: Fehler und Ergnzungen zum Softwareteil
+Copyright (c) 1992  Julian F. Reschke
+
+Ausschlielich (!) kostenfreie Weitergabe erwnscht.
+
+Vorbemerkung: obwohl das Profibuch gerade erst wieder vier Monate alt ist, 
+haben sich doch schon eine ganze Reihe von Meldungen angesammelt. Die meisten 
+davon sind glcklicherweise nur Druckfehler oder Ergnzungen. Je nach Wich-
+tigkeit und techn. Aufwand (eine nderung des Seitenumbruchs ist nur schwer 
+mglich), werden einige dieser nderungen auch in den nchsten Auflagen 
+umgesetzt werden.
+
+An dieser Stelle mchte ich mich fr alle Bugreports und konstruktive Kritik 
+bedanken (speziell bei Johannes Hill und Stefan Hintz). Weiter so!
+
+Elektronische Mail kann an folgende Adressen gerichtet werden:
+
+Hardware:      Hans-Dieter_Jankowski@un.maus.de
+
+Software:      Dietmar_Rabich@do.maus.de
+               Julian_Reschke@ms.maus.de
+
+     Auflage:  10
+       Seite:  IV
+    Position:  unteres Drittel
+Beschreibung:  Streiche `Projektmanagement'.
+
+     Auflage:  10, 11
+       Seite:  10
+    Position:  oberes Drittel
+Beschreibung:  Ergnzung: das aktuelle POSIX-Draft der Norm P1003.2 (Shells 
+               and Utilities) nennt LINES anstelle von ROWS. Damit ergibt sich 
+               die Empfehlung, ROWS nur dann abzufragen, wenn LINES nicht 
+               gesetzt ist.
+
+     Auflage:  10, 11
+       Seite:  41
+    Position:  Unten
+Beschreibung:  Neu sind auch die TOS-Versionen 3.06 (24. 9. 1991) und TOS 2.06 
+               (14. 11. 1991). Wichtigste nderungen sind die optischen nde-
+               rungen in der Bootroutine (Atari-Logo, grafische Anzeigen beim 
+               Speichertest und beim Warten auf die Festplatte), die Unter-
+               sttzung des _FDC-Cookies, die Untersttzung von IDE-Platten 
+               (2.06) und einiges mehr.
+
+     Auflage:  10, 11
+       Seite:  51
+    Position:  Diese und folgende Seiten
+Beschreibung:  Bei den Systemvektoren fehlten alle Prozessor-Exceptions, die 
+               nicht schon beim 68000er vorhanden waren:
+
+               Liste der Systemvektoren
+
+               Der Bereich von Adresse $0 bis $37F wird von denen durch die 
+               CPU vorgegegebenen Vektoren (Exceptions, Auto-Vector-Inter-
+               rupts usw.) belegt. Eine erschpfende Darstellung dieser 
+               Vektoren -- insbesondere der von einer FPU benutzten -- ist 
+               hier in diesem Buch als Platzgrnden nicht mglich. Voll-
+               stndige Informationen dazu befinden sich in den im Litera-
+               turverzeichnis angegebenen Handbchern von Motorola.
+
+               Bemerkung: die FPU-Exceptions mssen im Allgemeinen explizit 
+               im FPU-Kontrollregister eingeschaltet werden.
+
+
+               LONG $034      52        Coprocessor Protocol Violation
+
+               Exception-Vektor 13 (bei CPUs mit Koprozessor-Schnittstelle, 
+               also 68020 und 68030).
+
+               Tritt auf, wenn bei der Kommunikation zwischen CPU und 
+               Coprozessor (etwa der FPU im TT) Verstndigungsschwierig-
+               keiten (nicht notwendig wegen Hardwareproblemen) auftreten.
+
+
+               LONG $038      56        Format Error
+
+               Exception-Vektor 14 (ab 68010, sonst reserviert)
+
+               Diese Exception wird ausgelst, wenn festgestellt wird, da 
+               gewisse Informationen defekt sind. Zur Zeit kann diese 
+               Exception nur von den Befehlen RTE (defekter Stackframe) und 
+               cpRESTORE (Koprozessor-Befehlsgruppe RESTORE, zum Beispiel 
+               FRESTORE bei der FPU) ausgelst werden.
+
+
+               LONG $03C      60        Uninitialized Interrupt
+
+               Exception-Vektor 15
+
+               Viele Peripherie-Bausteine fr die 68000-Familie nutzen die 
+               programmierbare Interruptvektornummer anstatt eines Auto-
+               vektor-Interrupts. Nach einem Reset wird in diesen Baustei-
+               nen auch die zu generierende Vektornummer gelscht. Tritt 
+               nun ein solcher Interrupt auf, bergibt der Peripheriebau-
+               stein die Vektornummer 15, solange sein Interruptnummern-
+               speicher nicht durch Software initialisiert ist (diese 
+               Exception wird niemals durch die CPU, sondern ausschlielich 
+               durch Peripheriebausteine ausgelst).
+
+
+               LONG $060      96        Spurious Interrupt
+
+               Exception-Vektor 24
+
+               Tritt auf, wenn ein Interrupt ausgelst wurde, die Ursache 
+               dafr aber nicht feststellbar war. Genauer: dies ist ein 
+               durch die Hardware ausgelster 'Bus Error' whrend des 
+               Interruptbesttigungs-Buszyklus, bei dem entweder eine Vek-
+               tornummer der CPU bergeben wird, oder diese angewiesen wird, einen 
+               Autovektor zu generieren.
+
+
+
+               LONG $0C0      192       FPCP Branch or Set on Unordered 
+                                        Condition
+
+               Exception-Vektor 48 (bei FPU als Coprozessor bzw. 68040, 
+               sonst reserviert)
+
+               Eine 'unordered condition' liegt vor, wenn eine der Ein-
+               gangszahlen fr eine arithmetische Operation NAN ('Not a 
+               number') war. Diese Exception tritt dann auf, wenn einer 
+               durch die vorherige arithmetische Operation eingeleiteten 
+               'unordered condition' einer der Befehle FBcc, FDBcc, oder 
+               FTRAPcc mit einer der 'IEEE nonaware' Verzweigungskonditio-
+               nen folgt. Die 'IEEE nonaware' Verzweigungskonditionen sind 
+               die von Motorola zustzlich, ber den IEEE-Standard hinaus-
+               gehenden Konditionen: GT, NGT, GE, NGE, LT, NLT, LE, 
+               NLE, GL, NGL, GLE, NGLE, SF, ST, SEQ, SNE.
+
+
+               LONG $0C4      196       FPCP Inexact Result
+
+               Exception-Vektor 49 (bei FPU als Coprozessor bzw. 68040, 
+               sonst reserviert)
+
+               Tritt bei durch Rundung erzeugten Ungenauigkeiten 
+               auf. Dabei werden zwei verschiedene Ungenauigkeitsquel-
+               len unterschieden (siehe die Bits INEX1 und INEX2 im FPU-
+               Statusregister):
+
+               -    Ungenauigkeiten bei der Wandlung eines Operanden vom dezimal gepacktem 
+                    Format in das intern immer benutzte 'extended precision' Format.
+
+               -    Ungenauigkeiten bei der Wandlung des Ergebnisses in das Zielformat.
+
+               Ein Befehl wie "FDIV.P #7E-1, FP3" erzeugt beide Typen von 
+               'Ungenauigkeit'. Zunchst wird die Zahl 7E-1 aus dem 
+               gepackten dezimalen Format in das Extended-Precision-Format 
+               gewandelt, und dabei tritt eine erste Ungenauigkeit auf. 
+               Diese rhrt daher, da beim binren Format die Zahlenbasis 
+               zwei, beim BCD-Format jedoch 10 ist. Im Allgemeinen fhren 
+               Wandlungen zwischen zwei verschiedenen Darstellungen immer 
+               zu Rundungsfehlern. Nach der Berechnung wird das Ergebnis 
+               wieder in das dezimale Zahlenformat gewandelt.
+
+
+               LONG $0C8      200       FPCP Divide by Zero
+
+               Exception-Vektor 50 (bei FPU als Coprozessor bzw. 68040, 
+               sonst reserviert)
+
+               Tritt auf, wenn die FPU durch Null dividiert (auch bei 
+               einer der transzendenten Funktionen mit asymptotisch gegen 
+               Unendlich strebenden Ergebnis).
+
+
+               LONG $0CC      204       FPCP Underflow
+
+               Exception-Vektor 51 (bei FPU als Coprozessor bzw. 68040, 
+               sonst reserviert)
+
+               Tritt auf, wenn eine arithmetische FPU-Instruktion zu einem 
+               numerischen Unterlauf fhrte (Zahl ist zu klein, um unter 
+               Bercksichtigung des eingestellten Rundungsverfahrens im 
+               benutzten Format dargestellt zu werden).
+
+
+               LONG $0D0      208       FPCP Operand Error
+
+               Exception-Vektor 52 (bei FPU als Coprozessor bzw. 68040, 
+               sonst reserviert)
+
+               Tritt bei den Zahlenbereichsberschreitungen auf, die nicht durch eine 
+               unmittelbare arithmetische Operation ausgelst werden. Beispiel: 
+               FMOVE von einem FPU-Datenregister zu einem anderen Ziel mit 
+               Datentypwandlung in ein kleineres Datenformat, 
+               wobei bei der Wandlung in das kleinere Format die Zahlenbe-
+               reichsberschreitung auftritt. Dabei wird das Ziel immer 
+               dann mit 'NAN' beschrieben.
+
+
+               LONG $0D4      212       FPCP Overflow
+
+               Exception-Vektor 53 (bei FPU als Coprozessor bzw. 68040, 
+               sonst reserviert)
+
+               Tritt auf, wenn eine arithmetische FPU-Instruktion zu einem 
+               numerischen Unterlauf fhrte (Zahl ist zu gro, um im 
+               benutzten Format dargestellt zu werden).
+
+
+               LONG $0D8      216       FPCP Signaling NAN
+
+               Exception-Vektor 54 (FPU als Coprozessor bzw. 68040, sonst 
+               reserviert)
+
+               Tritt dann auf, wenn einer der Operanden (nicht das Ergebnis!) einer 
+               arithmetischen Operation eine SNAN-Zahl ist. SNAN-Zahlen 
+               sind niemals Ergebnis einer arithmetischen Operation, son-
+               dern ein sogenannter Escape-Mechanismus, um ber den IEEE-
+               Standard hinausgehende eigene Zahlenformate definie-
+               ren zu knnen. Dabei knnen Teile der Mantisse zur Unter-
+               scheidung verschiedener SNAN-Zahlen benutzt werden.
+
+
+               LONG $0E0      224       MMU Configuration Error
+
+               Exception-Vektor 56 (ab 68030, sonst reserviert)
+
+               Diese Exception tritt auf, wenn versucht wird, MMU-Register 
+               mit ungltigen Werten zu fllen (beim 68030 bei den MMU-
+               Registern TC, CRP und SRP).
+
+
+     Auflage:  10
+       Seite:  71
+    Position:  unteres Drittel
+Beschreibung:  Ersetze `fmemtop' durch `ramtop'.
+
+     Auflage:  10
+       Seite:  71
+    Position:  unteres Drittel
+Beschreibung:  Die korrekten Bezeichnungen fr die Systemvariablen sind 
+               natrlich `ramtop' und `ramvalid'.
+
+     Auflage:  10, 11
+       Seite:  119
+    Position:  Parameter
+Beschreibung:  Ersetze die Bescheibungen fr `buf' und `Flopver()':
+
+               buf:           Adresse des zu vergleichenden Speicherbereiches. 
+                              Nach dem Aufruf findet man eine (durch zwei 
+                              Nullbytes abgeschlossene Liste) mit den Nummern 
+                              der gefundenen defekten Sektoren (eine leere 
+                              Liste beginnt mit zwei Nullbytes).
+               Flopver():     0:   kein Fehler (das Finden von defekten 
+                                   Sektoren an der angegebenen Stelle ist 
+                                   nicht als Fehler anzusehen).
+
+     Auflage:  10, 11
+       Seite:  120
+    Position:  Aufruf in Assembler
+Beschreibung:  Ersetze in der ersten Zeile `-> 24(sp)' durch `Offset 18'.
+
+     Auflage:  10, 11
+       Seite:  147
+    Position:  vorletzte Zeile
+Beschreibung:  ersetze `ucr-, rsr- und tsr- Registers' durch `ucr-, rsr-, tsr- 
+               und scr-Registers'.
+
+     Auflage:  10, 11
+       Seite:  149
+    Position:  vorletzte Zeile
+Beschreibung:  Ersetze `ausgeschrnkte' durch `eingeschrnkte' (netter Ver-
+               tipper, nicht?)
+
+     Auflage:  10, 11
+       Seite:  167
+    Position:  Mitte
+Beschreibung:  Ersetze `...im Anhang beschriebene...' durch `...in der BIOS-
+               Einleitung beschriebene...'.
+
+     Auflage:  10, 11
+       Seite:  241
+    Position:  unten
+Beschreibung:  Fge folgende Bemerkung an: `In allen zur Zeit verffentlichten 
+               GEMDOS-Versionen (bis mindestens einschlielich 0.20) fhrt der 
+               Versuch, als Zielverzeichnis ein vollstndig geflltes Wurzel-
+               verzeichnis anzugeben, zu einem Bus-Error.'
+
+     Auflage:  10, 11
+       Seite:  269
+    Position:  unteres Drittel
+Beschreibung:  TOS 2.06 und TOS 3.06 haben die GEMDOS-Version 0.20. Einzige 
+               bislang bekannte nderung: Medien mit nur einer FAT werden 
+               untersttzt.
+
+     Auflage:  10, 11
+       Seite:  289
+    Position:  unten
+Beschreibung:  Ersetze den letzen Absatz:
+
+               Da das VDI ursprnglich auf dem PC entwickelt wurde, liegen 
+               normalerweise alle Daten im Intel-Format vor. In diesem 
+               Format sind folgende Konvertierungen notwendig:
+
+               16-Bit-Werte:  High- und Low-Byte austauschen
+               32-Bit-Werte:  Byte 3 mit Byte 0, Byte 2 mit Byte 1 tauschen
+               off_table:     Die einzelnen 16-Bit-Werte im Array konver-
+                              tieren
+               dat_table:     Die einzelnen 16-Bit-Werte im Array konver-
+                              tieren
+
+     Auflage:  10, 11
+       Seite:  290
+    Position:  oben
+Beschreibung:  Ersetze `typedef struct' durch `typedef struct _font_hdr'.
+
+     Auflage:  10, 11
+       Seite:  291
+    Position:  obere Hlfte
+Beschreibung:  Ersetze `UBYTE  *hor_table' durch `BYTE  *hor_table'.
+
+     Auflage:  10, 11
+       Seite:  291
+    Position:  Mitte
+Beschreibung:  Ersetze `FONT_HDR *next_font;' durch `struct _font_hdr 
+               *next_font;'.
+
+     Auflage:  10, 11
+       Seite:  291
+    Position:  mittlerer Absatz
+Beschreibung:  Ersetze `ACSII' durch `ASCII' (zweimal).
+
+     Auflage:  10, 11
+       Seite:  292 f.
+    Position:  Mitte
+Beschreibung:  In der angegebenen `ASSIGN.SYS'-Datei fehlen die Eintrge fr 
+               die zustzlichen Auflsungen (5..10) des Atari TT.
+
+     Auflage:  10, 11
+       Seite:  307
+    Position:  Mitte
+Beschreibung:  Ersetze `auszunutzen' durch `ausnutzen'.
+
+     Auflage:  10, 11
+       Seite:  311, 312, 314 und 316
+    Position:  WMMODE 3
+Beschreibung:  Ersetze `Inverse Transparent (XOR mit not(LN_MASK)' durch 
+               `Reverse Transparent (siehe 'vswr_mode()')'.
+
+     Auflage:  10, 11
+       Seite:  312
+    Position:  WMMODE 3
+Beschreibung:  Ersetze `Inverse Transparent (XOR mit not(Eingabe)' durch 
+               `Reverse Transparent (siehe 'vswr_mode()')'.
+
+     Auflage:  10, 11
+       Seite:  316
+    Position:  Ende 1. Absatz
+Beschreibung:  Entferne den Bindestrich aus `Sum-me'
+
+     Auflage:  10
+       Seite:  344
+    Position:  Oben
+Beschreibung:  In der Tabelle fehlt als vorletzte Zeile:
+
+               intin     intin[0]       select
+
+     Auflage:  10
+       Seite:  346
+    Position:  Unten
+Beschreibung:  In den beiden letzten Zeilen der Tabelle sind die Spalten 
+               verrutscht.
+
+     Auflage:  10, 11
+       Seite:  353
+    Position:  Oben
+Beschreibung:  Ersetze die komplette Beschreibung durch:
+
+               Diese Funktion fllt eine von einem Polygonzug umrahmte Flche 
+               aus. Dabei werden die Fllattribute beachtet. Die ausgefllte 
+               Flche wird von einer Linie in der Fllfarbe umgeben. 
+               nderungen der Attribute beziehungsweise des Schreibmodus sind 
+               ber die Attributfunktionen mglich.
+
+               Sollte das Ausgabegert keine Ausfllmglichkeit haben, so wird 
+               die Flche nur mit der aktuellen Fllfarbe umgeben. Offene 
+               Polygonzge werden selbstttig geschlossen, indem der erste 
+               Punkt mit dem letzten verbunden wird. Es mssen mindestens drei 
+               Koordinatenpaare bergeben werden.
+
+               Eine Nullflche (nur ein Koordinatenpaar) wird nur dann als 
+               Punkt gezeichnet, wenn die automatische Umrahmung der Flche 
+               (siehe SET FILL PERIMETER VISIBILITY) eingeschaltet ist.
+
+               Das Verhalten fr zwei Koordinatenpaare ist nicht genau 
+               definiert. Derartige Aufrufe sollten also besser vermieden 
+               werden.
+
+     Auflage:  10, 11
+       Seite:  399
+    Position:  Unten
+Beschreibung:  Im C-Programmtext ist leider eine Zeile verschwunden. Hier noch 
+               einmal das komplette Listing:
+
+               /* Anfangsgre: 999 Punkt */
+
+               WORD asked_for = 999, got_size;
+                
+               got_size = asked_for;
+
+               /* Solange die zuletzt gefundene Gre tatschlich kleiner oder 
+               gleich der verlangten ist */
+
+               while (got_size <= asked_for)
+               {
+                    /* Versuch: ein Punkt kleiner als der zuletzt gefundene */
+                    asked_for = got_size - 1;
+
+                    got_size = vst_point (handle, asked_for, &dummy, &dummy, 
+                                          &dummy, &dummy);
+                        
+                    printf ("available size: %d\n", got_size);
+               }
+
+
+     Auflage:  10, 11
+       Seite:  417
+    Position:  drittletzte Zeile
+Beschreibung:  Die letzte schlieende Klammer ist zuviel.
+
+     Auflage:  10, 11
+       Seite:  460
+    Position:  6. Zeile
+Beschreibung:  Zwischen '0' und '1000' fehlt der Bindestrich.
+
+     Auflage:  10, 11
+       Seite:  473
+    Position:  Parameter
+Beschreibung:  Ersetze:
+
+               element_num:   Nummer des Zeichensatzes (1 bis Maximalanzahl 
+                              der verfgbaren Zeichenstze -- ergibt sich aus 
+                              der Summe des Rckgabewertes beim ffnen der 
+                              Workstation (work_out[10]) und dem Rckgabewert 
+                              von 'vst_load_fonts()')).
+
+               vqt_name():    Index des Zeichensatzes. -1 steht fr einen 
+                              nicht verfgbaren 'dummy font' und wird von 
+                              einigen Gertetreibern anstelle eines nicht 
+                              vorhandenen Systemzeichensatzes zurckgeliefert.
+
+     Auflage:  10, 11
+       Seite:  540
+    Position:  Oben
+Beschreibung:  Hinweis: Alle zur Zeit bekannten AES-Versionen strzen ab, wenn 
+               der `v_opnwk()'-Aufruf zu einem Fehler fhrt (zum Beispiel, 
+               weil in der `ASSIGN.SYS'-Datei der Eintrag fr die entspre-
+               chende Auflsung fehlt.
+
+     Auflage:  10, 11
+       Seite:  545
+    Position:  oberes Drittel
+Beschreibung:  ersetze   `Dieses Fenster wird zum aktuellen Fenster.' 
+               durch     `Dieses Fenster soll zum aktuellen Fenster werden 
+                         (siehe auch: 'wind_set (WF_TOP, ...)')'.
+
+     Auflage:  10, 11
+       Seite:  558
+    Position:  Mitte
+Beschreibung:  WHITEBAK mu den Wert 0x0040, DRAW3D den Wert 0x0080 haben.
+
+     Auflage:  10, 11
+       Seite:  600
+    Position:  oben
+Beschreibung:  Ersetze `Ist dieser krzer, ...' durch `Ist dieser krzer als 
+               acht Zeichen'.
+
+     Auflage:  10, 11
+       Seite:  642
+    Position:  Unten
+Beschreibung:  Hinweis: In den zur Zeit vorliegenden GEM-Funktionen ist das 
+               nach einem 'FMD_FINISH'-Aufruf neugemalte Rechteck brigens 
+               zwei Pixel breiter und hher als angegeben. Damit soll wahr-
+               scheinlich kompensiert werden, da 'form_center()' das Attribut 
+               SHADOWED bei der Berechnung der Flche nicht bercksichtigt.
+
+     Auflage:  10, 11
+       Seite:  690
+    Position:  Mitte
+Beschreibung:  Ersetze: `...hlt von der entsprechenden...' durch `...hngt 
+               von der entsprechenden...'.
+
+     Auflage:  10
+       Seite:  734
+    Position:  `font_size'
+Beschreibung:  Zusatz: Als Parameter sind die gleichen Werte wie in der 
+               TEDINFO-Struktur (also 3 (gro) bzw. 5 (klein)) zu verwenden. 
+               Laut Atari wird zur Zeit nur der groe Zeichensatz untersttzt.
+
+     Auflage:  10, 11
+       Seite:  750
+    Position:  1. Zeile
+Beschreibung:  Streiche einmal `viele'.
+
+     Auflage:  10, 11
+       Seite:  755
+    Position:  unten
+Beschreibung:  ersetze `...im rechten Randbereich...' durch `...im linken 
+               Randbereich...'.
+
+     Auflage:  10, 11
+       Seite:  764
+    Position:  Letzter Absatz; erste Zeile
+Beschreibung:  Ersetze `seine' durch `ihre'.
+
+     Auflage:  10, 11
+       Seite:  1229
+    Position:  Mitte
+Beschreibung:  Ersetze `typedef struct' durch `typedef struct _font_hdr'.
+
+               In der viertletzten Zeile sind einzelnen Spalten verrutscht 
+               (Offset $34).
+
+     Auflage:  10, 11
+       Seite:  1230
+    Position:  Unten
+Beschreibung:  Ersetze `FONT_HDR *next_font;' durch `struct _font_hdr 
+               *next_font;'.
+
+     Auflage:  10
+       Seite:  1409
+    Position:  Mitte
+Beschreibung:  Beim Eintrag `BCONMAP' sollte `12 f.' hinzugefgt werden.
+
+     Auflage:  10
+       Seite:  1413
+    Position:  Oben
+Beschreibung:  Fge ein: `Cache, Mega STE   1368'.
+
+     Auflage:  10
+       Seite:  1472
+    Position:  Unten
+Beschreibung:  Fge ein: `Stacy, LCD-Steuerung   1351'
+

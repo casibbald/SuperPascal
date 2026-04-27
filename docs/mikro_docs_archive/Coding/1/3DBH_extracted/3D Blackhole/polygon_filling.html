@@ -1,0 +1,226 @@
+<html>
+
+<head>
+<title>Polygon Filling</title>
+</head>
+
+<body BGCOLOR="#000000" TEXT="0088FF" LINK="#00FFFF" VLINK="#008080" ALINK="#000080">
+
+<h1>Polygon Filling</h1>
+
+<h2>Third part of <a href="http://pages.infinit.net/jstlouis/3dbhole"><i>The 3D Coding
+Blackhole</i></a> tutorial series</h2>
+
+<ul>
+  <li><a HREF="#Structure">The polygon structure</a> </li>
+  <li><a HREF="#Triangles">Finding the triangles</a> </li>
+  <li><a HREF="#Scanline">Scanning the triangles lines</a> </li>
+</ul>
+<a NAME="Structure">
+
+<h1><font color="#FFFFFF">The polygon structure</font></h1>
+</a>
+
+<p>How will we store our polygons? First of all, you must know that at this state, our
+polygons will be flat 2D polygons. And since the original polygons will be 3D, we will
+only need one temporary 2D polygon, so we can set the maximum number of 2D vertices to a
+constant number, without wasting an important amount of memory: </p>
+
+<pre WRAP>
+typedef struct
+{
+   _2D Points[20];
+    int PointsCount;
+   int Texture;
+}Polygon2D_t;
+</pre>
+
+<p>And our 3D structure: </p>
+
+<pre WRAP>
+typedef struct
+{
+    int Count;
+   int * Vertex;
+   int Texture;
+
+   Vertex_t P,M,N;
+}Polygon_t;
+</pre>
+
+<p>Wondering why the array of vertices consists of integer values? Well... If you think
+about it, in a cube three polygons use the same vertex. So storing and transforming the
+same vertex in 3 polygons would be wasting both time and memory. We will rather store them
+in an <i><b>object</b></i> structure, and in the polygons, we will put the indexes of the
+appropriate vertices. Look at our object structure: </p>
+
+<pre WRAP>
+typedef struct
+{
+   int VertexCount;
+   int PolygonCount;
+   Vertex_t * Vertex;
+   Polygon_t * Polygon;
+   _3D Scaling;
+   _3D Position;
+   _3D Angle;
+   int NeedUpdate;
+}Object_t;
+</pre>
+<a NAME="Triangles">
+
+<h1><font color="#FFFFFF">Finding the triangles</font></h1>
+</a>
+
+<p>As you will realize in the next chapter, drawing a triangle is much simpler than
+drawing an arbitrary polygon. So we'll start by cutting our polygons into 3-vertices
+shapes. The method is really simple and straightforward: </p>
+
+<pre WRAP>
+void POLY_Draw(Polygon2D_t *Polygon)
+{
+    _2D P1,P2,P3;
+   int i;
+
+   P1 = Polygon-&gt;Points[0];
+   for(i=1; i <Polygon->PointsCount-1; i++)
+   {
+       P2=Polygon-&gt;Points[i];
+       P3=Polygon-&gt;Points[i+1];
+       POLY_Triangle(P1,P2,P3,Polygon-&gt;Texture);
+   }
+}
+</pre>
+
+<p align="center"><br>
+<img SRC="triangle.jpg" BORDER="0" width="128" height="128"> <a NAME="Scanline"></p>
+
+<h1><font color="#FFFFFF">Scanning the triangles lines</font></h1>
+</a>
+
+<p>Now what about the <i><b>Triangle</b></i> function? What we have to do is to draw every
+horizontal scan line, and to do so we have to find the starting and ending <b><i>x</i></b>
+coordinate of every row. We will start by defining two simple useful macros to class two
+points vertically and two numbers: </p>
+
+<pre WRAP>
+
+#define MIN(a,b) ((a&lt;b)?(a):(b))
+#define MAX(a,b) ((a&gt;b)?(a):(b))
+#define MaxPoint(a,b) ((a.y &gt; b.y) ? a : b)
+#define MinPoint(a,b) ((b.y &gt; a.y) ? a : b)
+</pre>
+
+<p>Then we will define three others to class three points: </p>
+
+<pre WRAP>
+#define MaxPoint3(a,b,c) MaxPoint(MaxPoint(a,b),MaxPoint(b,c))
+#define MidPoint3(a,b,c) MaxPoint(MinPoint(a,b),MinPoint(a,c))
+#define MinPoint3(a,b,c) MinPoint(MinPoint(a,b),MinPoint(b,c))
+</pre>
+
+<p>You will notice that the <b><i>MidPoint3</i></b> macro doesn't always work properly,
+depending on the order of the 3 points. We will fix this with a <b>if</b> statement. Now
+our declarations: </p>
+
+<pre WRAP>
+void POLY_Triangle(_2D   p1,_2D p2,_2D p3,char c)
+{
+   _2D p1d,p2d,p3d;
+   int xd1,yd1,xd2,yd2,i;
+   int Lx,Rx;
+</pre>
+
+<p>And we will do a first sorting of our 3 points: </p>
+
+<pre WRAP>
+   p1d = MinPoint3(p1,p2,p3);
+   p2d = MidPoint3(p2,p3,p1);
+   p3d = MaxPoint3(p3,p1,p2);
+</pre>
+
+<p>Why is there a rotation of the points when calling these macros? I'll tell you I'm not
+sure myself, but it probably has something to do with the fact that points are passed
+counter-clockwise. Try to change the macro and you will see junk on your screen! Now,
+we're not sure about our MidPoint, so we do a little check, and when we're in this
+condition, it seems that the MinPoint can be wrong, so we correct that too: </p>
+
+<pre WRAP>
+   if(p2.y &lt; p1.y)
+   {
+      p1d=MinPoint3(p2,p1,p3);
+      p2d=MidPoint3(p1,p3,p2);
+   }
+</pre>
+
+<p>I know these orders seem strange, but just try to change them and everything turns to
+garbage so either try to understand them (and then please mail me your conclusion so I can
+add it here), or accept them the way they are. Anyway, now we must compute the deltas: </p>
+
+<pre>
+   xd1=p2d.x-p1d.x;
+   yd1=p2d.y-p1d.y;
+   xd2=p3d.x-p1d.x;
+   yd2=p3d.y-p1d.y;
+</pre>
+
+<p>Ok, here is the first side, that we only bother to draw if there is a delta <b><i>y</i></b>:
+</p>
+
+<pre WRAP>
+   if(yd1)
+      for(i=p1d.y; i&lt;=p2d.y; i++)
+      {
+</pre>
+
+<p>We compute the <b><i>x</i></b> values with the starting <b><i>x</i></b> coordinate,
+adding the delta y between the current point and our starting point, multiplied by the
+inverse of the slope <b>( x / y )</b>. </p>
+
+<pre>
+          Lx = p1d.x + ((i - p1d.y) * xd1) / yd1;
+          Rx = p1d.x + ((i - p1d.y) * xd2) / yd2;
+</pre>
+
+<p>If we are not on the same point, draw the horizontal run, passing the two points in
+order: </p>
+
+<pre>
+          if(Lx!=Rx)
+             VID_HLine(MIN(Lx,Rx),MAX(Lx,Rx),i,c);
+      }
+</pre>
+
+<p>Now we recompute the first deltas and do the second side: </p>
+
+<pre WRAP>
+   xd1=p3d.x-p2d.x;
+   yd1=p3d.y-p2d.y;
+
+   if(yd1)
+      for(i   = p2d.y;   i &lt;= p3d.y;   i++)
+      {
+         Lx =   p1d.x   + ((i   - p1d.y)   * xd2) / yd2;
+         Rx =   p2d.x   + ((i   - p2d.y)   * xd1) / yd1;
+         if(Lx!=Rx)
+            VID_HLine(MIN(Lx,Rx),MAX(Lx,Rx),i,c);
+      }
+}
+</pre>
+
+<p>That's it! You've got your polygon filler! The implementation for a flat filling system
+is only a simple <b>for</b>: </p>
+
+<pre WRAP>
+void VID_HLine(int x1, int x2, int y, char c)
+{
+   int x;
+   for(x=x1; x&lt;=x2; x++)
+      putpixel(x, y, c);
+}</pre>
+
+<p><em>Copyright © 1996-1998 Jerome St-Louis</em></p>
+
+<p><a href="MAILTO:jerstlouis@videotron.ca">jerstlouis@videotron.ca</a></p>
+</body>
+</html>

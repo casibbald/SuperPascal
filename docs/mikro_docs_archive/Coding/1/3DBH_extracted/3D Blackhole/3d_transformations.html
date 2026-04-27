@@ -1,0 +1,289 @@
+<html>
+
+<head>
+<title>3D Transformations</title>
+</head>
+
+<body BGCOLOR="#000000" TEXT="0088FF" LINK="#00FFFF" VLINK="#008080" ALINK="#000080">
+
+<h1>3D Transformations</h1>
+
+<h2>Second part of <a href="http://pages.infinit.net/jstlouis/3dbhole"><i>The 3D Coding
+Blackhole</i></a> tutorial series</h2>
+
+<ul>
+  <li><a HREF="#Coordinates">Saving coordinates</a> </li>
+  <li><a HREF="#Matrices">Implementing a matrix system</a> </li>
+  <li><a HREF="#Trigo">Implementing a trigonometric system</a> </li>
+  <li><a HREF="#Transformations">Creating the transformation matrices</a> </li>
+  <li><a HREF="#Perspective">How to create perspective</a> </li>
+  <li><a HREF="#Objects">Transforming objects</a> </li>
+</ul>
+<a NAME="Coordinates">
+
+<h1><font color="#FFFFFF">Saving coordinates</font></h1>
+</a>
+
+<p>It's now time to start coding some starfield simulator... So what will be our
+fundamental structure, in which the description of every object will be stored? To answer
+this question, we'll ask another one: What are the types of coordinates we need? The most
+obvious are: 
+
+<ul>
+  <li><b><i>Screen Coordinates</i></b>: 2D Coo rdinates relative to the origin of the video
+    display </li>
+  <li><b><i>Local Coordinates</i></b>: 3D Coordinates relative to the origin of an object </li>
+</ul>
+
+<p>But we must not forget intermediate coordinates, such as: 
+
+<ul>
+  <li><b><i>World Coordinates</i></b>: 3D Coordinates relative to the origin of the 3D world </li>
+  <li><b><i>Aligned Coordinates</i></b>: World Coordinates transformed so that the viewer
+    position becomes the world origin </li>
+</ul>
+
+<p>Here are the fundamental basic structures: </p>
+
+<pre WRAP>
+typedef struct
+{
+   short x, y;
+}_2D;
+
+typedef struct
+{
+   float x, y, z;
+}_3D;
+</pre>
+
+<p>And here comes the structure for a set of coordinates that we'll call vertex, since the
+word &quot;vertex&quot; refers to the meeting of two or more edges of a poyhedron. Our
+vertices can simply be regarded as vectors described with different systems. </p>
+
+<pre WRAP>
+typedef struct
+{
+   _3D Local;
+   _3D World;
+   _3D Aligned;
+}Vertex_t;
+</pre>
+<a NAME="Matrices">
+
+<h1><font color="#FFFFFF">Implementing a matrix system</font></h1>
+</a>
+
+<p>We're gonna store all our matrices in 4x4 array of floating-point numbers. So we'll
+have this matrix when we'll need transfromations: </p>
+
+<pre WRAP>
+float matrix[4][4];
+</pre>
+
+<p>then we create some function to copy a temporary matrix to the global matrix: </p>
+
+<pre WRAP>
+void MAT_Copy(float source[4][4], float dest[4][4])
+{
+    int i,j;
+    for(i=0; i&lt;4; i++)
+      for(j=0; j&lt;4; j++)
+         dest[i][j]=source[i][j];
+} 
+</pre>
+
+<p>Quite simple? Now, the big part with matrix, multiplying two matrices together. It's
+now time to try to understand the big formula in the maths tutorial, with this code: </p>
+
+<pre WRAP>
+void MAT_Mult(float mat1[4][4], float mat2[4][4], float dest[4][4])
+{
+   int i,j;
+   for(i=0; i&lt;4; i++)
+      for(j=0; j&lt;4; j++)
+         dest[i][j]=mat1[i][0]*mat2[0][j]+
+                    mat1[i][1]*mat2[1][j]+
+                    mat1[i][2]*mat2[2][j]+
+                    mat1[i][3]*mat2[3][j];
+}
+</pre>
+
+<p>Did you get it now?? Isn't it way clearer? Now let's do the product of a vector by a
+matrix: </p>
+
+<pre WRAP>
+void VEC_MultMatrix(_3D *Source,float mat[4][4],_3D *Dest)
+{
+    Dest-&gt;x=Source-&gt;x*mat[0][0]+
+            Source-&gt;y*mat[1][0]+
+            Source-&gt;z*mat[2][0]+
+                      mat[3][0];
+    Dest-&gt;y=Source-&gt;x*mat[0][1]+
+            Source-&gt;y*mat[1][1]+
+            Source-&gt;z*mat[2][1]+
+                      mat[3][1];
+    Dest-&gt;z=Source-&gt;x*mat[0][2]+
+            Source-&gt;y*mat[1][2]+
+            Source-&gt;z*mat[2][2]+
+                      mat[3][2];
+}
+</pre>
+
+<p>And here's your matrix system, working perfectly! <a NAME="Trigo"></p>
+
+<h1><font color="#FFFFFF">Implementing a trigonometric system</font></h1>
+</a>
+
+<p>I know almost every C compiler in the world comes up with a maths library with
+trigonometric functions, but don't ever use them every time you need one simple sine!! The
+computation of sines and cosines is a multitude of factorials and divides! Build yourself
+trigonometric tables instead. First decide the number of degrees you want, then allocate
+some place to hold the values: </p>
+
+<pre WRAP>
+float SinTable[256], CosTable[256];
+</pre>
+
+<p>Then use a macro that will bother about putting every degree positive, and doing the
+wrap-around when it goes over the number of degrees, then return you the good value. If
+you use a number of degree which is a power of two, you can use a &quot;&amp;&quot;, which
+is much faster, instead of a &quot;%&quot; to do so. For a 256-degrees based trigonometric
+system: </p>
+
+<pre WRAP>
+#define SIN(x) SinTable[ABS((int)x&amp;255)]
+#define COS(x) CosTable[ABS((int)x&amp;255)]
+</pre>
+
+<p>Once you've defined everything, create an initializing function that you will call at
+the beginning of your program: </p>
+
+<pre WRAP>
+void M3D_Init()
+{
+   int d;
+   for(d=0; d&lt;256; d++)
+   {
+       SinTable[d]=sin(d*PI/128.0);
+       CosTable[d]=cos(d*PI/128.0);
+   }
+}
+</pre>
+<a NAME="Transformations">
+
+<h1><font color="#FFFFFF">Creating the transformation matrices</font></h1>
+</a>
+
+<p>Now here is what the transformation matrices look like, written in C: </p>
+
+<pre WRAP>
+float mat1[4][4], mat2[4][4];
+
+void MAT_Identity(float mat[4][4])
+{
+    mat[0][0]=1; mat[0][1]=0; mat[0][2]=0; mat[0][3]=0;
+    mat[1][0]=0; mat[1][1]=1; mat[1][2]=0; mat[1][3]=0;
+    mat[2][0]=0; mat[2][1]=0; mat[2][2]=1; mat[2][3]=0;
+    mat[3][0]=0; mat[3][1]=0; mat[3][2]=0; mat[3][3]=1;
+}
+
+void TR_Translate(float matrix[4][4],float tx,float ty,float tz)
+{
+   float tmat[4][4];
+   tmat[0][0]=1;  tmat[0][1]=0;  tmat[0][2]=0;  tmat[0][3]=0;
+   tmat[1][0]=0;  tmat[1][1]=1;  tmat[1][2]=0;  tmat[1][3]=0;
+   tmat[2][0]=0;  tmat[2][1]=0;  tmat[2][2]=1;  tmat[2][3]=0;
+   tmat[3][0]=tx; tmat[3][1]=ty; tmat[3][2]=tz; tmat[3][3]=1;
+   MAT_Mult(matrix,tmat,mat1);
+   MAT_Copy(mat1,matrix);
+}
+
+void TR_Scale(float matrix[4][4],float sx,float sy, float sz)
+{
+   float smat[4][4];
+   smat[0][0]=sx; smat[0][1]=0;  smat[0][2]=0;  smat[0][3]=0;
+   smat[1][0]=0;  smat[1][1]=sy; smat[1][2]=0;  smat[1][3]=0;
+   smat[2][0]=0;  smat[2][1]=0;  smat[2][2]=sz; smat[2][3]=0;
+   smat[3][0]=0;  smat[3][1]=0;  smat[3][2]=0;  smat[3][3]=1;
+   MAT_Mult(matrix,smat,mat1);
+   MAT_Copy(mat1,matrix);
+}
+
+void TR_Rotate(float matrix[4][4],int ax,int ay,int az)
+{
+   float xmat[4][4], ymat[4][4], zmat[4][4];
+   xmat[0][0]=1;        xmat[0][1]=0;        xmat[0][2]=0;        xmat[0][3]=0;
+   xmat[1][0]=0;        xmat[1][1]=COS(ax);  xmat[1][2]=SIN(ax);  xmat[1][3]=0;
+   xmat[2][0]=0;        xmat[2][1]=-SIN(ax); xmat[2][2]=COS(ax);  xmat[2][3]=0;
+   xmat[3][0]=0;        xmat[3][1]=0;        xmat[3][2]=0;        xmat[3][3]=1;
+
+   ymat[0][0]=COS(ay);  ymat[0][1]=0;        ymat[0][2]=-SIN(ay); ymat[0][3]=0;
+   ymat[1][0]=0;        ymat[1][1]=1;        ymat[1][2]=0;        ymat[1][3]=0;
+   ymat[2][0]=SIN(ay);  ymat[2][1]=0;        ymat[2][2]=COS(ay);  ymat[2][3]=0;
+   ymat[3][0]=0;        ymat[3][1]=0;        ymat[3][2]=0;        ymat[3][3]=1;
+
+   zmat[0][0]=COS(az);  zmat[0][1]=SIN(az);  zmat[0][2]=0;        zmat[0][3]=0;
+   zmat[1][0]=-SIN(az); zmat[1][1]=COS(az);  zmat[1][2]=0;        zmat[1][3]=0;
+   zmat[2][0]=0;        zmat[2][1]=0;        zmat[2][2]=1;        zmat[2][3]=0;
+   zmat[3][0]=0;        zmat[3][1]=0;        zmat[3][2]=0;        zmat[3][3]=1;
+
+   MAT_Mult(matrix,ymat,mat1);
+   MAT_Mult(mat1,xmat,mat2);
+   MAT_Mult(mat2,zmat,matrix);
+}
+</pre>
+<a NAME="Perspective">
+
+<h1><font color="#FFFFFF">How to create perspective</font></h1>
+</a>
+
+<p align="center">How can you create the illusion of something seeming close to you, and
+something far away on a 2D screen?? The question of perspective has always been a problem
+for artists and programmers. Different methods has been used. But as strange as it can
+seem, the most realistic one only consist in a simple division. Here's the formula we will
+use to project our 3D world on a 2D screen: <font SIZE="+1"><i><b>P( <sub>f</sub> ):(x, y,
+z)==&gt;( fx / z + XOrigin, fy / z + YOrigin )</b></i></font><br>
+Here <b><i>f</i></b> is the &quot;focal distance&quot;. It represents the distance from
+the viewer to the screen, and is usually between 80 and 200. XOrigin and YOrigin are the
+coordinates of the center of the video display. You want to know what a <i>Project </i>function
+would look like? </p>
+
+<pre WRAP>
+#define FOCAL_DISTANCE 200
+void Project(vertex_t * Vertex)
+{
+   if(!Vertex-&gt;Aligned.z)
+	Vertex-&gt;Aligned.z=1;
+   Vertex-&gt;Screen.x = FOCAL_DISTANCE * Vertex-&gt;Aligned.x / Vertex-&gt;Aligned.z + XOrigin;
+   Vertex-&gt;Screen.y = FOCAL_DISTANCE * Vertex-&gt;Aligned.y / Vertex-&gt;Aligned.z + YOrigin;
+}</pre>
+
+<p>You like the line <i>z = 1</i>?? I hate divides by zero... They're everywhere... <a
+NAME="Objects"></p>
+
+<h1><font color="#FFFFFF">Transforming objects</font></h1>
+</a>
+
+<p>Now that you have all the necessary tools to transform vertices, you should know the
+main steps you need to execute. 
+
+<ul type="square">
+  <li>Initialize all the local coordinates of every vertices </li>
+  <li>Set the global matrix to an identity matrix </li>
+  <li>Scale the global matrix with the scaling of the object </li>
+  <li>Rotate the global matrix with the angle of the object </li>
+  <li>Translate the global matrix with the position of the object </li>
+  <li>Multiply the local coordinates by the global matrix to get the world coordinates </li>
+  <li>Set the global matrix to an identity matrix </li>
+  <li>Translate the global matrix with the negative position of the viewer </li>
+  <li>Rotate the global matrix with the negative angle of the viewer </li>
+  <li>Multiply the world coordinates by the global matrix to get the aligned coordinates </li>
+  <li>Project the aligned coordinates to get the screen coordinates</li>
+</ul>
+
+<p><em>Copyright © 1996-1998 Jerome St-Louis</em></p>
+
+<p><a href="MAILTO:jerstlouis@videotron.ca">jerstlouis@videotron.ca</a></p>
+</body>
+</html>

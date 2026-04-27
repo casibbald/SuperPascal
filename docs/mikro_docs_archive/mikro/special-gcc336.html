@@ -1,0 +1,299 @@
+<html>
+<body>
+
+<h2><strong>GCC 3.3.6 useage for Atari projects</strong></h2>
+<i>Miro Kropacek , miro.kropacek(at)gmail.com</i>
+
+<br>&nbsp;<br>
+
+<ol>
+<li>	<a href="#preface">Preface</a>
+<li>	<a href="#setup">Setting up stuff for cross compiling</a>
+<li>	<a href="#binutils">Optimizing binutils + gcc</a>
+<li>	<a href="#final">Final notes</a>
+</ol>
+
+<br>&nbsp;<br>
+
+
+<a name="preface"><h3>Preface</h3></a>
+
+Week or two ago I decided to try new gcc-3.3.6 for Atari Falcon. The main
+reason was to see how much it helps with quake compilation, i.e. if the code
+will be at least a little bit faster. So I downloaded Zorro's binaries
+(<a href="http://users.skynet.be/atarix/gcc.tgz">http://users.skynet.be/atarix/gcc.tgz</a>) and tried it. It worked pretty well but
+I noticed the compilation process is slower than with gcc-2.95.3 even with the
+same compilation flags (not speaking about -O3 flag).
+<br>&nbsp;<br>
+
+After some thinking and playing with gcc's configure I've seen some chances
+to speed up that compilation time: whole gcc is compiled for bare 68000
+without FPU! (except m68020 and m68020-60 libraries but this is a minor
+thing). And even more, whole project is compiled with -O2 flag so again we
+can do something with this (replace with -O3 flag). And finally, whole
+gcc-3.3.6 is compiled using gcc-2.95.3... So we need to do three things:
+<br>&nbsp;<br>
+- compile gcc-3.3.6 against gcc-3.3.6 and not gcc-2.95.3<br>
+- replace -O2 flag with -O3 one<br>
+- add -m68060 flag to produce 68060 optimized code
+<br>&nbsp;<br>
+
+After look at Patrice Mandin's tutorial
+(<a href="http://perso.orange.fr/patrice.mandin/v3/en/howto-gcc-c.html">http://perso.orange.fr/patrice.mandin/v3/en/howto-gcc-c.html</a>) I haven't
+seen any problem with this "fix" so I started gcc-3.3.6 compilation... and
+here it comes: to reach all three targets we need to compile gcc-3.3.6 with
+old 2.95.3 compiler and then compile gcc-3.3.6 (again) with our new gcc-3.3.6
+compiler (with new -m68060 and -O3 flags). This procedure includes also
+compiling mintlib with similar flags (since gcc uses part of mintlib) to
+have the maximum performance and probably we want to have newer binutils
+(2.16.1), too (with the same optimizations). You see the problem: 68060@100
+MHz is quite powerfull CPU but where raw power comes into play we'll soon
+notice its age (more than 10 years), i.e. slowness. Solution is on the hand:
+cross compilation.
+<br>&nbsp;<br>
+
+There are some m68k-atari-mint cross compilers available
+(<a href="http://sparemint.atariforge.net/sparemint/cross-mint.html">http://sparemint.atariforge.net/sparemint/cross-mint.html</a>) but they are
+pretty old, too. So we need to compile new gcc-3.3.6 cross compiler and
+then, using this compiler, to compile native gcc-3.3.6 compiler for atari.
+All in all we need ot build three compilers:
+<br>&nbsp;<br>
+1. native host compiler (host = linux, bsd, ...)<br>
+2. native cross m68k-atari-mint compiler<br>
+3. atari compiler
+<br>&nbsp;<br>
+
+This procedure (generating (cross)compiler for the host which differs from
+the build machine) is called Canadian Cross.
+<br>&nbsp;<br>&nbsp;<br>
+
+
+
+
+<a name="setup"><h3>Setting up stuff for cross compiling</h3></a>
+
+So now we know what we need to do. I used mentioned Patrice Mandin's
+tutorial for native gcc-3.3.6 and cross gcc-3.3.3
+(<a href="http://perso.orange.fr/patrice.mandin/v3/en/howto-cross333.html">http://perso.orange.fr/patrice.mandin/v3/en/howto-cross333.html</a>) so there
+will be some passages very similar.
+<br>&nbsp;<br>
+
+OK, so here is step-by-step tutorial how to reach our target:
+<br>&nbsp;<br>
+
+<strong>1. Download source code + patches to the same directory</strong>
+<br>&nbsp;<br>
+
+gcc-3.3.6 package: <a href="http://ftp.gnu.org/gnu/gcc/gcc-3.3.6/gcc-3.3.6.tar.bz2">http://ftp.gnu.org/gnu/gcc/gcc-3.3.6/gcc-3.3.6.tar.bz2</a> (22.9 MB)<br>
+binutils-2.16.1 package: <a href="http://ftp.gnu.org/gnu/binutils/binutils-2.16.1.tar.bz2">http://ftp.gnu.org/gnu/binutils/binutils-2.16.1.tar.bz2</a> (12.0 MB)
+<br>&nbsp;<br>
+
+gcc-3.3.6 patch: <a href="http://perso.orange.fr/patrice.mandin/download/diff/gcc-c-3.3.6.diff.gz">http://perso.orange.fr/patrice.mandin/download/diff/gcc-c-3.3.6.diff.gz</a><br>
+binutils-2.16.1 patch: <a href="http://perso.orange.fr/patrice.mandin/download/diff/binutils-2.16.1-mint-4.diff.gz">http://perso.orange.fr/patrice.mandin/download/diff/binutils-2.16.1-mint-4.diff.gz</a>
+<br>&nbsp;<br>
+
+MiNTLib binary snapshot: <a href="http://files.dhs.nu/files_coding/mintlib-current.tar.bz2">http://files.dhs.nu/files_coding/mintlib-current.tar.bz2</a> (2.7 MB) [already compiled against gcc-3.3.6 -O3]
+<br>&nbsp;<br>
+
+
+<strong>2. Compile native binutils + gcc for host</strong>
+<br>&nbsp;<br>
+
+It's possible on your host machine (linux etc) is already gcc installed.
+Believe me, this step is really good idea even when it's gcc installed --
+you'll avoid problems with version-incompatibility (gcc-4.x.x has more
+restrictive rules for pointer arithmetics) and there are even more problems
+(finding the right paths etc).
+<br>&nbsp;<br>
+
+<pre>
+tar xjf binutils-2.16.1.tar.bz2
+rm binutils-2.16.1.tar.bz2
+
+mkdir binutils-2.16.1-linux
+cd binutils-2.16.1-linux
+../binutils-2.16.1/configure --prefix=$HOME/cross-tools
+make && make install
+cd ..
+
+rm -rf binutils-2.16.1-linux
+
+tar xjf gcc-3.3.6.tar.bz2
+rm gcc-3.3.6.tar.bz2
+
+We set PATH variable to point to our newly created directory. That means if
+you type "ar", "gcc" etc in the end, shell will use this ones and not
+/usr/bin/ar, /usr/bin/gcc etc.
+
+export PATH=$HOME/cross-tools/bin:$PATH
+
+mkdir gcc-3.3.6-linux
+cd gcc-3.3.6-linux
+../gcc-3.3.6/configure --prefix=$HOME/cross-tools --enable-languages="c"
+make && make install
+cd ..
+
+rm -rf gcc-3.3.6-linux
+</pre>
+<br>
+
+<strong>3. Compile cross binutils + gcc for host</strong>
+<br>&nbsp;<br>
+
+OK, now we have native linux gcc + binutils. We can start phase two, making
+cross compiler.
+<pre>
+
+cd binutils-2.16.1
+gunzip -c ../binutils-2.16.1-mint-4.diff.gz | patch -p1
+cd ..
+
+rm binutils-2.16.1-mint-4.diff.gz
+
+mkdir binutils-2.16.1-cross
+cd binutils-2.16.1-cross
+../binutils-2.16.1/configure --prefix=$HOME/cross-tools --target=m68k-atari-mint
+make && make install
+cd ..
+
+rm -rf binutils-2.16.1-cross
+
+cd gcc-3.3.6
+gunzip -c ../gcc-c-3.3.6.diff.gz | patch -p1
+cd ..
+
+rm gcc-c-3.3.6.diff.gz
+
+tar xjf mintlib-current.tar.bz2
+rm mintlib-current.tar.bz2
+
+mkdir gcc-3.3.6-cross
+cd gcc-3.3.6-cross
+../gcc-3.3.6/configure --prefix=$HOME/cross-tools --enable-languages="c" --target=m68k-atari-mint --with-sysroot=$(pwd)/../mintlib-current
+make && make install
+cd ..
+
+rm -rf gcc-3.3.6-cross
+</pre>
+
+
+<strong>4. Compile native binutils + gcc for Atari</strong>
+<br>&nbsp;<br>
+
+OK, cross compiler done. Now we're going to the most interesting part,
+building native atari stuff. Gcc has a support for cross compilation in any
+way so you can specify:
+<br>&nbsp;<br>
+
+- host: on what machine will be gcc running<br>
+- target: for what machine will be the code generated<br>
+- build: on what machine is gcc build
+<br>&nbsp;<br>
+
+If we specify host (default guessed via configure script), target will be
+used with the same name. But you _HAVE_ to specify build machine by hand! If
+you aren't sure about the name of your build machine, go to
+$HOME/cross-tools and look at something which looks similar to your machine
+:) (you'll see m68k-atari-mint directory, some system ones like usr, bin and
+the host machine directory -- this is the one you're looking for)
+<pre>
+
+mkdir binutils-2.16.1-atari
+cd binutils-2.16.1-atari
+../binutils-2.16.1/configure --prefix=$HOME/atari-binutils --host=m68k-atari-mint --build=i686-pc-linux-gnu
+make && make install
+cd ..
+
+rm -rf binutils-2.16.1-atari
+
+mkdir gcc-3.3.6-atari
+cd gcc-3.3.6-atari
+../gcc-3.3.6/configure --prefix=$HOME/atari-gcc --enable-languages="c" --host=m68k-atari-mint --build=i686-pc-linux-gnu
+make && make install
+cd ..
+
+rm -rf gcc-3.3.6-atari
+
+</pre>
+And we're done -- binaries for your Atari are in $HOME/atari-gcc and
+$HOME/atari-binutils.
+<br>&nbsp;<br>&nbsp;<br>
+
+
+
+
+<a name="binutils"><h3>Optimizing binutils + gcc</h3></a>
+
+As I said, there are various options how to speed gcc (and binutils) up:
+<br>&nbsp;<br>
+
+- add -m68060 flag<br>
+- replace -O2 with -O3 flag<br>
+- remove -g flag (this will decrease binary size a lot; we really don't need debug
+  symbols in gcc binaries...)
+<br>&nbsp;<br>
+
+
+<strong>1. Binutils</strong>
+<br>&nbsp;<br>
+
+This is really easy. Just replace 'make' command with:
+<br>
+<pre>make BOOT_CFLAGS="-O3 -m68060" CFLAGS="-O3 -m68060" CFLAGS_FOR_TARGET="-O3 -m68060"</pre>
+
+
+<strong>2. Gcc</strong>
+<br>&nbsp;<br>
+
+Here we have to care about various things: gcc building process needs some
+things to build on linux in all cases and the rest on cross compiler. Then it
+needs to build a library for various targets (m68020, m68020-60, mshort,
+...) so we can't just replace all CFLAGS as in previous case.
+<br>&nbsp;<br>
+
+So go to gcc-3.3.6-atari directory and:
+<br>&nbsp;<br>
+
+- In the Makefile file:<br>
+- set CFLAGS = -O3 (replace O2 and remove -g)<br>
+- set CC = m68k-atari-mint-gcc -m68060 (add -m68060)<br>
+- replace -O2 to -O3 in CFLAGS_FOR_TARGET
+- set CFLAGS = -O3 in libiberty/Makefile<br>
+- replace -O2 to -O3 & delete -g for: LIBGCC2_FLAGS, CRTSTUFF_CFLAGS, LIBGCC2_DEBUG_CFLAGS
+  in gcc/Makefile<br>
+- set CFLAGS = -O3 -m68060 in gcc/intl/Makefile
+<br>&nbsp;<br>
+
+I recommend to make these steps after configure script in the clean directory
+(there will be some Makefiles generated).
+
+<br>&nbsp;<br>&nbsp;<br>
+
+
+
+<a name="final"><h3>Final notes</h3></a>
+
+You don't need to delete directories in the cross building process
+(gcc-3.3.6-cross, gcc-3.3.6-atari etc) since you can re-run configure with
+various prefix, install into separate directory and make binary package
+(rpm, deb, ...) for this build.
+<br>&nbsp;<br>
+
+Of course, this tutorial isn't for total beginners, I expect you have
+installed some development environemnt both on your Linux and Atari.
+<br>&nbsp;<br>
+
+I didn't focused on g++ since I don't need it :) But the process is very
+similar, just follow Patrice's g++ tutorial about 3.3.6 version...
+<br>&nbsp;<br>
+
+Final results are very good, I've got about 30% speedup by quake
+compilation. Imagine MiNTLib compilation speedup :) But don't forget all
+this stuff isn't tested very well so be carefull. Only thing I can confirm
+that raw gcc-3.3.6 works good -- i.e. I used gcc-3.3.6 binary for compiling
+earch source file but I used old binutils for the rest.
+<br>&nbsp;<br>
+
+Enjoy :)
+
+</body></html>

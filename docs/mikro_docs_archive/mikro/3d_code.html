@@ -1,0 +1,194 @@
+<HTML><HEAD><TITLE>myStiC bYTeS - atari fALcoN demoCREW</TITLE>
+<META http-equiv=content-type content=text/html;charset=ISO-8859-2>
+<STYLE>
+A {
+COLOR: #001f6f; TEXT-DECORATION: none
+}
+</STYLE>
+</HEAD>
+<BODY bgColor=FFEFD5 align=center>
+<br clear=all>
+<TABLE cellSpacing=0 cellPadding=0 width=640 height=100% valign=middle rules=none align=center border=0 frame=void>
+<tbody>
+<tr>
+<td bgColor=FFEFD5 align=justify><font size="3" face=Courier color=black><pre>
+- --- - -----------------------------------------------------------------------
+<center><h2>Some hints for 3D coding</center></h2>
+--------------------------------------------------------------------- - --- --- 
+
+This shouldn't be a complex tutorial  or  anything,  simply I've got an idea to
+write some of my  experiences  I  got  in  my  beginnings.  In other words, the
+lamers' area starts here =)
+
+Structures
+==========
+Believe or not, but the  amount  of  time  you'll  spend with improving your 3D
+engine directly depends on structuring your data.  A typical example is a cube;
+you wont write 4 points for every face  (24  points) but only 8 points and your
+basic structure will look:
+
+face1: dc.l p1,p2,p3,p4
+face2: dc.l p2,p5,p6,p3 ... etc This lead us to
+
+Pointers
+========
+I've seen a lot of C sources where  structures are used, but only as parameters
+by calling a poly routine for  example  and then using "direct" values. Sorting
+by y-coordinates was done by simple 3-compares swapping. This is no problem for
+flat-shaded poly for example, but if you're  coding a texture mapper, your face
+looks like:
+
+face1: dc.l p1,p2,p3,p4,t_p1,t_p2,t_p3,t_p4
+
+Yeah ppl, I've even seen source which swaps x, y, tx, ty values for every point
+! Best solution is to load  only  y-values  into registers and swap pointers to
+texture coordinates. As  I  wrote:  better  structure  =  less complications in
+future (no one says this is that structure :-))
+
+Clipping
+========
+You know that - you have working rotation  of 3D object, but you aren't free to
+set any parameters you want, you have to be careful about the size of projected
+picture becoz of videoram  limits.  But  hey,  we  aren't  owners  of stupid PC
+machines! Imagine the meaning of "clipping": you  have some big scene and small
+window (our screen) you are  looking  through.  Clipping  algorithms do in most
+cases two things:
+
+1) if a whole polygon is in/out of screen - skip it
+2) if some part of a polygon is on boundary, clip it
+
+And this clipping is done  using  brutal  methods  (if  you  ever tried to code
+simple line clipper, you know what I'm talking about)
+
+Please note that word "window" in my explanation: it's similar to the human eye
+- if you see something, you see it. If  not, you don't see it (logical :-)) And
+why we can't do it on our Falcon, too?  Hey,  we  can do it ! Simply if a whole
+polygon is out of screen, you don't draw  it.  And if it lies on a boundary, we
+leave it as it is ! More  concretely  -  if you reserve some space "around" the
+screen ram area,  you  can  drop  any  clipping  and  start  to  show this cool
+advantage to PC coders :)) Top  and  bottom areas aren't problem. In horizontal
+direction you need  to  increase  number  of  words  per  line (using $ffff820e
+register) and here you are - clipped picture without any clipping :)
+
+Sorting
+=======
+Another big mystery in 3D coding. We are in need of sorting faces if you rotate
+inconvex objects, here face killing by dot product isn't enough. Most simple is
+the bubble sort. It's nice,  small  and  slow.  Then comes sort-algorithms like
+insert, merge or quicksort.  I  can  code  none  of  these algorithms :))) Some
+months ago I found very nice  sort-algorithm  called  Radix sort. It's based on
+the idea numbers aren't sorted  but  they  are  used  as indexes. Ofcourse your
+number should be positive and  <256  (in  the  simplest  case).  So you have to
+allocate 256*n words in memory, where  n  is  number  of entries. Here you are,
+some C lame code:
+
+int radix (int *array, int entries) {
+
+int *low_radix_stack[256];
+int hash_entry [256];
+int i, j, k;
+
+/* init part */
+for (i=0; i<256; i++) {
+        hash_entry [i] = 0;
+        low_radix_stack[i] = (int *)malloc (entries*sizeof(int));
+        if (low_radix_stack[i] == NULL) {
+                printf ("\nNo memory");
+                return (1);
+                }
+        }
+
+/* "sorting" */
+for (i=0; i<entries; i++) {
+        j = array [i];
+        k = hash_entry [j];
+        low_radix_stack [j][k] = j;
+        hash_entry [j] ++;
+        }
+
+k = 0;
+
+/* save sorted values */
+for (i=0; i<256; i++) {
+        for (j=0; j<hash_entry[i]; j++, k++) {
+                array[k] = low_radix_stack [i][j];
+                }
+        }
+
+return (0); }
+
+Please note this code is  totally  unoptimized.  This algorithm has a fantastic
+Advantage in that the speed  needed  for  "sorting"  is increased LINEARLY. And
+memory needed for stacks is again  increased  linearly  (512*n words for 16 bit
+radix etc) Of course, you can code  "true"  16 bit radix with stacks of 65536*n
+size, but this is very much even for PCs  :-) It's very easy to rewrite it into
+030 asm, it can be optimized to the fantastic speed.
+
+Favourite errors
+===============
+Here I give you some of examples how  to  find  not so visible bugs (esp if you
+haven't seen anything similar before)
+
+divs.w dy,dx
+~~~~~~~~~~~~
+this instruction divides 32/16 numbers and saves a 16 bit result, right? One of
+my errors was dividing in 8.8  arithmetic: some number*256/another number. This
+works nicely if you're using  "normal"  numbers.  But  what about 199*256/1 for
+example? Result = $c700? NO :) It's a  word? Yes. So what's wrong? I forgot I'm
+dividing SIGNED numbers => result can be max $7fff ! It's very hard to discover
+since CPU continues to the next instruction without any problem (numbers aren't
+divided), only V flag is set.. be careful !
+
+segments
+~~~~~~~~
+be very careful if you're using source includes (famous include 'code.s')
+
+file1.s:
+                text
+                nop
+
+                data
+                dc.l    -1
+
+                include 'file2.s'
+
+file2.s:
+                lea     label,a0                ;a0 = label
+                nop
+                moveq   #0,d0
+                lea     (label,pc,d0.w),a1      ;a0 != a1 ???
+                nop
+
+                bss
+label           ds.l    1
+
+This bug made me crazy :-) What's  wrong?  I  forgot to write 'section text' in
+the begin of the file2.s So, the file  is included into data segment and all PC
+relative modes work strange ! Devpac ignores  this  in case of data segment, it
+only writes an error with the bss.
+
+memory
+~~~~~~
+Devpac is a very strange program :-)  Its strange and not-so-system GUI doesn't
+care about memory limits. In better case, you type one more line to your source
+code and during assembling you will see TENS of errors without any reason... in
+the worst case scenario, you wont see  any  errors and your binary file will be
+corrupted (tos error #35) And my favourite:  no  errors, no tos error, but your
+data will be corrupted ! Double-click  on  foo.prg, code is running..... bang !
+strange gfx data or even worse, bombs,  system halted etc... I really love this
+tool :-)
+
+OK, this is about all I can  remember...  I  know, not such cool article as you
+expected (???), but I promised Grey this one, so here you are :)
+
+<b>-------------------------------------------------------------------------------
+   MiKRO              XE/XL/MegaSTE/Falcon/CT60              <a href=http://mikro.atari.org>mikro.atari.org</a>
+-------------------------------------------------------------------------------</b>
+
+</pre> 
+</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

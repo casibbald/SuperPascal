@@ -271,6 +271,81 @@ impl std::error::Error for ParserError {}
 /// Result type for parser operations (legacy)
 pub type ParserResult<T> = Result<T, ParserError>;
 
+/// Collection of parser errors with recovery support
+#[derive(Debug, Clone, Default)]
+pub struct ParseErrors {
+    /// All accumulated errors
+    pub errors: Vec<ParserError>,
+}
+
+impl ParseErrors {
+    /// Create a new empty error collection
+    pub fn new() -> Self {
+        Self { errors: Vec::new() }
+    }
+
+    /// Add an error to the collection
+    pub fn push(&mut self, error: ParserError) {
+        self.errors.push(error);
+    }
+
+    /// Check if there are any errors
+    pub fn is_empty(&self) -> bool {
+        self.errors.is_empty()
+    }
+
+    /// Get the number of errors
+    pub fn len(&self) -> usize {
+        self.errors.len()
+    }
+
+    /// Get diagnostics for all errors
+    pub fn diagnostics(&self, file: Option<String>) -> Vec<Diagnostic> {
+        self.errors
+            .iter()
+            .map(|e| e.to_diagnostic(file.clone()))
+            .collect()
+    }
+
+    /// Format all errors as FPC-compatible messages
+    pub fn format_fpc(&self, file: Option<String>) -> String {
+        if self.errors.is_empty() {
+            return String::new();
+        }
+
+        let count = self.errors.len();
+        let mut output = String::new();
+
+        for (i, diag) in self.diagnostics(file).iter().enumerate() {
+            if i > 0 {
+                output.push('\n');
+            }
+            output.push_str(&diag.format_fpc());
+        }
+
+        // Add summary
+        let error_count = self
+            .errors
+            .iter()
+            .filter(|e| {
+                matches!(
+                    e,
+                    ParserError::UnexpectedToken { .. } | ParserError::InvalidSyntax { .. }
+                )
+            })
+            .count();
+
+        if error_count > 0 {
+            output.push_str(&format!(
+                "\n{} error(s) found",
+                error_count
+            ));
+        }
+
+        output
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

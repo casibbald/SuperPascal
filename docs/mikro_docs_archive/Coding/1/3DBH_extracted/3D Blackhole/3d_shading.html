@@ -1,0 +1,125 @@
+<html>
+
+<head>
+<title>3D Shading</title>
+</head>
+
+<body BGCOLOR="#000000" TEXT="0088FF" LINK="#00FFFF" VLINK="#008080" ALINK="#000080">
+
+<h1>3D Shading</h1>
+
+<h2>Seventh part of <a href="http://pages.infinit.net/jstlouis/3dbhole"><i>The 3D Coding
+Blackhole</i></a> tutorial series</h2>
+
+<ul>
+  <li><a HREF="#Normals">Computing the Normals</a> </li>
+  <li><a HREF="#Crossproduct">Doing the Cross Product</a> </li>
+  <li><a HREF="#Lighttable">Using a light table</a> </li>
+</ul>
+<a NAME="Normals">
+
+<h1><font color="#FFFFFF">Computing the Normals</font></h1>
+</a>
+
+<p>Ok... we deeply discussed vectors and normals in the 3D mathematics tutorial, so here
+are some implementations: </p>
+
+<pre WRAP>
+float VEC_DotProduct(_3D Vector1, _3D Vector2)
+{
+    return (Vector1.x*Vector2.x+Vector1.y*Vector2.y+Vector1.z*Vector2.z);
+}
+_3D VEC_CrossProduct(_3D Vector1, _3D Vector2)
+{
+   return P3D(Vector1.y*Vector2.z-Vector1.z*Vector2.y,
+              Vector1.z*Vector2.x-Vector1.x*Vector2.z,
+              Vector1.x*Vector2.y-Vector1.y*Vector2.x);
+}
+void VEC_Normalize(_3D * Vector)
+{
+   float m=sqrt(Vector-&gt;x*Vector-&gt;x+Vector-&gt;y*Vector-&gt;y+Vector-&gt;z*Vector-&gt;z);
+   Vector-&gt;x/=m;
+   Vector-&gt;y/=m;
+   Vector-&gt;z/=m;
+}
+</pre>
+
+<p>For 3D shading, you need to add to <b><i>ENG3D_SetPlane</i></b>: </p>
+
+<pre WRAP>
+   //Compute the normal of the plane
+   PlaneNormal=VEC_CrossProduct(P3D(x2-x1,y2-y1,z2-z1),P3D(x3-x1,y3-y1,z3-z1));
+   VEC_Normalize(&amp;PlaneNormal);
+</pre>
+<a NAME="Crossproduct">
+
+<h1><font color="#FFFFFF">Doing the Cross Product</font></h1>
+</a>
+
+<p>Now, as we said in the maths part, the cosine of the angle between two vectors is equal
+to their dot product when both vectors are normalized. To find the light reaching a plane,
+we simply add the ambient light to the cross product of the world coordinate of our
+normalized light source, multiplied by the maximal light intensity. Here's some code:<br>
+<br>
+Global definitions: </p>
+
+<pre WRAP>
+   WORD AmbientLight=20;
+   #define MAXLIGHT 32
+   static Vertex_t LightSource;
+   WORD light;
+</pre>
+
+<p>And in <b><i>SetPlane</i></b>: </p>
+
+<pre WRAP>
+   //Compute light intensity from the dot product of the normal and of
+   //the lightsource
+   light=MAXLIGHT*VEC_DotProduct(PlaneNormal,LightSource.World)+AmbientLight;
+   if(light&gt;MAXLIGHT)light=MAXLIGHT;
+   if(light&lt;1)light=1;
+
+</pre>
+
+<p>And you obviously need to initialize the light source, exactly like a normal vertex. </p>
+
+<pre>
+   //Initialize Light Source
+   LightSource.Local=P3D(0,0,0);
+   MAT_Identity(matrix);
+   TR_Translate(matrix, 10,10,10);
+   TR_Rotate(matrix, 0,128-32,128);
+   VEC_MultMatrix(&amp;LightSource.Local,matrix,&amp;LightSource.World);
+   VEC_Normalize(&amp;LightSource.World);
+</pre>
+<a NAME="Lighttable">
+
+<h1><font color="#FFFFFF">Using a light table</font></h1>
+</a>
+
+<p>A light table is a method of using light intensities on a palette based display. You
+find the best color match for every color at every intensity. Christopher Lampton made a
+great light table generator (<a
+HREF="http://pages.infinit.net/jstlouis/3dbhole/makelite.cpp">makelite.cpp</a>) in his
+book <u><i>Gardens of Imagination</i></u>. Unfortunately, that one uses a module of his
+own for pcx, so you have the choice of either modying it yourself (actually, you only need
+to load the palette of the pcx, not the image) or using my own modification (<a
+HREF="http://pages.infinit.net/jstlouis/3dbhole/makelite.c">makelite.c</a> or <a
+HREF="http://pages.infinit.net/jstlouis/3dbhole/makelite.exe">makelite.exe</a>). Once we
+have our light table, we load it in a global array: </p>
+
+<pre WRAP>
+BYTE LightTable[MAXLIGHT+1][256];
+</pre>
+
+<p>Once you've loaded it, all you need to change in your <b><i>TEX_HLine</i></b> function
+is the following: </p>
+
+<pre WRAP>
+   screen[offset]=LightTable[light][color];</pre>
+
+<p><em>Copyright © 1996-1998 Jerome St-Louis</em></p>
+
+<p><a href="MAILTO:jerstlouis@videotron.ca">jerstlouis@videotron.ca</a></p>
+</body>
+</html>

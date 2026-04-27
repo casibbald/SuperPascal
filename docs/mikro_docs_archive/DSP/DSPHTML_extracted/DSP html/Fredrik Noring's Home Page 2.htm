@@ -1,0 +1,92 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0045)http://www.lysator.liu.se/~noring/DSPDMA.html -->
+<SPML><HTML><HEAD><TITLE>Fredrik Noring's Home Page</TITLE>
+<META content="text/html; charset=windows-1250" http-equiv=Content-Type>
+<META content="MSHTML 5.00.2614.3500" name=GENERATOR></HEAD>
+<BODY aLink=#ff0000 background="Fredrik Noring's Home Page 2.files/yellow_w.gif" 
+bgColor=#c0c0c0 link=#0000f0 text=#000000 vLink=#500000>
+<TABLE>
+  <TBODY>
+  <TR>
+    <TD vAlign=top>
+    <TD vAlign=top>
+    <TD vAlign=top>
+  <TR>
+    <TD vAlign=top>
+    <TD vAlign=top><IMG alt=DSP 
+      src="Fredrik Noring's Home Page 2.files/dsp.gif">
+    <TD vAlign=top><IMG alt="Atari Falcon DMA system calls" 
+      src="Fredrik Noring's Home Page 2.files/DMAsys.gif">
+      <P>You can also have a look at <A 
+      href="http://www.lysator.liu.se/~noring/DSPsys.html">DSP system calls</A>, 
+      the <A href="http://www.lysator.liu.se/~noring/DSP.html">DSP main page</A> 
+      or a <A href="http://www.lysator.liu.se/~noring/DSPDMAEx.html">DMA 
+      Handshaked Communication Example</A>.
+      <P>Here are some useful DMA system calls:
+      <P><B>Opcode #139<BR>devconnect(src, dst, srclk, prescale, 
+      protocol)<BR>int src;<BR>int dst;<BR>int srclk;<BR>int prescale;<BR>int 
+      protocol;<BR></B>The devconnect function call is used to attach a source 
+      device to any of the destination devices in the matrix. Given a source 
+      device, this call will attach that one source device to one or all of the 
+      destination devices. This call also sets up the source clock prescale 
+      value and protocol used. 
+      <BLOCKQUOTE>
+        <DL>
+          <DT><B>src</B>: Source devices are:<BR>
+          <DD><B>3</B> - ADC (microphone/PSG)<BR><B>2</B> - EXTINP (External 
+          Port Input)<BR><B>1</B> - DSPXMIT (DSP Transmit)<BR><B>0</B> - DMAPLAY 
+          (DMA Playback)<BR>
+          <DT><B>dst</B>: A bitmap of destination devices, several are 
+          allowed.<BR>
+          <DD><B>0x8</B> - DAC (Headphone or Internal speaker)<BR><B>0x4</B> - 
+          EXTOUT (External Port Output)<BR><B>0x2</B> - DSPRECV (DSP 
+          Receive)<BR><B>0x1</B> - DMAREC (DMA Record)<BR>
+          <DT><B>srclk</B>: The Clock source the device will use.<BR>
+          <DD><B>0</B> - Internal 25.175 MHz Clock (ADC/DAC 
+          compatible)<BR><B>1</B> - External Clock<BR><B>2</B> - Internal 32 MHz 
+          Clock<BR>
+          <DT><B>prescale</B>: Clock prescale value.<BR>
+          <DD><B>1</B> - 49170Hz<BR><B>2</B> - 33880Hz<BR><B>3</B> - 
+          24585Hz<BR><B>4</B> - 20770Hz<BR><B>5</B> - 16490Hz<BR><B>7</B> - 
+          12292Hz<BR><B>9</B> - 9834Hz<BR><B>11</B> - 8195Hz<BR>
+          <DT><B>protocol</B>: Handshake mode.<BR>
+          <DD><B>0</B> - Enable Handshaking<BR><B>1</B> - Disable 
+          Handshaking<BR></DD></DL></BLOCKQUOTE><B>Opcode 
+      #137<BR>dsptristate(dspxmit, dsprec)<BR>int dspxmit;<BR>int 
+      dsprec;<BR></B>dsptristate is used to tristate the DSP from the 
+matrix.<BR>
+      <BLOCKQUOTE>
+        <DL>
+          <DT><B>dspxmit</B>:<BR>
+          <DD><B>0</B> - Tristate<BR>
+          <DD><B>1</B> - Enable<BR>
+          <DT><B>dsprec</B>:<BR>
+          <DD><B>0</B> - Tristate<BR>
+          <DD><B>1</B> - Enable<BR></DD></DL></BLOCKQUOTE><B>Opcode #136<BR>status = 
+      buffoper(mode)<BR>int mode;<BR>long status;<BR></B>buffoper is used to 
+      control the operation of the DMA. 
+      <BLOCKQUOTE>
+        <DL>
+          <DT><B>mode</B>: Mode code, several modes are allowed.<BR>
+          <DD><B>0x8</B> - Record Repeat on<BR>
+          <DD><B>0x4</B> - Record Enable on<BR>
+          <DD><B>0x2</B> - Playback Repeat on<BR>
+          <DD><B>0x1</B> - Playback Enable on<BR>
+          <DD><B>-1</B> - Current status is 
+      returned<BR></DD></DL></BLOCKQUOTE><B>Opcode #131<BR>setbuffer(reg, 
+      begaddr, endaddr)<BR>int reg;<BR>long begaddr;<BR>long 
+      endaddr;<BR></B>setbuffer is used to set the play or record buffers. The 
+      ending address is the first invalid data location. 
+      <BLOCKQUOTE>
+        <DL>
+          <DT><B>reg</B>: Register select.<BR>
+          <DD><B>0</B> - Sets playback registers.<BR>
+          <DD><B>1</B> - Sets record registers.<BR>
+          <DT><B>begaddr</B>: Sets the beginning address to the buffer. 
+          <DT><B>endaddr</B>: Sets the ending address to the buffer. 
+      </DT></DL></BLOCKQUOTE><A 
+      href="http://www.lysator.liu.se/~noring">Back</A> to <B>Fredrik 
+      Noring</B>'s Home Page.
+      <P><I><A href="http://www.lysator.liu.se/~noring/">Fredrik Noring</A> <A 
+      href="mailto:noring@lysator.liu.se">mailto:noring@lysator.liu.se</A> </I>
+      <P></P></TR></TBODY></TABLE></SPML></BODY></HTML>

@@ -1,0 +1,196 @@
+<HTML><HEAD><TITLE>myStiC bYTeS - atari fALcoN demoCREW</TITLE>
+<META http-equiv=content-type content=text/html;charset=ISO-8859-2>
+<STYLE>
+A {
+COLOR: #001f6f; TEXT-DECORATION: none
+}
+</STYLE>
+</HEAD>
+<BODY bgColor=FFEFD5 align=center>
+<br clear=all>
+<TABLE cellSpacing=0 cellPadding=0 width=640 height=100% valign=middle rules=none align=center border=0 frame=void>
+<tbody>
+<tr>
+<td bgColor=FFEFD5 align=justify><font size="3" face=Courier color=black><pre>
+- - --- -- --------------------------------------------------------------------  
+<center><h2>Optimizing for FastRAM
+& 68060 CPU</center></h2>
+------------------------------------------------------------------ - - -- -----
+
+Well, so it happend, ct60 arrived to our hands =) Short time after receiving my
+CT60 I've  got  some  nice  c2p  source  from  Evil/DHS  by  Michael  Kalms aka
+Scout/Appendix where I learned some things about 060 so why not write it here:)
+
+Burst mode
+==========
+I was very surprised when I didn't find  'burst mode' bit in CACR register. But
+this doesn't mean 060 has no burst...  060  operates in burst mode all the time
+:) And what is this burst mode?  If  you  read  my article about 030 timing you
+know how it works in the 030 cache:  every  word  or long read has its place in
+data cache (unless the data cache isn't disabled and/or frozen of course)... so
+if you want to load let's say 32 bytes into data cache you have to do on 030:
+
+        tst.w   0(a0)           ;  4 bytes loaded
+        tst.w   4(a0)           ;+ 4 bytes
+        tst.w   8(a0)           ;+ 4 bytes
+        tst.w   12(a0)          ;+ 4 bytes
+        :
+        :
+        tst.w   28(a0)          ;+ 4 bytes = 32 bytes
+
+Since every data entry is stored  as  a  long...  you  can use the advantage of
+misaligned operands:
+
+        tst.w   3(a0)           ;  4+4 bytes loaded
+        tst.w   11(a0)          ;+ 4+4 bytes
+        tst.w   19(a0)          ;+ 4+4 bytes
+        tst.w   27(a0)          ;+ 4+4 bytes = 32 bytes
+
+Since we're filling two entries at once  (because of misaligned words). And now
+the Burst Mode: this one allows you to load 16 bytes at once if your cache line
+is 'clean', that means all entries  are  marked  as  'invalid' and your data is
+read from a 16 bytes boundary:
+
+        tst.w   (a0)            ;  16 bytes loaded
+        tst.w   16(a0)          ;+ 16 bytes = 32 bytes
+
+And we can again use advantage of misaligned operands:
+
+        tst.w   0*16+15(a0)     ; 32 bytes loaded
+        tst.w   2*16+15(a0)     ; next 32 bytes loaded
+
+Cool isn't it? :) By the way, you can use this trick on CT2, too, since CT2 has
+FastRAM & burst support  for  it.  But  don't  forget  to enable the previously
+mentioned bit in the CACR !!!
+
+Writing to ST RAM
+=================
+Yeah, yeah... we have got superb 68060 CPU, superb FastRAM and still we have to
+do what? Write to ST RAM! Now someone  could  ask if 68060 and FastRAM helps in
+this area, too. So, for very curious people: YES, IT DOES :) How?
+
+1. Store Buffer
+---------------
+Even if our 8 KB data cache is  a  lot of space, for copying thousands of bytes
+It isn't very useful :) And so  here  comes  our store buffer into play: it's a
+four  entry (that means 4 longs)  first-in-first-out  buffer used by writing to
+slow memory. So, if we want to write  a  word or long to memory and the databus
+is still used by the previous memory  write,  this value will be stored in this
+buffer and the program will continue to the next (hopefully not memory operate)
+instruction.
+
+2. Instruction overlapping
+--------------------------
+I touched this topic in 030  timing  article  a  little bit: If your code isn't
+only about writing to ST RAM, you  can  use this very nice trick with fantastic
+results. I mean here a famous chunky  to  planar routines of course. Let's make
+some analysis:
+
+For 320*240/TC you need  to  transfer/clear  320*240*2  =  153600 bytes what is
+76800 words. If one word takes  4  cycles  to  write  to memory, we need 307200
+cycles. And most demos didn't use 'true'  truecolor: they used lookup table for
+256 colours + additional values for lighting, shading or pixel overlapping...
+
+What about 256 colour modes? On  standard  Falcon  we can't use them because of
+... bitplanes. Simply, without FastRAM you have to:
+- clear chunky buffer in ST RAM (320*240 bytes = 38400 words)
+- do some nice 3D stuff (variable amount of writes)
+- copy from chunky buffer to screen memory (2*38400 words since both chunky
+  buffer and screen are in ST RAM)
+
+This gives us 3*38400 words what is 3*38400*4 = 460800 cycles and still without
+instruction timings.. so it's slower than TC..
+
+OK, but FastRAM comes into play! The situation looks much much better:
+- clearing chunky buffer in FastRAM (19200 longs)
+- do some nice 3D stuff (still in FastRAM)
+- c2p conversion (19200 longs to transfer = 38400 words)
+
+So... if one write to SDRAM is one 66.666 MHz clock cycle what is
+16/66.666 = 0.24 of one 16 MHz clock cycle we get:
+
+19200*0.24 + 38400*4 = 158208 cycles! Let's compare:
+
+320*240/TC: 307 200 cycles + reads from lookup table
+320*240/256: 158 208 cycles
+
+Maybe you ask why I'm so sure c2p  conversion will not take some cycles ;) It's
+because of instruction overlapping. If you  write  a  long to ST RAM (typically
+c2p where we are writing longs) it takes eight 16 MHz cycles:
+
+2*4*(1/16000000) / (1/66666000) ~ 33 66.666  MHz  cycles between each c2p pass.
+And be sure in this time you can do everything :)
+
+Here we see  that  idea  of  putting  our  truecolor  screen  into  FastRAM has
+practically no sense - ok, we have our buffer in SDRAM:
+
+- clearing of buffer: 320*240*2 = 38400 longs
+- doing stuff in FastRAM...
+- copying to ST RAM: 38400 longs to transfer = 76800 words
+
+38400*0.24 + 76800*4 = 316416... we didn't  help ourselves very much... 2 times
+slower than 256 colours mode....
+
+Caches
+======
+Only some words on this topic: unroll  your  loops !!!!!!!!!!!!!! =) And for ST
+RAM operations... try to optimize a program pipeline to the max...
+
+Superscalar architecture
+========================
+People, this thing rules =) It's a little  bit similar to the DSP pipeline, but
+with much more freedom. Here's a copy&paste  from  one mail by Amiga guy Thomas
+Richter:
+
+---------------
+Actually, the '060 UM is sufficient  in  this  topic.  The '060 has two ALUs of
+which one has only  a  restricted  instruction  set  (the sOEP).  Most *simple*
+operations can run in parallel in the  pEOP and sOEP provided the results don't
+depend on each other (and provided you don't trip on a bug in the '060 of which
+- unfortunately - there are some).
+
+Thus,
+
+ add.l d0,d1
+ add.l d2,d3
+
+can be executed in parallel since "add"  can  be executed in both ALUs, and the
+source of the second instruction does not depend on a result of the first.
+
+Instructions as "sOEP|pOEP" run on both  ALUs.  Those marked as "pOEP" can only
+run on the primary ALU and hence  may  cause stalls. Further-more, the FPU runs
+in parallel with the integer unit, it makes  quite some sense to 'fire off' the
+FPU and to perform integer arithmetic while the FPU is busy.
+
+Thus, programming hint:  Try  to  'interleave'  instructions  from two separate
+instruction pipelines to keep both ALUs  busy.  For  example, if you have tight
+inner loops, unroll  the  loop  (if  possible)  into  two  parallel instruction
+streams.
+---------------
+
+I proved this to myself by modifying that  c2p routine which Evil sent me and I
+have to say, it's faster! Even with incredible slow ST RAM writes!
+
+
+And that is it... just short overview  if  you  are too lazy to read Motorola's
+docs ;) What to say at the end...  make sure you have enabled intruction & data
+& branch cache, enabled FIFO  buffer  for  data  cache and enabled "superscalar
+mode" in PCR !
+
+I attached to this article mentioned c2p routine,  I don't know a faster one at
+this time ;)
+
+CT60 rules !!!!!!!!!!!! =)
+
+
+<b>-------------------------------------------------------------------------------
+   MiKRO              XE/XL/MegaSTE/Falcon/CT60              <a href=http://mikro.atari.org>mikro.atari.org</a>
+-------------------------------------------------------------------------------</b>
+
+</pre> 
+</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

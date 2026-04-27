@@ -1,0 +1,421 @@
+<HTML><HEAD><TITLE>myStiC bYTeS - atari fALcoN demoCREW</TITLE>
+<META http-equiv=content-type content=text/html;charset=ISO-8859-2>
+<STYLE>
+A {
+COLOR: #001f6f; TEXT-DECORATION: none
+}
+</STYLE>
+</HEAD>
+<BODY bgColor=FFEFD5 align=center>
+<br clear=all>
+<TABLE cellSpacing=0 cellPadding=0 width=640 height=100% valign=middle rules=none align=center border=0 frame=void>
+<tbody>
+<tr>
+<td bgColor=FFEFD5 align=justify><font size="3" face=Courier color=black><pre>
+--- - -- - --------------------------------------------------------------------
+<center><h2>68030</h2>
+ST RAM and things around it</center>
+---------------------------------------------------------------------- ---- - -
+
+I tell you the truth - I'm  always  reading  about  how slow ST RAM is and that
+Fast RAM is something unbeatable etc, but  I  never knew WHY. There is only one
+Falcon timing document - the one published  by  Rodolphe Czuba with CT2. But in
+my eyes, this doc is so  short/unclear  and SHITTILY translated, there's no way
+to get the idea for non-hw freaks like me.  But one nice day I told myself: "It
+can't be so hard... other ppl understood  that,  I can too" :-) So I downloaded
+both uk and fr version of the mentioned doc and started to read...
+
+OK, after some weeks :) I've got  that  damned  idea... I have to say I haven't
+got any oscilloscope or  any  other  device  to  verify  my  results, but there
+shouldn't be big differences. From time to time I use some numbers by Rodolphe.
+So, let's start!
+
+Let's talk something about timing tables at first:
+
+We want to know how many cycles the move.l (an)+,d0 instruction is. If you take
+a look into official timing tables by Motorola (and rewritten by Zyx/Inferiors,
+JHL/TRSI, aRt/TBL and others):
+
+MOVE    EA,Dn   0       0       2(0/0/0)        2(0/1/0)
+
+and for EA calculation:
+
+        (An)+   0       1       3(1/0/0)        3(1/0/0)
+                ----------------------------------------
+                                5(1/0/0)        5(1/1/0)
+
+From this example you can see:
+- no overlapping will occur
+- move (an)+,dn takes 5 bus-cycles at all (cache setting doesn't matter)
+- data reading takes 1 bus-cycle
+- i-prefetching takes 0 (if it's in i-cache) or 1 (if isn't) bus-cycle
+- data writing takes 0 bus-cycles
+
+According to Motorola, this table assumes:
+- 32 bit data bus
+- 1 bus-cycle = 2 clock (cpu) periods
+- 2 i-prefetches per 1 bus cycle
+- long aligned operands incl. system stack
+- no wait states
+- data cache disabled
+
+Instruction prefetch means "loading"  of  the  instruction  into CPU, including
+additional <ea> extensions. In the  simplest  case,  one instruction prefetch =
+one word prefetch (since basic instruction on 68k  is 16 bit). In case of movem
+instruction for example, CPU has to prefetch  one long = 2 word prefetches. But
+we see, it still takes the same time  (it isn't important if we transfer a word
+or long with 32 bit  data  bus)  Conclusion:  it  doesn't  matter if we have to
+prefetch one or two words for a complete instruction, it takes the same time.
+
+bus activity:  1*2 (data read) + 0*2 (prefetching) = 2 in cache-case or
+               1*2 (data read) + 1*2 (prefetching) = 4 in non-cache-case
+
+So, number of internal cycles for execution:
+all cycles - bus activity = 5 - 2 = 3 for cache-case or
+                            5 - 4 = 1 for non-cache-case
+
+Please note there's no dependency  between  internal  cycles for both cache and
+non-cache cases. Sometimes it's faster executing/decoding with cache, sometimes
+without cache. Ofcourse we're talking only  about internal cycles and very fast
+(2 clock periods per 32 bit) RAM  access,  in  case of slow memory you will see
+that difference. Also keep in  mind  values  for i-prefetching are AVERAGE ones
+for odd/even word -> final value  is  always  less  or equal to the current bus
+status. In practice: let's take our movem  example.  In  all cases it is min. 2
+words long, right? But in calculations, it's always divided into 2 i-prefetches
+-> i-prefetching takes 2*2 = 4 clock  periods  and  real bus status is only 1*2
+clock periods. (in case of long aligned  operands  and 32 bit data bus ofcourse
+!!!) Also don't be surprised if you get result of 0 internal cycles sometime.
+
+But hey, that's our dream machine and not Falcon030! =) Reference for us should
+be:
+
+- 16 bit data bus
+- 1 WORD bus-cycle = 4 clock periods (according to Czuba's doc)
+- refreshing every 15.6 us [wait states] (again Czuba's doc)
+
+This stuff implies that the table above is  bad. At least the overall number of
+cycles. There's a need for some changes:
+
+- if you have 32 bit data bus, doesn't matter if you read (long aligned)
+  long or word - it still takes the same time. In our case it DOES matter
+  since 1 bus read = 1 WORD read, NOT LONG
+- as you can see, bus activity is 2 times longer (2 vs 4 clock periods)
+
+So correct timing should look like this:
+
+move.w (an)+,dn 0       1        7(1/0/0)        9(1/1/0)
+move.l (an)+,dn 0       1       11(2/0/0)       13(2/1/0)
+
+How I got these numbers?
+
+bus activity for move.w:
+1*4 (data read) + 0*4 (prefetching) = 4 in cache-case or
+1*4 (data read) + 1*4 (prefetching) = 8 in non-cache-case
+
+bus activity for move.l:
+2*4 (data read) + 0*4 (prefetching) = 8  in cache-case or
+2*4 (data read) + 1*4 (prefetching) = 12 in non-cache-case
+
+And from example above we know this move takes 3 (cache) / 1 (non-cache)
+internal cycles: 4+3=7 / 8+1=9 (move.w) and 8+3=11 / 12+1=13 (move.l)
+
+Here we see we needn't care  about  1-word vs 2-word instructions anymore since
+our bus can transfer only words :) That means if an instruction takes one word,
+it needs 1*4 clock periods, if it  takes  two words, it needs 2*4 clock periods
+etc.
+
+We're more than 2 times slower than an 'original' 68030 in long transfer ! Here
+I stop talking  about  timing  tables,  it's  more  complicated  than you could
+expect, I mean especially  pipelining  &  intruction/data  cache  stuff, it's a
+topic for separate article. (mail me and I'll write about it)
+
+So, back to ST-RAM:
+
+The Falcon is equiped with  Motorola  68030@16  MHz  and  16 bit data bus. That
+means CPU can access to RAM only 1  word  per bus-cycle. The one bus-cycle is 4
+clock periods long -> CPU can  read/write  one  word every 4th clock period (in
+the next text I assume 16  MHz  clock  period  = 1 cycle). Luckily, during this
+time CPU isn't halted  totally  -  if  CPU  doesn't  access any external source
+(ST/TT RAM, hardware regs, ...) you  can  execute some other instructions which
+are doing stuff in CPU (this should  allow  use  of  the data cache, too, but I
+didn't get  very  good  results..)  By  the  way,  instructions...  the fastest
+instruction on 030 takes 2  cycles,  but  you  can't  use these two intructions
+during the bus write since  you  have  got  less  than  4  cycles, I don't know
+exactly why.. Or, you can write to ST-RAM one long (that means <8 cycles pause)
+and here you have time for three  2-cycles instructions.. not very much, I know
+=)
+
+So, if 1 cycle is 1/16000000 s  =  62.5  *  10^-9  s  = 62.5 ns and CPU needs 4
+cycles for RAM access, complete  reading/writing  is  4  *  62.5 = 250 ns long.
+Remember our SIMMs have usually 80 ns,  that  means  CPU can access to this RAM
+3.125 times faster ! And this is only beginning of time wasting :)
+
+1 word = 2 bytes -> we can  transfer  2  bytes per 4 cycles -> 1/2 byte[4 bits]
+per cycle. If one cycle is 62.5 ns:
+
+0.5/62.5ns = 8 000 000 bytes per second. Fiction.
+
+Let's take a look at the move.l (an)+,dn again. We calculated in worst case (no
+instruction cache) it takes 13 cycles, right? What is the max reading speed?
+
+16000000/13 longs/s = 16000000*4/13 bytes/s = 4 923 076 bytes/s. Shame!
+
+Do you think it can't be worse? Okie, let's continue...
+
+Here is another bus-cycle-stealer: DMA.  DMA  means  Direct Memory Access. That
+'direct' means if DMA device wants something from  RAM, CPU can fuck up and has
+to wait until the DMA device  has  finished.  In  Falcon we have 3 DMA devices:
+Videl, Blitter and Sound DMA. I'm not going to talk about Blitter or SDMA since
+these chips aren't necessary for  EVERY  application,  but  grafix we need from
+time to time :-)
+
+Eeeehhh... what example to  give?  I  think  320x240xTC  could be interresting,
+couldn't it?
+
+320 x 240 x 2 bytes = 153600 bytes = 38400 longs. Videl access to video-data in
+so called BURST mode, that means 17 longs  per one Videl (!) access. This BURST
+mode looks like:
+
+1st long = 2 (RAS cycle = init) + 1 (CAS cycle = data)  =  3 cycles
+2nd ~ 17th long =                 16 (CAS cycles)       = 16 cycles
+                                                          ---------
+                                                          19 cycles
+(thanks to Rodolphe for this explanation)
+
+So one BURST access = 19 cycles.
+38400/17 = 2259 BURST accesses and 2259 * 19 = 42921 cycles per screen.
+
+That gives us 42921 * 60 =  2  575  260  cycles  per second for Videl (!!!). 60
+stands for 60 Hz ofcourse. 50 could be for 50 Hz, 100 for 100 Hz etc
+
+Due to DMA stealing we lose: 16000000 - 2575260 = 13 424 740 cycles/s !!!
+
+So, what about our move.l ?
+
+13424740/13 longs/s = 13424740*4/13 bytes/s = 4 130 689 bytes per second...
+
+Are you still thinking Falcon is fantastically developed? =) Ok...
+
+This example assumes all  your  RAM  reading  is  sequential, that means you're
+reading address n+$0, n+$2, n+$4, n+$6 etc.  Maybe  you think: "nah and what? I
+have all my data together and  my  program  doesn't  jump every time". Hahah my
+little lady! =) How does your RAM accessing look?
+
+lea     something,a0
+move.l  d0,(a0)+
+move.l  d3,(a0)+
+:
+:
+for example. But remember  the  CPU  fetches  instructions from your code-space
+(text-segment), then writes some long data  to  ANOTHER area, then fetches next
+instruction, ... etc. And we still assume  all  your code and data is word/long
+aligned ! (for more info  about  aligning  see below) For non-sequential access
+you have  to  add  2  cycles  for  precharge  time  (again  Czuba's  number) to
+instruction time. In our case:
+
+13424740/(13+2) longs/s = 13424740*4/(13+2) bytes/s = 3 579 930 bytes/s...
+
+Our 256 byte chache can solve these  troubles with precharging. If you put your
+loop  into  the  instruction  cache,  the  data  bus  will  be  used  only  for
+reading/writing data. If you're really,  really  lucky  boy, in case of reading
+you can put both program  and  read  data  in  the  instr/data cache and no bus
+transfer will be done.  In  case  of  writing,  data  is  ALWAYS transferred to
+memory, since our cache works in so called 'write-through' mode. 040 and higher
+works in 'write-back'  mode,  here  it  isn't  always  necessary  to access RAM
+(better internal logic)
+
+Now, we killed the last cycle in our  Falcon  :-)  Ah, not the last - there are
+still those stupid wait  states...  but  as  Rodolphe  wrote, they don't affect
+calculations a lot. If you want some additional info how to implement them into
+timing tables, I refer you to the 68030 User's Manual by Motorola.
+
+Aligning & cache stuff
+======================
+
+OK, let's start with a  cool  030  feature  -  burst mode. Our data/instruction
+cache has lines of 16 bytes  =  4  longs.  If  you  align your data to 16 bytes
+boundary and you enable the so called BURST mode (not the same as the Videl one
+:), the 030 will read/write data in  4  longs at once which makes four accesses
+to the bus in a faster way. But  here's  a bottleneck... There's a need for hw-
+support for this ! Most of  dynamical  RAMs  allows  it (faster access to whole
+pages against sequential reading), but in  Falcon  we can forget it completely.
+I'll kill that bastard who came  with  idea  of  16  bit  width of data bus !!!
+Conclusion: instr/data burst disabling has no effect on a standard Falcon :(
+
+When I began coding, I thought  the  cache  solves everything. I've got a loop,
+ok, let's put it into the cache  and  do  things. Shit, again not 100% true :-)
+030 has two caches: instruction and data.
+
+Instruction cache:
+
+It's more "friendly" to  us  :-)  Only  one  thing  you  have  to keep in mind:
+instruction fetching is a longword  operation!  That  means  if you have (long)
+unaligned begining of code (not only  the  first  line of code, but begining of
+every jump, too) you will fetch the unused instruction, too.
+
+Data cache [reading]:
+
+If you read some new data and  data cache is enabled/unfreezed, these data will
+be stored as an entry in  one  of  64  locations.  64?  Yeah ppl, data cache is
+longword one, again! So, if you  read  word  from  RAM at address $02, entry in
+data cache will be: ($00):($02) = long ! In a normal situation, no tragedy. But
+in the case of a 16 bit data  bus  this  really sux !!! One more bus access for
+every reading !!! Solution: always read longs from (long-aligned) memory if you
+can. Or disable data cache ;-)  Here's  an extremely important aligning tip. If
+your long lies at address $03 for  example,  you'll get _four_ bus accesses !!!
+How it's possible?
+
+line in cache: $00         $04           ...
+               -------------------------
+               |b7|b6|b5|b4|b3|b2|b1|b0| ...
+               -------------------------
+and reading:             ** ** ** ** <- our long
+
+1) b5:b4 [16 bits] - b4 is MSB of our long
+2) b7:b6 [16 bits] - unimportant values
+3) b3:b2 [16 bits] - next 16 bits of our long
+4) b1:b0 [16 bits] - b1 is LSB of our long
+
+Data cache [writing]:
+
+Heh, even more of a performance killer  than reading. If you write something to
+RAM, doesn't matter if you have it in cache or not, it's always written to this
+RAM. I wonder why Motorola implemented this one, there's only one use of this -
+if you save something to RAM and in a short time you want to restore it back to
+the regs and you want to do it in  a loop. Maybe here it would be useful... but
+in other cases, especially for things  like  clearing, always disable this data
+cache !!!  Reading  is  very  obsolete,  too.  Maybe  for  things  like  matrix
+multiplication it's useful (more values  than  registers). I recommend to flush
+data cache, "load" these values via something like tst.w (a0), tst.w 4(a0), ...
+then clear WA bit in CACR and do a loop with muls.w (a0)+, ...
+
+
+Practical example
+=================
+
+I think famous the movem clear routine for tc may be interesting...
+
+We want to clear 320*240*2 = 153600 bytes. Some movem.l timings:
+movem.l d0-d6/a0-a5,-(a6)       4+op    0       110(0/0/26)     116(0/2/26)
+movem.l d0-d6/a0-a4,-(a6)       4+op    0       102(0/0/24)     108(0/2/24)
+movem.l d0-d6/a0-a3,-(a6)       4+op    0        94(0/0/22)     100(0/2/22)
+dbra.w  [counter not expired]   6       0         6(0/0/0)       12(0/2/0)
+dbra.w  [counter expired]       10      0        10(0/0/0)       16(0/3/0)
+
+Let's look at 3 examples:
+
+1) minimal length
+=================
+loop:   movem.l d0-d6/a0-a5,-(a6)
+        dbra    d7,loop                 ;d7 = 2953-1
+        movem.l d0-d6/a0-a3,-(a6)
+
+Since no instruction has a tail, no  overlapping will occur. We divide clearing
+into 3 phases:
+
+a) executing & loading into cache
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+movem.l d0-d6/a0-a5,-(a6) [116+2] (2 stands for precharge time)
+dbra    d7,loop           [012]
+
+b) executing from cache
+~~~~~~~~~~~~~~~~~~~~~~~
+movem.l d0-d6/a0-a5,-(a6) [110]
+dbra    d7,loop           [006]
+(2951 times)
+
+c) last execution
+~~~~~~~~~~~~~~~~~
+movem.l d0-d6/a0-a5,-(a6) [110]
+dbra    d7,loop           [010]
+movem.l d0-d6/a0-a3,-(a6) [100]
+
+result = (116+2+12) + (110+6)*2951 + (110+10+100) = 342 666 cycles
+
+2) one movem
+============
+loop:   rept 50
+        movem.l d0-d6/a0-a4,-(a6)
+        endr
+        dbra    d7,loop                 ;d7 = 64-1
+
+a) executing & loading into cache
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+movem.l d0-d6/a0-a4,-(a6) [108+2]*50
+dbra    d7,loop           [012]
+
+b) executing from cache
+~~~~~~~~~~~~~~~~~~~~~~~
+movem.l d0-d6/a0-a4,-(a6) [102]*50
+dbra    d7,loop           [006]
+(62 times)
+
+c) last execution
+~~~~~~~~~~~~~~~~~
+movem.l d0-d6/a0-a4,-(a6) [102]*50
+dbra    d7,loop           [010]
+
+result = ((108+2)*50+12) + (102*50+6)*62 + (102*50+10) = 327 194 cycles
+
+3) 100% of cache filled
+=======================
+loop:   rept 63
+        movem.l d0-d6/a0-a5,-(a6)
+        endr
+        dbra    d7,loop                 ;d7 = 47-1
+
+a) executing & loading into cache
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+movem.l d0-d6/a0-a5,-(a6) [116+2]*63
+dbra    d7,loop           [012]
+
+b) executing from cache
+~~~~~~~~~~~~~~~~~~~~~~~
+movem.l d0-d6/a0-a5,-(a6) [110]*63
+dbra    d7,loop           [006]
+(45 times)
+
+c) last execution
+~~~~~~~~~~~~~~~~~
+movem.l d0-d6/a0-a5,-(a6) [110]*63
+dbra    d7,loop           [010]
+
+result = ((116+2)*63+12) + (110*63+6)*45 + (110*63+10) = 326 506 cycles.
+Please note in this case we're clearing 372 bytes more than needed.
+
+One VBL on VGA 60 Hz can be max.  1/60  =  0.0167 s long, that means 0.0167 s /
+62.5 ns = 266 666 cycles  per  VBL.  Keep  in  mind this is absolut maximum, in
+practise this number is much lower. That gives us:
+
+342 666 / 266 666 = 1.29 frames for clearing
+327 194 / 266 666 = 1.23 frames for clearing
+326 506 / 266 666 = 1.22 frames for clearing
+
+Also, if your fx is able to run in 60 fps, in an ideal case, the fps count will
+be decreased to 30 and lower fps (approx)
+
+We reached the end, finally :-) As you can  see,  the 16 bit data bus at 16 MHz
+is the single most performance killer hand in hand with Videl accesses. This is
+the reason why  the  CT60+Fastram+SuperVidel  combination  is  so awaited. This
+hardware eliminate most of the stupid  things  in the Falcon architecture since
+we will get:
+- ultra-fast CPU [ct60]
+- 32 bit BURST access [fastram]
+- ultra-fast data bus [ct60+fastram]
+- no accesses to old st-ram via slow databus for program and data
+- even no accesses to st-ram for gfx data !!! [supervidel]
+
+Fantastic, isn't it?
+
+
+<b>-------------------------------------------------------------------------------
+   MiKRO              XE/XL/MegaSTE/Falcon/CT60              <a href=http://mikro.atari.org>mikro.atari.org</a>
+-------------------------------------------------------------------------------</b>
+
+</pre> 
+</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

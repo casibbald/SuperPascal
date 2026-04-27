@@ -1,0 +1,422 @@
+        otmvoxel released 11-08-94
+
+        voxel landscape explanation/demo
+        by Voltaire/OTM
+        all source Copyright (C) 1994 Zach Mortensen
+
+        email -
+        mortens1@nersc.gov
+
+        see OTMVOXEL.NFO and OTM-94.NFO for more information
+
+
+OPENING WORDS
+
+        I make the assumption that you have at least some experience in
+        writing 3d code.  You should not attempt to understand voxels if you
+        cannot understand the basics of 3d.  If you are interested in the 3d
+        engine used to make this demo, it is availible via ftp at
+
+        hornet.eng.ufl.edu
+
+        the archive is
+
+        /demos/code/graph/library/V3DT090.ZIP
+
+        I highly reccomend picking it up (unbiased opinion of the author ;))
+
+
+
+WHAT ARE VOXELS?
+
+        A voxel is an approximation of volume, much in the same way a pixel
+        is an approximation for area.  Imagine a voxel as a cube in space,
+        it has length, width and depth.  Just pixels have a fixed length and
+        width, voxels have a fixed length, width, and depth.
+
+         ---------
+        |\        \
+        | \        \
+        |  \        \
+        |   ---------       ---------
+        |   |       |       |       |
+        |   |       |       |       |
+        |   | voxel |       | pixel |
+         \  |       |       |       |
+          \ |       |       |       |
+           \|_______|       ---------
+
+        gotta love my ascii art...hehehe
+
+        Now that you know what voxels are...
+
+
+HOW ARE VOXELS USED?
+
+        Because they can approximate volume, voxels can be used to create
+        very complex formations in three dimensions.  Commanche made
+        voxels famous for creating somewhat realistic landscapes in
+        realtime.  Many recent demos have also made use of voxels in
+        landscapes, ocean waves, etc.
+
+        But how do they do it so quickly?  It would seem that in order
+        to draw a voxel, one must keep track of its verticies, rotate
+        and translate them, and draw a cube in every frame.  This is
+        obviously too slow to do in realtime, because landscapes usually
+        contain upwards of 1000 voxels.
+
+        Here's the quick and dirty shortcut:  If we limit our perspective
+        so that we only view voxels from the front, each cube looks like
+        this:
+
+                ---------
+                |       |
+                |       |
+                | voxel |
+                |       |
+                |       |
+                ---------
+
+        Wow...that looks an awful lot like a square, and we can draw squares
+        MUCH faster than we can draw polygons with arbitrary angles that
+        are required to draw a cube in 3d.  More importantly, we only need
+        to keep track of one point.
+
+           P1
+              \
+                x--------
+                |       |
+                |       |
+                | voxel |
+                |       |
+                |       |
+                ---------
+
+
+
+SO WHAT DO WE DO NOW?
+
+        Well, now that we know voxels can be approximated by a point and
+        a square, we need to define a pattern for our voxels that looks
+        somewhat like a landscape.  It's best to start out simple, by
+        defining a parametric curve in 3d such as
+
+        x = 10t
+        y = 20(sin x + sin z) + 25
+        z = 10t
+
+        make sure you convert x and z to radians before you take their sine
+        when you are calculating the y value.  These equations form something
+        that vaguely resembles a hill.  Make a 10x10 array of points, 
+        assign a voxel to each point, and you can rotate your hill, translate 
+        it, etc.  Several problems soon become evident, though.  First, our 
+        hill seems to have some unsightly holes in it.  This is due to the 
+        fact that we have attempted to project a voxel without changing its 
+        size.  When a voxel is closer to the viewer, it must be larger.  Of 
+        course, it must also appear to be smaller when it is far away.  
+        Remember to scale your voxels to a size determined by their distance 
+        from the viewer.  This is a simple 3d projection, the same way 2d 
+        screen coordinates are determined from 3d world coordinates.
+                               
+        newSize = SIZE * DIST / z3d
+
+        where SIZE is the set size for a voxel and DIST is the distance      
+        between the viewer and the screen.  I like to use SIZE = 16 and DIST = 
+        1024.  Of course, your landscape will look better if you make your 
+        voxels smaller and closer together.
+
+        Another obvious problem is that our hill appears as a blob of one
+        color.  In order to get around this, we need to shade our voxels
+        in some inventive way.
+
+
+MADE IN THE SHADE
+
+        this is perhaps the easiest way to shade a voxel:
+
+           P1
+              \
+                x--------
+                |5555555|
+                |4444444|
+                |3333333|
+                |2222222|
+                |1111111|
+                ---------
+
+        If we assign the the y value of each voxel's point to the starting
+        color value (represented above by 5), we get a hill that is smoothly
+        shaded from top to bottom.  Of course, this requires a carefully
+        chosen palette, but I'll leave that up to you.  Some popular ideas
+        include shading the palette from blue (low colors = water) to green
+        (middle colors = land) to white (upper colors = snowcapped mountains).
+        I use a grossly simple green to white gradient.
+
+        Other methods of shading (I haven't tried these, but they seem like
+        they would work):
+
+                ---------
+                |1234567|
+                |1234567|
+                |1234567|   (light appears to be coming from one side)
+                |1234567|
+                |1234567|
+                ---------
+
+                ---------
+                |1234567|   (If I'm not mistaken, this is the type of shading
+                |2345678|   that was used in Mars)
+                |3456789|
+                |456789A|
+                |56789AB|
+                ---------
+
+        give these a try and see what happens...
+
+
+LIMITATIONS OF SHADING
+
+        Although shading makes our hill look much better, it does limit the
+        way in which we can use our landscape.  If we use this easy method of 
+        shading, we cannot rotate our landscape around any axis but the y.  
+        Rotation around the y axis does not change the y coordinate of a 
+        point, which is the basis for this shading technique.  The shading 
+        routine we use simply assumes that color will change in the vertical 
+        direction.  By rotating the vertical direction, (rotating around the 
+        x or z axis), we make the shading appear incorrect.
+
+
+ONWARD AND UPWARD
+        
+        Now that we have a disgustingly simple landscape working properly,
+        we are ready to move on to bigger and better things.  First, we
+        must find an equation that will create a more exciting landscape.
+        I have found that plasmas and certain fractals are best suited for
+        this purpose.  Extruding a plasma or fractal into a landscape
+        is an easy process:
+
+        for every point (x,y,color) in the plasma or fractal image, create a
+        3d point (x,color,y) in the landscape.
+
+        This produces some truly incredible results.  Plasmas are spectacular
+        with their hills and valleys, and some complex canyon landscapes can
+        be obtained by using a section of the Mandelbrot set.  Feel
+        free to experiment with any other of your favorite fractals as well.
+
+        One thing that is an absolute necessity is that you depth sort your
+        points from back to front.  If you do not, your landscape will look
+        VERY bad.
+
+        Now that we have a potentially HUGE landscape, we must also decide
+        where to stop displaying voxels.  This is extremely simple, just weed
+        out points that are too far away while you are sorting.  It's up to
+        you to decide how far you want your landscape to extend.
+
+
+FINAL WORDS
+
+        I honestly hope this explanation along with the example code helps to
+        clarify the uses of voxels.  If for some reason my explanation seems
+        vague in any way, feel free to email me with any questions.  I do not
+        claim to be the world's most talented coder, and I realize that I make
+        my share of mistakes.  Just make sure you point them out to me ;)
+
+
+Volt
+#include <stdio.h>
+#include <conio.h>
+#include <math.h>
+#include "3dtools.h"
+#include "mode13h.h"
+
+//  otmvoxel.cpp - released 11-08-94
+//  simple voxel landscape demo
+//  coded by Voltaire/OTM
+//  all source Copyright (C) 1994 Zach Mortensen
+//
+//  see OTMVOXEL.NFO and OTM-94.NFO for more information
+//
+//  this source is included purely as an example.  If you want to re-compile
+//  it as is, you must link in the following files:
+//
+//  3dtools.obj
+//  mode13h.obj
+//  sin.obj
+//
+//  sources to these files have been previously released in V3DT090.ZIP
+//  which is availible via ftp at hornet.eng.ufl.edu in the
+//  /demos/code/graph/library directory, as well as at OTM distribution
+//  sites listed in OTM-94.NFO
+
+
+// z threshold - maximum depth at which a voxel is displayed
+
+#define ZTHRESH 2048
+
+int *x16;
+char *vPage;
+
+void initX16(int threshold);
+void voxel(int x, int y, int z, int c);
+
+void main()
+{
+    int count, x, y, pos;
+    point3d *temp;
+
+    // create object and associated points
+
+    obj3d *land = new obj3d(0, -75, 1024);
+    point3d **point = new point3d* [100];
+
+    // set up object as 3d sine curve
+
+    for (y = 0; y < 10; y++)
+        for (x = 0; x < 10; x++)
+            {
+                point[y * 10 + x] = new point3d(x * 10,
+                                        (int) ((double) 25 * (sin((double) PI * 18 *x / 180) + sin((double) PI * 18 * y / 180))) + 25,
+                                        y * 10);
+                land->addLocalPoint(point[y * 10 + x]);
+            }
+
+    // initialize speedy size routine and sin/cos tables
+
+    initX16(ZTHRESH);
+    initSinCos();
+
+    // virtual page for off screen drawing
+
+    vPage = new char [64000];
+
+    // setup video mode etc.
+
+    setMode13h(vPage);
+
+    // initialize palette
+
+    for (count = 1; count < 16; count++)
+        set_dac_register(count, 0, 0, 0);
+
+    for (count = 1; count < 32; count++)
+    {
+        set_dac_register(count + 16, 0, count * 2, 0);
+        set_dac_register(count + 31 + 16, count * 2, 63, count * 2);
+    }
+
+    // setup for off screen drawing
+
+    setActivePage(pVirtual);
+
+    // main loop
+
+    while (!kbhit())
+    {
+        clearScreen(0);
+
+        // draw the landscape
+
+        for (count = 99; count > 0; count--)
+            voxel(point[count]->x2d, point[count]->y2d, point[count]->z3d, point[count]->localY);
+
+        // now show the virtual page
+
+        flipVPage();
+
+        // rotate the landscape 1 degree about the y axis
+
+        land->localRotate(0, 1, 0);
+
+        // linear sort points according to depth
+
+        for (count = 0; count < land->numPoints - 1; count++)
+        {
+            pos = count;
+            for (x = count + 1; x < land->numPoints; x++)
+                if (point[x]->z3d < point[pos]->z3d)
+                    pos = x;
+
+            if (pos != count)
+            {
+                temp = point[pos];
+                point[pos] = point[count];
+                point[count] = temp;
+            }
+        }
+
+    }
+
+    // read a keypress
+
+    getch();
+
+    // back to 80x25 text mode
+
+    textMode();
+
+    // clean house
+
+    delete x16;
+    delete vPage;
+    delete land;
+    delete point;
+
+}
+
+void initX16(int threshold)
+{
+    int count;
+
+    x16 = new int [threshold];
+
+    // setup a table containing perspective sizes of 16 pixels at given
+    // depths for speedy reference
+
+    for (count = 1; count < threshold; count++)
+        x16[count] = 16 * 1024 / count;
+
+}
+
+
+void voxel(int x, int y, int z, int c)
+{
+    int index, count, col;
+
+    // make sure we're positive
+
+    if (c < 0)
+        c += 256;
+
+    // calculate starting offset into virtual screen
+
+    index = (int) vPage + (320 * y) + x;
+
+    // display the voxel if it is within the z threshold
+
+    if (z < ZTHRESH)
+    {
+        // draw a shaded square to the offscreen buffer
+
+        for (count = 0; count < x16[z]; count++)
+        {
+            // draw one row of the square
+
+            for (col = 0; col < x16[z]; col++)
+            {
+                *(char *) index = (char) c;
+                index++;
+            }
+
+            // go to next line
+
+            index += 320;
+            index -= x16[z];
+
+            // change colors
+
+            c--;
+        }
+    }
+
+}
+

@@ -1,0 +1,77 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0045)http://www.lysator.liu.se/~noring/DSPsys.html -->
+<SPML><HTML><HEAD><TITLE>Fredrik Noring's Home Page</TITLE>
+<META content="text/html; charset=windows-1250" http-equiv=Content-Type>
+<META content="MSHTML 5.00.2614.3500" name=GENERATOR></HEAD>
+<BODY aLink=#ff0000 background="Fredrik Noring's Home Page.files/yellow_w.gif" 
+bgColor=#c0c0c0 link=#0000f0 text=#000000 vLink=#500000>
+<TABLE>
+  <TBODY>
+  <TR>
+    <TD vAlign=top>
+    <TD vAlign=top>
+    <TD vAlign=top>
+  <TR>
+    <TD vAlign=top>
+    <TD vAlign=top><IMG alt=DSP 
+src="Fredrik Noring's Home Page.files/dsp.gif">
+    <TD vAlign=top><IMG alt="Atari Falcon DSP system calls" 
+      src="Fredrik Noring's Home Page.files/DSPsys.gif">
+      <P>You can also have a look at <A 
+      href="http://www.lysator.liu.se/~noring/DSPDMA.html">DMA system calls</A>, 
+      the <A href="http://www.lysator.liu.se/~noring/DSP.html">DSP main page</A> 
+      or a <A href="http://www.lysator.liu.se/~noring/DSPHostEx.html">DSP Host 
+      Communication Example</A>.
+      <P>Here are some useful DSP system calls:
+      <P><B>Opcode #109<BR>Dsp_ExecProg(codeptr, codesize, ability)<BR>char 
+      *codeptr;<BR>long codesize;<BR>int ability;<BR></B>Dsp_ExecProg executes a 
+      DSP program which resides as a binary in memory. Codeptr should point to a 
+      block of DSP binary code and codesize is the number of DSP <B>words</B> 
+      (24 bits = 3 bytes) that will be transferred to the DSP. The ability 
+      number can be set to any number, but should be set to the number given by 
+      the Dsp_RequestUniqueAbility call.
+      <P><B>Opcode #108<BR>status = Dsp_LoadProg(file, ability, buffer)<BR>char 
+      *file;<BR>int ability;<BR>int status;<BR>char *buffer;<BR></B>Dsp_LoadProg 
+      loads (from disk) and executes a DSP LOD file. The file is in the ASCII 
+      LOD format. File should point to the name of the program file to be loaded 
+      into the DSP. The ability number can be set to any number, but should be 
+      set to the number given by the Dsp_RequestUniqueAbility call. Buffer 
+      should point to a block of memory where the loader can place the DSP code 
+      it generates (32k byte is usually enough). A 0 return value indicates a 
+      successful launch. A return value of -1 indicates an error occured.<BR>I 
+      <B>don't recommend</B> using this call since an extra LOD file is needed 
+      (and the path must be correct, otherwise the LOD cannot be loaded). Use 
+      the Dsp_ExecProg call instead. See below for details regarding LOD to 
+      binary conversion.
+      <P><B>Opcode #111<BR>size = Dsp_LodToBinary(file, codeptr)<BR>char 
+      *file;<BR>char *codeptr;<BR>long size;<BR></B>Dsp_LodToBinary reads a LOD 
+      file and convert it to binary form used by the Dsp_ExecProg function. 
+      Codeptr should point to a block of memory large enough for the routine to 
+      place the DSP binary data. The program will return the size of the program 
+      in DSP <B>words</B> (24 bits = 3 bytes). A negative size means that an 
+      error occured during the conversion process.
+      <P><B>Opcode #98<BR>Dsp_BlkUnpacked(data_in, size_in, data_out, 
+      size_out)<BR>char *data_in;<BR>long size_in;<BR>char *data_out;<BR>long 
+      size_out;<BR></B>Dsp_BlkUnpacked transfers size_in number of DSP 
+      <B>words</B> (24 bits = 3 bytes) to the DSP using the DSP Host Port. 
+      Data_in should point to a block of data ready to be sent. If size_in 
+      equals zero, no transfer will be made.<BR>Size_out number of DSP words 
+      will also be transferred from the DSP using the Host Port. Data_out should 
+      point to a block of memory big enough to place the data. If size_out 
+      equals zero, no transfer will be made. <BR>Data is fetched from the least 
+      significant bytes of the longword and sent to the DSP. Similarly, data 
+      obtained from the DSP is placed into the least significant bytes of the 
+      data_out buffer. Note that the least significant 24 bits of each longword 
+      would contain DSP data, while the most significant 8 bits would contain 
+      something meaningless. Size_in and Size_out are limited to 64k.
+      <P>Some other system calls:<BR><B>#97 Dsp_BlkHandShake(data_in, size_in, 
+      data_out, size_out);<BR>#123 Dsp_BlkWords(data_in, size_in, data_out, 
+      size_out);<BR>#124 Dsp_BlkBytes(data_in, size_in, data_out, 
+      size_out);<BR>#126 Dsp_SetVectors(receiver, transmitter);<BR>#102 
+      Dsp_RemoveInterrupts(mask);<BR>#104 state = Dsp_Lock();<BR>#105 
+      Dsp_UnLock();
+      <P><A href="http://www.lysator.liu.se/~noring">Back</A> to <B>Fredrik 
+      Noring</B>'s Home Page.
+      <P><I><A href="http://www.lysator.liu.se/~noring/">Fredrik Noring</A> <A 
+      href="mailto:noring@lysator.liu.se">mailto:noring@lysator.liu.se</A> </I>
+      <P></P></B></TR></TBODY></TABLE></SPML></BODY></HTML>

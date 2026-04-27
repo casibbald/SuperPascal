@@ -1,0 +1,13 @@
+Say you have two instructions: instr 1 uses 8 cycles, and have 2 cycles
+tail. instr 2 uses 8 cycles and have 2 cycles head.
+
+instr 1: --------
+instr 2:       --------
+
+As you can see the head and tail overlap eachother. So we save two cycles
+here, instead of 16c we get 14c. It's also called pipelining, even if the
+030 is very limited in these cases.
+
+--Anders Eriksson
+ae@dhs.nu
+

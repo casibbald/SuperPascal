@@ -1,0 +1,272 @@
+<!doctype HTML public "-//W3O//DTD W3 HTML 3.2//EN"><html><head>
+	<nextid=1205199702>
+	<title>Atari operating systems</title>
+	<meta name="Author" content="Konrad Kokoszkiewicz">
+	<meta name="GENERATOR" content="CAB 1.5/Edison 1.0 (GEM, Atari Falcon030)">
+</head>
+<body background="../images/ataribk1.gif" link=#0000FF>
+<hr width=95%>
+<h1 align=center>Operating systems<br>for Atari computers</h1>
+<center>
+	<b>Short characteristic</b>
+</center>
+<hr width=95%>
+<i>It is a short description of several existing operating systems for ST
+computer series. It is not supposed to be a complete document, because
+some of less popular, but existing systems, like OASES for example, are
+missing - I just can't write about ones, which I have never seen in
+action. Additional problem is, that some of them, as MultiGEM, are in fact
+TOS enhancements and cannot be considered as complete operating systems.</i>
+<hr width=95%>
+<center>
+<table border>
+<tr><td><i>Today's topics:</i><td><i>Soon:</i>
+<tr><td><b><a href=#tos>TOS</a></b><td><b>Linux/m68k</b>
+<tr><td><b><a href=#mtos>MultiTOS</a></b><td><b>NetBSD</b>
+<tr><td><b><a href=#magic>MagiC</a></b><td><b>Atari TT System V 4.0</b>
+<tr><td><b><a href=#mint>MiNT</a></b><td><b>OASES</b>(?)
+</table>
+</center>
+<hr width=95%>
+<a name=tos>
+<h3 align=center>TOS</h3>
+<center>
+	<b>The Operating System</b>
+</center>
+<p><a href="../images/tos1.gif">
+<img src="../images/tos2.gif" align=left border=1></a>
+The <b>TOS</b> is the native Atari operating system, which comes together 
+with each Atari computer. The first version, 1.0, also known as <b>RAM TOS</b>
+was loaded from disk, each next version is burned into system ROM at the
+factory.</p>
+<br clear=all><br>
+<p>Each TOS version Atari has developed, apart from the official number, 
+is also known under an unofficial name:</p>
+<ul>
+	<li><b>TOS 1.0</b> - <b>RAM TOS</b>, since it was loaded from
+ 	disk and resided in the system RAM.
+	<li><b>TOS 1.02</b> - <b>Blitter TOS</b> was introduced with
+	the Mega ST computer and contained routines supporting the
+ 	Blitter, a graphic co-processor.
+	<li><b>TOS 1.04</b> - <b>Rainbow TOS</b>, since it displays
+	a rainbow Atari logo in the info box.
+	<li><b>TOS 1.62</b> - <b>STE TOS</b> was introduced with STE
+ 	computer series.
+	<li><b>TOS 2.0x</b> - <b>Mega TOS</b> was developed for Mega
+ 	STE computer.
+	<li><b>TOS 3.0x</b> - <b>TT TOS</b> was developed for the Atari 	TT030.	<li><b>TOS 4.0x</b> - <b>Falcon TOS</b> also known as <b>3D 	TOS</b> is present in the Falcon030 computer and provides
+ 	3D-looking window elements.
+	<li><b>TOS 5.0</b> - the real <b>Falcon030 TOS</b> was supposed to
+	become the native system of Falcon computers, but has never
+ 	been officially released. The only available version is a beta
+ 	release known as <b>TOS 4.92</b>.
+</ul>The non-multitasking TOS, to be differentiated from the <b>MultiTOS</b>,
+is also known as the <b>SingleTOS</b>.
+<h4 align=center>System structure</h4>
+<p>The TOS consists of four main parts, each one can be replaced by a 
+RAM-based substitute:</p>
+<ul>
+	<li><b>BIOS</b>, Basic Input/Output System, provides several
+	hardware dependent functions and is basically compatible with PC BIOS.
+	Additionally, the ST-BIOS contains an enhancement, known as
+	<b>XBIOS</b> (Extended BIOS). The XBIOS functions are strictly
+	platform dependent and aren't compatible with any other computer,
+	but ST.
+	<li><b>GEMDOS</b>, is the main file management subsystem. The
+	GEMDOS has been developed by the Digital Research, Inc.	and is
+	compatible with DR-DOS. The GEMDOS may be replaced with
+ 	MiNT kernel in order to use MiNT networking software.
+	<li><b>VDI</b>, Virtual Device Interface, is a library of
+	hardware dependent graphic functions. Generally, it is 
+	responsible for drawing basic screen elements (points, lines, 
+	filled and empty objects, fill textures, fonts etc.) and
+	controlling the mouse. The VDI has also an optional, loadable
+ 	extension called <b>GDOS</b>, mainly responsible for font
+	management. Latest GDOS versions support Bitstream and True
+ 	Type character sets. The VDI may be replaced with NVDI, which
+	is much faster and provides some additional functions.
+ 	<li><b>AES</b>, Application Environment Manager, is a fully
+	hardware independent window and application manager. The AES
+ 	and the VDI, both developed by the Digital Research, Inc.,
+ 	are known as <b>GEM</b>, Graphic Environment Manager. The
+ 	standard AES (version 3.40 in Falcon TOS) may be replaced with
+	the MultiAES (AES 4.10), a part of MultiTOS 1.08 or with the Geneva,
+	which converts the TOS to a co-operative multitasking system.
+</ul>
+<p>Besides of that, the system ROM contains also the <b>GEM Desktop</b>,
+i.e. an application program directly responsible for user interaction with
+the TOS.
+<br>This structure, in order to keep compatibility with the TOS,
+is present in some other operating systems.</p>
+<h4 align=center>Short characteristic</h4>
+<p>The main advantage of the TOS is that it is fast, stable and not memory
+hungry - if you don't load many TSRs, it gives you about 3,7 MB of TPA on a
+4 MB machine, since it doesn't utilize the system RAM to keep it's own code
+into. But even considering that the system resides in ROM, you must prove
+that the TOS code is generally compact: the latest version, Falcon TOS,
+fits in a 512k chip together with the desktop and five resource files for
+five different nationalities. Also notice, that the TOS will work fine even
+if there is no hard drive connected - you can run the system from a floppy
+and have a serious chance, that all necessary system files won't take more
+than 1% of the capacity on a standard 1,44M diskette.</p>
+<p>The main <b>disadvantage</b> of the TOS is that it doesn't support true
+multitasking: only one application can be used at once together with up to
+six so called accessories, which have to be loaded at startup and must be
+present in the memory all the time the system is running. The accessories
+may run in parallel with the main application using some sort of
+cooperative multitasking - the system switches the CPU time between those
+seven tasks if they interact with the GEM. If the application or one of
+the accessories executes an operation which runs without any system call,
+task switching is impossible and the rest is stopped.</p>
+<p>Additionally, the TOS doesn't support big logical drives. You can have
+up to 16 logical drives, 14 of them can be hard disk partitions. Each one
+is limited to 32766 data clusters, up to 16384 bytes each. It means, that
+the maximum capacity of a partition is about 512 MB.</p>
+<p>Summa summarum, the TOS cannot be currently considered as a modern
+operating system, but one has to remember that the latest version of the
+system has been released four years ago. That time big hard drives were
+rather rarely used in home computers and only one of popular operating
+systems supported true pre-emptive multitasking, namely the AmigaOS.
+
+Now the TOS is a bit out of date and has few devotees in the Atari community.
+Majority has moved to systems mentioned below.</p>
+<hr width=75%>
+<a name=mtos>
+<h3 align=center>MultiTOS</h3>
+<center>
+	<b>The multitasking TOS</b>
+</center><p><a href="../images/mtos1.gif">
+<img src="../images/mtos2.gif" align=right border=1></a>
+The <b>MultiTOS</b> has been developed by Atari Corp. to be a TOS replacement
+for those who would like to have a true multitasking system. Unlike the TOS,
+the MultiTOS is a fully RAM-based system and in fact consist of the
+<b>MiNT</b> kernel (that is described in one of the further sections) and
+a new, multitasking version of the AES (MultiAES). Due to this reason, the
+MultiTOS can theoretically support all of the MiNT possibilities, since in
+fact it is nothing else than the MiNT configured to be TOS and GEM
+compatible.</p>
+<p>The MultiTOS provides the true, pre-emptive multitasking and supports
+many additional functions which are needed in such a system, e.g. memory
+protection, multiple filesystems, startup sequence scripts, standardized
+system enhacements, easy task selection, window iconification, loadable
+accessories, unlimited number of concurrent applications and many more.
+Additionally, it is much more configurable than the TOS and follows the 
+general trend in programming of a modern operating system.</p>
+<p>Unfortunately, bad financial condition in 1993. has enforced the
+Atari Corp. to drop all ST-line support. MultiTOS was one of the victims
+of that decision. The latest official version, 1.04, was not perfect
+and has been quickly forgotten by the Atari community. Interestingly,
+the latest unofficial beta, MultiTOS 1.08, was way better and has began
+a general guideline for programmers developing software and replacement
+operating systems. In fact, the MultiTOS 1.08, never officially released,
+never officially supported and used only by a few heroical devotees
+- has become a standard.</p>
+<hr width=75%>
+<a name=magic>
+<h3 align=center>MagiC</h3>
+<center><b>A way to new hardware</b></center>
+<p><a href="../images/magic1.gif">
+<img src="../images/magic2.gif" align=left border=1>
+</a>
+The <b>MagiC</b> has been introduced to the market about two years ago by a
+German company called <b>Application Systems Heidelberg</b>, previously
+known as the developer of a C compiler (Pure C) and has become popular very
+quickly, breaking the Atari community into Magic's devotees and enemies.</p>
+<p>The MagiC is a modern operating system without any doubt. It is probably
+also the only and unique complete TOS replacement, which doesn't use any of
+the TOS components. It follows the main MultiTOS guidelines (though
+some of the MultiAES, or even Falcon AES, functions are missing) and,
+furthermore, tries to enforce a new standard for software developers by
+supporting many of Digital Research GEM/2 functions (which are missing
+in the Atari GEM) as well as several own enhancements.</p>
+<p>Besides of the multitasking (both pre-emptive or co-operative,
+depending on a user selection), the MagiC supports a new filesystem in
+order to allow you to use long filenames and really big disks,
+easy task management, background DMA transfers, fast GEMDOS, fast AES,
+fast VDI and many more features. Additionally, although it is a RAM-based
+system, it is compact and not memory hungry - the whole system takes less
+than 300 kilobytes. Furthermore, it opens a way for the Atari community a
+way to use GEM applications with newer hardware - since there's no hope to
+see new products of the Atari Corp. as the company is dead, the Application
+Systems Heidelberg released the MagiC versions for Apple computers and PCs.
+They are claimed to be GEM compatible and are supposed to allow you to use
+GEM applications on these platforms.</p>
+<hr width=75%>
+<a name=mint>
+<h3 align=center>MiNT</h3>
+<center>
+	<b>A bridge to Unix</b>
+</center>
+<p><a href="../images/mint1.gif">
+<img src="../images/mint2.gif" border=1 align=right></a>
+The <b>MiNT</b> is a system originally based on the BSD package ported to ST
+computers by Eric R. Smith. It was supposed to be a backdoor for the Atari
+community to the Unix world with loads of BSD based network applications.
+A short (1992-94) romance of the MiNT and Atari Corp., which decided to
+convert the system to the MultiTOS kernel, has caused a birth of an unique
+TOS/Unix hybrid, which gives you simultaneous access to both GEM and
+BSD application libraries.</p>
+<p>Since the MiNT is the MultiTOS's kernel, it has kept all the features
+described above and, if an AES replacement is installed, it can show you
+a new face of the MultiTOS. Unlike the MultiTOS however, the Unix-like MiNT
+is based on a different filesystem, which is much faster and more flexible
+than the TOS FS. Furthermore, thanks to the excellent network support,
+the MiNT gives you an unique possibility to convert your
+Atari to a true Internet server, which will still be able to run GEM and TOS
+applications! Thanks to this feature, the MiNT has a lot of devotees in
+the Atari community(they're recently considered as <i>MiNTquisitors</i>)
+and is the main competitor for ASH's MagiC.</p>
+<p>Unlike the Linux, the MiNT contents itself with Motorola 68000 without
+an FPU, but similarly to other Unix systems it requires much more memory
+to work in a decent setup. A 4 MB is an absolute minimum, if you want to
+have a multiuser configuration however, and to run GEM applications at the
+same time, it will require at least 8 MB or more.</p>
+<hr width=75%>
+<h4 align=center>To be continued...</h4>
+<hr width=75%>
+<h4 align=center>Operating system summaries</h4>
+<center>
+<table border>
+<tr><td><b>System</b><td>TOS<td>MultiTOS<td>Magic<td>MiNT<td>Linux<td>NetBSD
+<tr><td><b>Developer</b><td>Atari Corp.<td>Atari Corp.<td>ASH<td>GNU project<td>GNU project<td>GNU project
+<tr><td><b>GUI</b><td>Yes<td>Yes<td>Yes<td>Optional<sup>1)</sup><td>Optional<sup>2)</sup><td>Optional<sup>2)</sup>
+<tr><td><b>GEM compatibility</b><td>Yes<td>Yes<td>Yes<td>Optional<td>No<td>No
+<tr><td><b>TOS compatibility</b><td>-<td>Yes<td>Yes<td>Yes<td>No<td>No
+<tr><td><b>BSD compatibility</b><td>No<td>Optional<td>No<td>Yes<td>Yes<td>Yes
+<tr><td><b>Multitasking</b><td>Limited co-operative<td>Pre-emptive<td>Pre-emptive<td>Pre-emptive<td>Pre-emptive<td>Pre-emptive
+<tr><td><b>Maximum number<br>of concurrent applications<td>1<sup>3)</sup><td>Unlimited<td>125<td>Unlimited<td>Unlimited<td>Unlimited
+<tr><td><b>Stability</b><td>Excellent<td>Decent<td>Decent<td>Good<td>Good<td>?
+<tr><td><b>Network support</b><td>Client<td>Optional<td>Client<td>Yes<td>Yes<td>Yes
+<tr><td><b>Filesystem</b><td>TOS<td>Any<td>Any<td>Any<td>Any<td>Any
+<tr><td><b>Long filenames</b><td>No<td>Optional<sup>4)</sup><td>Optional<td>Optional<td>Yes<td>Yes
+<tr><td><b>Hard drive</b><td>Optional<td>Recommended<td>Strictly recommended<td>Required<td>Required<td>Required
+<tr><td><b>Price</b><td>-<td>99,- DM<td>149,- DM<td>free<td>free<td>free</table></center>
+<br>
+<small>Comments:
+<ol>
+	<li>GEM compatible, UNIX-like X-Windows (X11R5) or native W-Windows.
+	<li>X-Windows X11R6
+	<li>Plus up to seven accessories. Geneva Manager, if loaded, provides a full co-operative multitasking.
+	<li>The standard desktop doesn't support long filenames.
+</ol>
+</small>
+<hr width=75%><h4 align=center>System component replacements</h4>
+<center>
+<table border>
+<tr><td><b>Product</b><td><b>Developer</b><td><b>Replaces</b><td><b>Base system</b><td><b>Price</b>
+<tr><td>MiNT<td>GNU project<td>GEMDOS<td>TOS<td>free
+<tr><td>NVDI<td>ASH<td>VDI<td>TOS, MultiTOS, Magic, MiNT<td>99,- USD
+<tr><td>MultiAES<td>Atari Corp.<td>AES<td>TOS, MiNT<td>-
+<tr><td>Geneva<td>Gribniff Software<td>AES<td>TOS, MultiTOS, MiNT<td>69,- USD
+<tr><td>MultiGEM<td>?<td>AES<td>TOS<td>?<tr><td>N.AES<td>Overscan<td>AES<td>MultiTOS, MiNT<td>59,- DM
+<tr><td>OAESIS<td>NoCrew<td>AES<td>MultiTOS, MiNT, Linux<td>free
+<tr><td>OVDISIS<td>NoCrew<td>VDI<td>Linux<td>free
+<tr><td>OTOSIS<td>NoCrew<td>BIOS, XBIOS, GEMDOS<td>Linux<td>free
+<tr><td>XaAES<td>Data Uncertain<td>AES<td>MultiTOS, MiNT<td>free
+<tr><td>Gemini<td>?<td>Desktop<td>TOS, MultiTOS, MagiC, MiNT<td>?
+<tr><td>Thing<td>Arno Welzel<td>Desktop<td>TOS, MultiTOS, MagiC, MiNT<td>25,- DM
+<tr><td>Ease<td>ASH<td>Desktop<td>TOS, MultiTOS, MagiC, MiNT<td>?
+</table></center>
+<hr width=95%>
+</body>
+</html>

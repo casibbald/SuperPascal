@@ -1,0 +1,290 @@
+Date: 8 Mar 88 20:06:12 GMT 
+Comment:  Extracted from Info-Atari16 (INFO-A16) digest number 88-125 
+From: uflorida!codas!burl!clyde!watmath!orchid!achowe@gatech.edu  (CrackerJack) 
+Subject: Re: DESKTOP.INF  some notes 
+To: info-atari16@score.stanford.edu 
+  
+In article <8803071039.AA11095@lasso.laas.fr> ralph@lasso.UUCP (Ralph P. Sobek) 
+ writes: 
+>Is there any documentation on this file? and it's format?  I have a slight 
+>idea from seeing multiple versions of DESKTOP.INF but would enjoy something 
+>more coherent.  Thanks to all in advance, and I'll summarize either to those 
+>others you are as misinformed as I, or the net if there's sufficient interest. 
+>Please reply to me directly since I don't get the newsgroups (any ;-{). 
+> 
+>Ralph P. Sobek               | UUCP:  uunet!mcvax!inria!lasso!ralph,    or 
+  
+  
+Being home sick today, I took the time to prepare this file (credits 
+at the end). 
+------------------------- CUT HERE ------------------------------- 
+880308 
+  
+DESKTOP.INF 
+========== 
+  
+1) #a - RS-232 
+  
+digit    meaning 
+1        duplex  0 = full  1 = half 
+2        baud    0 = 9600  1 = 4800  2 = 1200  3 = 300 
+        (note: this may have more values to provide for the new 
+        control panel which supports all baud rates) 
+3        parity    0 = none  1 = odd  2 = even 
+4        data bits    0 = 8  1 = 7  2 = 6  3 = 5 
+5        protocol    0 = X off, rts/cts off 
+                    1 = X on, rts/cts off 
+                    2 = X off, rts/cts on 
+                    3 = X on, rts/cts on 
+6        strip bit    0 = on  1 = off 
+        (shouldn't this be called "stop bits 1 or 2"?) 
+  
+  
+eg.  #a062120    - full duplex, 2400 baud, even parity, 7 data bits, 
+                  X off and rts/cts on, 1 stop bit 
+  
+  
+2) #b - Printer 
+  
+digit    meaning 
+1        type    0 = dot matrix  1 = daisywheel 
+2        ink        0 = black and white   1 = colour 
+3        pixel    0 = 1280  1 = 960 
+4        quality 0 = draft  1 = final 
+5        port    0 = printer (parallel)  1 = modem (serial) 
+6        feed    0 = continuous  1 = single sheet 
+  
+eg.  #b000000    - dot matrix, b/w, 1280 pixels, draft, printer, 
+                  continuous (not the most interesting eg) 
+  
+  
+3) #c - Control Panel Settings 
+  
+The first 48 digits or first 16 sets of RGB triples represent the 
+colours to set. The fisrt digit in a triple is the RED value, next is 
+the GREEN and the third is BLUE. 
+  
+The last seven digits represent the following: 
+  
+digit     meaning 
+1        mouse button response  0 to 4 
+2        keyclick  0 = off  1 = on 
+3        bell  0 = off  1 = on 
+4 & 5    keyboard response  0 to 46 
+6 & 7   repeat delay  0 to 21 
+  
+  
+4) #d - Unknown, probably reserved 
+  
+  
+5) #E - View and Option Parameters 
+  
+The first hex value determines how files are arranged in the directory 
+and if confirmation should be requested before copying and deleting. 
+  
+bit        meaning 
+7        view as  0 = icon  1 = text 
+6,5        sort by  00 = name  01 = date  10 = size  11 = type 
+4        deletions 0 = proceed  1 = confirm 
+3        copies  0 = proceed  1 = confirm 
+2,1        unknown 
+  
+The second hex value is the screen resolution (and from what I can 
+tell, whether the blitter is on or off). 
+  
+digit     meaning 
+1        blitter  0 = off  1 = on 
+2        resolution  1 = low  2 = medium  3 = high 
+  
+  
+6) #W - Window Info 
+  
+There are 4 lines, one for each of the four windows that can be 
+opened from the desktop. For each line, the first two bytes are 
+the slider bar positions, the next two are the desktop screen 
+location and the third pair defines the window size. 
+  
+The next byte is uncertain but this byte will take on a value from 
+$07 to $0a or 0. Zero would denote a closed window. These values are 
+most likely window handles. 
+  
+The text string provids the default pathname for the directory. 
+Closing and reopening a window will restore the normal diectory. 
+The '@' is used to mark the end of the string. 
+  
+  
+7) #M - Drive Icons 
+  
+The first two bytes are the (x,y) location of the icon and the 
+third is the type of icon to use. 
+  
+00 = file drawer 
+01 = folder 
+02 = trach can 
+03 = program 
+04 = file 
+  
+The $FF is an $FF which seems to have no purpose in life. After that 
+follows the drive name and text for the icon (12 letters max). The 
+second text field is uncertain at the moment. 
+  
+  
+8) #T - Trash Icon 
+  
+Similar to drive icons except no drive name is given. 
+  
+  
+9) #D #F #G #P - File Icons 
+  
+eg. #F FF 04   @ *.*@ 
+    #D FF 01   @ *.*@ 
+    #G 03 FF   *.APP@ @ 
+    #G 03 FF   *.PRG@ @ 
+    #F 03 04   *.TOS@ @ 
+    #P 03 04   *.TTP@ @ 
+    #G 03 04   GEMCSH.PRG@ *.SH@ 
+  
+The information for this section may not be accurate this is based on 
+both observartion and what I've read else where. 
+  
+"The first #F and #D are said to represent folders and disks; their 
+"function is uncertian. [..] and they should be left untouched. 
+  
+#D function most likely stands for DIRECTORY not DISK while the first 
+#F probably stands for FILE rather than FOLDER. Based on what I say 
+for the rest of the examples maybe someone can figure out what these 
+first two lines do. 
+  
+From what I can tell, the first byte represents what icon should be 
+used to represent the first file string. The second represents what 
+icon/type of file is the second file string. The second file string 
+denotes the type of files attached to the first (ie. installed 
+applications). Or it denotes what to append to a command line. 
+  
+#G = GEM executable 
+#F = executable with no parameters 
+#P = executable with parameters 
+  
+eg. #G 03 FF *.APP@ @  - Any file marked with .APP extension is to 
+be considered as GEM program using a program icon (with no command 
+line parameter). 
+  
+eg. #G 03 04 GEMCSH.PRG@ *.SH@  - When any .SH file is opened, execute 
+GEMCSH.PRG passing the specified file name on the command line. 
+  
+eg. #F 03 04 *.TOS@ @  - Any file marked .TOS is considered as a 
+character based program. This is the confusing bit. Here a 04 is 
+passed but no second file string is given. All I can assume is that 
+it denotes that the command line not be altered in any way. 
+  
+So from the above I can only speculate to the following meanings as 
+I have not tried them. 
+  
+eg. #F FF 04 @ *.*@  - What constitutes a none executable, displayable 
+file. 
+  
+eg. #F FF 04 @ *.DOC@  - This to me means that I can "show" any file 
+with a .DOC extension. 
+  
+eg. #D FF 01 @ *.*@  - What files should be listed when a folder is 
+opened. 
+  
+eg. #D 01 01 GAMES@ *.PRG@  - This means to me that when I open a 
+folder called GAMES, I should only display .PRG files in the directory. 
+  
+  
+10) Sample DESKTOP.INF 
+  
+#a062120 
+#b000000 
+#c7770007000260070055200505552220770557075055507703111103 
+#d 
+#E 98 12 
+#W 00 00 0A 01 15 17 08 A:\*.*@ 
+#W 00 00 20 01 15 17 00 @ 
+#W 00 00 36 01 15 17 00 @ 
+#W 00 00 38 06 15 0D 00 @ 
+#M 00 02 00 FF D RAM DISK@ `@ 
+#M 00 00 00 FF A FLOPPY DISK@ @ 
+#M 00 01 00 FF B FLOPPY DISK@ @ 
+#T 00 03 02 FF   TRASH@ @ 
+#F FF 04   @ *.*@ 
+#D FF 01   @ *.*@ 
+#G 03 FF   *.APP@ @ 
+#G 03 FF   *.PRG@ @ 
+#F 03 04   *.TOS@ @ 
+#P 03 04   *.TTP@ @ 
+#G 03 04   GEMCSH.PRG@ *.SH@ 
+  
+----- 
+Most of the info provided here come from "Compute!'s Atari ST" 
+April 1987, Issue 4, Vol. 2 #2. The bit on file icons comes from my 
+own observations as the article had no answers about #F and #D. 
+Any additions or corrections would be appreciated. 
+  
+  
+--------------------- CUT HERE ------------------------------ 
+Anthony C. Howe                achowe@trillium.waterloo.edu 
+                               achowe@orchid.waterloo.edu 
+  
+"The definition of flying: throwing yourself at the ground and missing." 
+        - Douglas Adam's  "Life, the Universe and Everything" 
+  
+Date: 9 Mar 88 14:57:19 GMT 
+From: mnetor!utzoo!utgpu!water!watmath!orchid!achowe@uunet.uu.net  (CrackerJack 
+Subject: Re: DESKTOP.INF  some corrections 
+To: info-atari16@score.stanford.edu 
+  
+>9) #D #F #G #P - File Icons 
+[...] 
+>#D function most likely stands for DIRECTORY not DISK while the first 
+>#F probably stands for FILE rather than FOLDER. Based on what I say 
+>for the rest of the examples maybe someone can figure out what these 
+>first two lines do. 
+  
+I was right about #D for DIRECTORY. But I not sure what useful tricks 
+you can do with it. 
+  
+eg. #D 01 01  GAMES@ *.*@  - Seems to allow you only to look at the 
+GAMES directory, while clicking on any other directory cause a warm 
+boot. 
+  
+eg #D 01 04  GAMES@ *.PRG@  - Seems to bomb (2) when you click on a file 
+in that directory. 
+  
+>eg. #G 03 04 GEMCSH.PRG@ *.SH@  - When any .SH file is opened, execute 
+>GEMCSH.PRG passing the specified file name on the command line. 
+  
+Can be done with TOS and TTP files as well. Also it is possible to 
+install more than one file for an application. But you can't do this 
+from the desktop options. 
+  
+eg.    #F 03 04  LV.TOS@ *.C@ 
+    #F 03 04  LV.TOS@ *.H@    - Clicking on either a .C or .H file will 
+execute LV.TOS with the given file. 
+  
+>So from the above I can only speculate to the following meanings as 
+>I have not tried them. 
+> 
+>eg. #F FF 04 @ *.*@  - What constitutes a none executable, displayable 
+>file. 
+> 
+>eg. #F FF 04 @ *.DOC@  - This to me means that I can "show" any file 
+>with a .DOC extension. 
+  
+This one was right. Any other file simply caused a reboot as the system 
+did not know what to do with it if it was not mark for execution or 
+display. 
+  
+>eg. #D FF 01 @ *.*@  - What files should be listed when a folder is 
+>opened. 
+  
+Wrong. Still don't know what this spec means. 
+  
+>eg. #D 01 01 GAMES@ *.PRG@  - This means to me that when I open a 
+>folder called GAMES, I should only display .PRG files in the directory. 
+  
+Wrong again. 
+  
+  
+ 

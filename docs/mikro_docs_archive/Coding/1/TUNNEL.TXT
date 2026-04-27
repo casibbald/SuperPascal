@@ -1,0 +1,238 @@
+                     How to do free-directional tunnels
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                          by BlackAxe / KoLOr 1997
+
+
+In the latest demos (in almost every demo from Assembly97) you see those
+funny free-directional tunnels, namely tunnels where you can move how you
+want and perform complex camera movements.
+Many people in iRC asked me how to do such a tunnel, so instead of wasting
+phone costs and explaining it online i decided to write this little tute.
+In fact, this effect is kinda easy to do, but unlike normal, old, silly 
+tubes it doesn't work with those silly lookup tables (darn, I hate lookup
+tables :-)), but in fact it's realtime raytraycing. Realtime Raytraycing??
+Isn't that slow? No, there are some tricks to make it possible in realtime.
+Well, let's start with a little introduction to raytraycing.
+
+1.) Raytraycing, the basics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In fact, raytraycing is a very easy algorithm, many people think it's hard
+as hell, because one get's good quality pictures out of it, but the basics
+are easy. Performing refractions, reflections and other complex things is a
+bit more advanced, but the basics are very very easy, everyone that knows a
+bit math should understand it.
+Well, basically the algorithm consists of shooting a ray through each pixel
+of the screen and check for intersections of this ray with objects in the 
+scene. Let's start with the equation of a ray. A ray is defined as
+
+        Origin + t*Direction
+where Origin is the vector of the camera, and Direction a normalized direction
+vector. t is a float that indicates a position on the ray. Now for shooting
+a ray through a pixel, we do the following, if we consider the camera to be
+at (0,0,-256)
+        Origin.x = 0;
+        Origin.y = 0;
+        Origin.z = -128;
+
+now we shoot the ray through that pixel:
+        Direction.x = Pixel.X;
+        Direction.y = Pixel.Y;
+        Direction.z = 128;
+        Direction.Normalize();
+of course you can take something different for Z, that's your decision.
+Note: The midmost pixel of the screen muts be (0,0), so if you work in 
+320x200 you first have to substract 160 of X and 100 of Y (or 320 resp. 240
+when you work in 640x480). And don't forget to normalize the Direction
+(if you don't know how to normalize a vector, first check a vector tutorial
+like ZED3D), hmm, well, here's the little function to normalize a vector for
+all you dummies :-))
+
+void Vector::Normalize()
+{
+  float len = sqrt(x*x + y*y + z*z);
+  x /= len;
+  y /= len;
+  z /= len;
+}
+
+Now you have your ray, and you need to check for intersections. For that, you
+need to find t (of course, because you know the rest :-)). Then you have
+        Intersection = Origin + t*Direction
+how funny :-)
+[Intersection is a vector ofcourse]
+
+
+
+2.) Doing the raytraycing for the tunnel
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Think! What is a tunnel?? A tunnel is a cylinder, a simply silly cylinder.
+And what is a cylinder??? A cylinder is a set of circles on a straight line.
+Each Z coordinate has a circle. So it's just circles for each Z :-)
+Now we have to find the intersection between our ray and the correct circle.
+Recall the equation of a circle from your math course:
+
+        (x-a)^2 + (y-b)^2 = r^2
+(a,b) is the center of the circle, and r is the radius. As we suppose the
+circles are on (0,0) this becomes
+        x^2 + y^2 = r^2
+easy huu :-)
+
+Now we substitute the ray equation in this equation.
+        (Origin.x + t*Direction.x)^2 + (Origin.y + t*Direction.y)^2 = r^2
+and we calculate this out
+
+Origin.x^2 + 2*Origin.x*t*Direction.x + t^2*Direction.x^2 +
+  Origin.y^2 + 2*Origin.y*t*Direction.y + t^2*Direction.y^2 = r^2
+
+now we group all terms that should be grouped :-)
+t^2*(Direction.x^2 + Direction.y^2) + t*2*(Origin.x*Direction.x + 
+  Origin.y*Direction.y) + Origin.x^2 + Origin.y^2 - r^2 = 0;
+ain't this a nice quadratic equation? Hmm, let's write it like this
+
+a*t^2 + b*t + c = 0
+
+where:
+  a = Direction.x^2 + Direction.y^2
+  b = 2*(Origin.x*Direction.x + Origin.y*Direction.y)
+  c = Origin.x^2 + Origin.y^2 - r^2
+
+Now we need to solve this equation. From your math course you should now how
+to solve quadratic equations:
+we first have to calculate the discriminent delta
+        delta = b^2 - 4*a*c
+
+Now if delta < 0, there are no real solutions, only complex ones, if this
+  case happens, there's no Intersection and we can draw a background colour.
+If delta = 0, there's ONE intersection, that is calculated as follows
+             -b
+        t = -----
+             2*a
+
+If delta > 0, there are TWO real intersections:
+
+             -b - sqrt(delta)
+        t1 = ----------------
+                  2*a
+
+             -b + sqrt(delta)
+        t2 = ----------------
+                  2*a
+
+We are only interested in the nearer of those intersections, so we do
+        t = min(t1, t2);
+
+Now you have your intersection between the ray and the cylinder :-)
+Intersection = Origin + t*Direction
+
+One thing rests: we need to texturemap the tunnel. This is easy to, we just
+apply cylindric mapping to the Intersection point.
+
+we just do:
+
+u = abs(Intersection.z)*0.2;
+v = abs(atan2(Intersection.y, Intersection.x)*256/PI);
+
+that's it :-) you can combine that with depth cue too, i.e. taking the Z into 
+account to get a shade-level, but i leave that to you.
+That's already it. If you do that for each pixel, you get a nice tunnel :-)
+
+
+3.) Moving the camera
+~~~~~~~~~~~~~~~~~~~~~
+You want to move your camera ofcourse :-)
+That's easy, change your Origin vector's x,y of you want to move your camera,
+and if you want to to rotate, just rotate your Direction vector using a matrix
+or normal 12 mul rotation. I won't go any further into this, as it's really
+basic stuff, see the source below to check how it works.
+
+
+4.) Doing it in realtime
+~~~~~~~~~~~~~~~~~~~~~~~~
+I hear you cry, this is IMPOSSIBLE in realtime. Well in fact it is, tracing
+rays for each pixel :-) But you won't do that, won't you. In fact you just trace
+rays for some pixel and interpolate between. I take a 40x25 grid (that is 8x8
+pixels large) shoot a ray for each grid, i.e. getting (u,v) for each grid 
+position, and interpolate between, that way i get a full 320x200 screen by only
+calculating 1000 intersections, and it's precise enough. That method can be used
+for other 2d effects too, kinda great for bitmap distortions.
+
+
+5.) Some example source for the lazy ones
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+u,v are an index to a 256x256 texturemap, and as Radius I take 256
+
+virtual void FreeTunnel::GetUV(int x,int y, int &u, int &v)
+{
+  Vector Direction(x-160, y-100, 256);
+  Direction *= RotationMatrix;
+  Direction.Normalize();		// normalize Direction vector
+
+  Vector Origin(100, 100, -256);
+
+
+  // calculate the stuff :-)
+  float a = fsqr(Direction.x) + fsqr(Direction.y);
+  float b = 2*(Origin.x*Direction.x + Origin.y*Direction.y);
+  float c = fsqr(Origin.x) + fsqr(Origin.y) - fsqr(Radius);
+
+  // calculate discriminent delta
+  float delta = fsqr(b) - 4*a*c;
+
+  // if there's no real solution
+  if (delta < 0)
+    {
+	  u = 128;
+	  v = 128;
+	  return;
+	}
+
+  float t,t1,t2;
+  // there are 2 solutions, get the nearest ... this case should never happen
+  t1 = (-b + sqrt(delta))/(2*a);
+  t2 = (-b - sqrt(delta))/(2*a);
+  t = min(t1, t2);                      // min here
+
+  // finnally the intersection
+  Vector Intersection = Origin + t*Direction;
+
+// do the mapping
+  u = (int)(fabs(Intersection.z)*0.2);
+  v = (int)(fabs(atan2(Intersection.y, Intersection.x)*256/PI));
+} 
+
+
+Again, i call that for 40x25 and interpolate between the (u,v) set.
+As you can see, i used OOP massively, e.g for Vectors and Matrices.
+OOP really helps you alot, you should try it.
+If you take an 80x50 grid (4x4 interpolation) you might get better results, but
+this works fine for me.
+
+That's pretty much it, now go ahead and code yourself a killer-tunnel.
+If you want to see this tunnel in action, get our Evoke97 demo (1st place)
+the archive is called KWISSEN.ZIP and you should find it on cdrom.com.
+
+
+6.) Greets
+~~~~~~~~~~
+Greets fly to (no order):
+Tomh, Climax, Shiva, Fontex, Raytrayza, Noize, LordChaos, Red13, kb, DrYes, 
+Siriuz, Crest, Gaffer, Trickster, Houlq, Screamager, LoneWolf, Magic, Unreal,
+Aap, Cirion, Kyp, Assign, and the rest i have forgotten in some way.
+
+If you feel the need to contact me, do so :-)
+In the moment i don't have any e-mail, but i'll get one soon. Try to catch me
+on iRC (channel #coders and #coders.ger on IRCNET and #luxusbuerg on UnderNet)
+Or snail-mail me
+	Laurent Schmalen
+	6, rue Tony Schmit
+	L-9081 Ettelbruck
+	G.D. Luxembourg
+
+have fun and stay trippy dudes!
+
+	
+
+
+
+
+

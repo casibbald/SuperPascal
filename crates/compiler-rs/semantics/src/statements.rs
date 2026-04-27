@@ -17,6 +17,12 @@ impl SemanticAnalyzer {
             Node::ForStmt(f) => self.analyze_for_stmt(f),
             Node::RepeatStmt(r) => self.analyze_repeat_stmt(r),
             Node::CaseStmt(c) => self.analyze_case_stmt(c),
+            Node::Block(blk) => {
+                // BEGIN...END block: analyze all contained statements
+                for s in &blk.statements {
+                    self.analyze_statement(s);
+                }
+            }
             _ => {
                 self.core.add_error(
                     "Unsupported statement type".to_string(),
