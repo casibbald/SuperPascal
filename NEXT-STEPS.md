@@ -173,6 +173,73 @@
 - [ ] 68K backend (platforms/)
 - [ ] Commander X16 backend (platforms/CommanderX16)
 
+#### 15. x86_64 Backend (`backend-x86_64`) — ⭐ NEW
+**Goal:** Compile SuperPascal → x86_64 ELF64 binary (runnable on Linux locally)
+**Rationale:** Z80 requires emulator to test. x86_64 binary can run directly on developer machine for rapid iteration.
+
+**Step 1 — Crate scaffolding**
+- Create `crates/compiler-rs/backends/backend-x86_64/Cargo.toml`
+- Add `backend-x86_64` to workspace `members` in `Cargo.toml`
+- Define module structure: `lib.rs` with types and code generator
+
+**Step 2 — Code generator core**
+- Define `CodeGenerator` struct with state: current function, local stack offset, temp counter
+- Implement `generate(program: &Program) -> Vec<AssemblyInstruction>`
+- Implement function prologue: `push rbp; mov rbp, rsp; sub rsp, local_size`
+- Implement function epilogue: `mov rsp, rbp; pop rbp; ret`
+
+**Step 3 — IR opcode → x86_64 translation**
+Map each IR opcode to x86_64 instructions:
+- `Mov` → `mov` (register, register; register, immediate; register, [mem])
+- `Add/Sub` → `add r64, src` / `sub r64, src`
+- `Mul/Div` → `imul r64, src` / `idiv` (dividend in RAX)
+- `Cmp` → `cmp r64, src`
+- `Jump` → `jmp label`
+- `CJump` → `cmp` + `je/jne/jl/jle/jg/jge label`
+- `Call` → `call function_name` (cdecl: RDI, RSI, RDX, RCX, R8, R9 for params; RAX for return)
+- `Ret` → `ret`
+- `Load` → `mov r64, [mem]`
+- `Store` → `mov [mem], r64`
+- `Push` → `push r64`
+- `Pop` → `pop r64`
+
+**Step 4 — Register allocation**
+- Map IR temps (T0, T1...) to x86_64 callee-saved and volatile registers
+- Register pool: RAX, RCX, RDX, RSI, RDI, R8, R9, R10, R11 (callee-volatile) + RBX, RBP, R12-R15 (callee-saved)
+- Implement spilling to stack frame when register pressure exceeds 9 registers
+- Handle value-to-register loading and register-to-value storing
+
+**Step 5 — Assembly text emission**
+- Define `AssemblyInstruction` enum: `Label`, `Nop`, `Comment`, `Mov`, `Add`, `Sub`, `Imul`, `Idiv`, `Cmp`, `Jmp`, `Jcc`, `Call`, `Ret`, `Push`, `Pop`, `Lea`, `Nop`
+- Implement `Display` for each variant with Intel syntax, proper operand formatting
+- Handle 32-bit vs 64-bit operand sizing (byte, word, dword, qword)
+- Handle RIP-relative addressing for external symbols
+
+**Step 6 — ELF64 object file generation**
+- Generate a `.s` assembly text file or directly emit ELF64 binary
+- ELF64 structure: ELF header (64 bytes) → program header table → sections
+- Sections: `.text` (code), `.data` (initialized globals), `.bss` (zero-initialized), `.symtab`, `.strtab`
+- Section alignment: 16-byte for code
+- Symbol table: export function names as global symbols
+
+**Step 7 — Linker integration in driver**
+- Add `x86_64` target variant to `TargetPlatform` enum
+- In `Compiler::compile_file()`, detect target and choose codegen path
+- For x86_64: generate `.s` file → invoke `as` → generate `.o` → invoke `ld` → produce final ELF64
+- Support `--target=x86_64` CLI flag or output extension detection (`.elf`, `.bin`, `.o`)
+
+**Step 8 — Runtime stubs**
+- Minimal `_start` entry point: call `main`, exit via `syscall 60` (exit_group)
+- For I/O: link against libc (`printf`, `scanf`, `fopen`, etc.)
+- Alternative: provide libc-free syscall wrappers for write/read/exit/open/close
+- Handle C calling convention (cdecl): caller saves RAX, RCX, RDX, RDI, RSI, R8-R11
+
+**Step 9 — End-to-end test**
+- Compile a Pascal program with: `if/else`, `for` loop, `function`, `local variables`, `WriteLn`
+- Run the produced ELF64 binary directly on Linux
+- Verify correct stdout output and exit code
+- Compare against expected output
+
 ---
 
 ## 📊 Implementation Roadmap (Revised)
