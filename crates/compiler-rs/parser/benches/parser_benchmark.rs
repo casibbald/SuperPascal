@@ -2,7 +2,7 @@
 //!
 //! Run with: cargo bench --package parser
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use parser::Parser;
 
 fn bench_parse_simple_program(c: &mut Criterion) {
@@ -86,11 +86,11 @@ fn bench_parse_expressions(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, 
+criterion_group!(
+    benches,
     bench_parse_simple_program,
     bench_parse_large_program,
     bench_parse_nested_blocks,
     bench_parse_expressions
 );
 criterion_main!(benches);
-

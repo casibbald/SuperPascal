@@ -1,9 +1,9 @@
 //! Core semantic analyzer functionality
 
+use ::types::Type;
 use errors::Diagnostic;
 use symbols::SymbolTable;
 use tokens::Span;
-use ::types::Type;
 
 /// Core semantic analyzer functionality
 pub struct CoreAnalyzer {
@@ -25,8 +25,11 @@ impl CoreAnalyzer {
     /// Add an error diagnostic
     pub fn add_error(&mut self, message: String, span: Span) {
         use errors::ErrorSeverity;
-        let diag = Diagnostic::new(ErrorSeverity::Error, message, span)
-            .with_file(self.filename.clone().unwrap_or_else(|| "unknown".to_string()));
+        let diag = Diagnostic::new(ErrorSeverity::Error, message, span).with_file(
+            self.filename
+                .clone()
+                .unwrap_or_else(|| "unknown".to_string()),
+        );
         self.diagnostics.push(diag);
     }
 
@@ -48,7 +51,9 @@ impl CoreAnalyzer {
             }
             Type::Error => "error".to_string(),
             Type::Named { name, .. } => name.clone(),
-            Type::Generic { name, param_names, .. } => {
+            Type::Generic {
+                name, param_names, ..
+            } => {
                 format!("{}<{}>", name, param_names.join(", "))
             }
             Type::Instantiated { generic_name, args } => {
@@ -62,7 +67,11 @@ impl CoreAnalyzer {
                 return_type,
                 is_method_pointer,
             } => {
-                let kind = if *is_function { "function" } else { "procedure" };
+                let kind = if *is_function {
+                    "function"
+                } else {
+                    "procedure"
+                };
                 let method = if *is_method_pointer { " of object" } else { "" };
                 let param_strs: Vec<String> = params.iter().map(|t| Self::format_type(t)).collect();
                 let params_str = if param_strs.is_empty() {
@@ -80,4 +89,3 @@ impl CoreAnalyzer {
         }
     }
 }
-

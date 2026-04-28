@@ -62,16 +62,16 @@ pub enum TokenKind {
     // ===== Keywords (Tier 1: Core) =====
     KwAnd,
     KwArray,
-    KwAsm,   // ASM keyword for inline assembly
+    KwAsm, // ASM keyword for inline assembly
     KwBegin,
     KwBoolean,
     KwByte,
     KwCase,
     KwChar,
     KwConst,
-    KwConstref,  // CONSTREF parameter mode
-    KwOut,       // OUT parameter mode
-    KwAbsolute,  // ABSOLUTE keyword for absolute addressing
+    KwConstref, // CONSTREF parameter mode
+    KwOut,      // OUT parameter mode
+    KwAbsolute, // ABSOLUTE keyword for absolute addressing
     KwDiv,
     KwDo,
     KwDownto,
@@ -81,32 +81,32 @@ pub enum TokenKind {
     KwFor,
     KwFunction,
     KwGoto,
-    KwLabel,  // LABEL keyword for label declarations
+    KwLabel, // LABEL keyword for label declarations
     KwIf,
-    KwIn,      // in (set membership operator)
+    KwIn, // in (set membership operator)
     KwInteger,
-    KwIs,      // is (type checking operator)
-    KwAs,      // as (type casting operator)
+    KwIs, // is (type checking operator)
+    KwAs, // as (type casting operator)
     KwMod,
     KwNot,
     KwOf,
     KwOr,
-    KwPacked,    // PACKED keyword for packed records/arrays
+    KwPacked, // PACKED keyword for packed records/arrays
     KwProcedure,
     KwProgram,
     KwRecord,
     KwRepeat,
     KwSet,
     KwString,
-    KwStruct,  // SuperPascal extension
+    KwStruct, // SuperPascal extension
     KwThen,
     KwTo,
     KwTrue,
     KwType,
     KwUntil,
     KwVar,
-    KwThreadvar,  // THREADVAR keyword for thread-local variables
-    KwResourcestring,  // RESOURCESTRING keyword for resource strings
+    KwThreadvar,      // THREADVAR keyword for thread-local variables
+    KwResourcestring, // RESOURCESTRING keyword for resource strings
     KwWhile,
     KwWith,
     KwWord,
@@ -119,14 +119,14 @@ pub enum TokenKind {
     KwLibrary,
     KwInitialization,
     KwFinalization,
-    KwNamespace,  // Future
-    KwUsing,      // Future
+    KwNamespace, // Future
+    KwUsing,     // Future
 
     // ===== Keywords (Tier 3: Object Pascal) =====
     KwClass,
     KwConstructor,
     KwDestructor,
-    KwObject,    // OBJECT keyword (for method pointers)
+    KwObject, // OBJECT keyword (for method pointers)
     KwOverride,
     KwPrivate,
     KwProtected,
@@ -136,7 +136,7 @@ pub enum TokenKind {
     KwVirtual,
     KwForward,
     KwExternal,
-    KwOperator,  // OPERATOR keyword for operator overloading
+    KwOperator, // OPERATOR keyword for operator overloading
     KwProperty,
     KwRead,
     KwWrite,
@@ -149,14 +149,14 @@ pub enum TokenKind {
     KwFinally,
     KwRaise,
     KwTry,
-    KwOn,      // ON exception_type DO (exception handler)
-    KwFile,    // FILE keyword for file types
+    KwOn,   // ON exception_type DO (exception handler)
+    KwFile, // FILE keyword for file types
 
     // ===== Keywords (Special) =====
     KwNil,
     KwSelf,
     KwInherited,
-    KwHelper,  // HELPER keyword for class/record helpers
+    KwHelper, // HELPER keyword for class/record helpers
 
     // ===== Identifiers =====
     Identifier(String),
@@ -176,37 +176,37 @@ pub enum TokenKind {
 
     // ===== Operators =====
     // Arithmetic
-    Plus,      // +
-    Minus,     // -
-    Star,      // *
-    Slash,     // /
+    Plus,  // +
+    Minus, // -
+    Star,  // *
+    Slash, // /
     // Comparison
-    Equal,     // =
-    NotEqual,  // <>
-    Less,      // <
-    LessEqual, // <=
-    Greater,   // >
+    Equal,        // =
+    NotEqual,     // <>
+    Less,         // <
+    LessEqual,    // <=
+    Greater,      // >
     GreaterEqual, // >=
     // Logical
     // (and, or, not are keywords)
     // Assignment
-    Assign,    // :=
+    Assign, // :=
     // Other
-    Dot,       // .
-    DotDot,    // ..
-    Caret,     // ^
+    Dot,    // .
+    DotDot, // ..
+    Caret,  // ^
 
     // ===== Delimiters =====
-    Semicolon,  // ;
-    Comma,      // ,
-    Colon,      // :
-    LeftParen,  // (
-    RightParen, // )
-    LeftBracket, // [
+    Semicolon,    // ;
+    Comma,        // ,
+    Colon,        // :
+    LeftParen,    // (
+    RightParen,   // )
+    LeftBracket,  // [
     RightBracket, // ]
-    LeftBrace,  // {
-    RightBrace, // }
-    At,         // @
+    LeftBrace,    // {
+    RightBrace,   // }
+    At,           // @
 
     // ===== Directives =====
     /// Compiler directive: {$...}
@@ -447,7 +447,7 @@ impl TokenKind {
 ///
 /// Maps keyword strings (case-insensitive) to TokenKind
 /// Fast case-insensitive ASCII character comparison
-/// 
+///
 /// Turbo Pascal-style optimization: compare without allocating.
 /// Uses bit manipulation to convert uppercase to lowercase (ASCII only).
 #[inline]
@@ -462,7 +462,7 @@ fn ascii_to_lower(ch: u8) -> u8 {
 }
 
 /// Fast case-insensitive string comparison (ASCII only)
-/// 
+///
 /// Turbo Pascal-style: early exit on mismatch, no allocation.
 /// Returns true if strings are equal ignoring case.
 #[inline]
@@ -476,7 +476,7 @@ pub fn eq_ignore_ascii_case(a: &str, b: &str) -> bool {
 }
 
 /// Fast case-insensitive string comparison with early exit
-/// 
+///
 /// Returns the position of first mismatch, or None if equal.
 #[inline]
 pub fn compare_ignore_ascii_case(a: &str, b: &str) -> Option<usize> {
@@ -498,101 +498,283 @@ pub fn lookup_keyword(s: &str) -> Option<TokenKind> {
     // Fast case-insensitive lookup without allocation
     // Use eq_ignore_ascii_case for comparison
     // Tier 1: Core keywords
-    if eq_ignore_ascii_case(s, "and") { return Some(TokenKind::KwAnd); }
-    if eq_ignore_ascii_case(s, "array") { return Some(TokenKind::KwArray); }
-    if eq_ignore_ascii_case(s, "asm") { return Some(TokenKind::KwAsm); }
-    if eq_ignore_ascii_case(s, "begin") { return Some(TokenKind::KwBegin); }
-    if eq_ignore_ascii_case(s, "boolean") { return Some(TokenKind::KwBoolean); }
-    if eq_ignore_ascii_case(s, "byte") { return Some(TokenKind::KwByte); }
-    if eq_ignore_ascii_case(s, "case") { return Some(TokenKind::KwCase); }
-    if eq_ignore_ascii_case(s, "char") { return Some(TokenKind::KwChar); }
-    if eq_ignore_ascii_case(s, "const") { return Some(TokenKind::KwConst); }
-    if eq_ignore_ascii_case(s, "constref") { return Some(TokenKind::KwConstref); }
-    if eq_ignore_ascii_case(s, "out") { return Some(TokenKind::KwOut); }
-    if eq_ignore_ascii_case(s, "absolute") { return Some(TokenKind::KwAbsolute); }
-    if eq_ignore_ascii_case(s, "div") { return Some(TokenKind::KwDiv); }
-    if eq_ignore_ascii_case(s, "do") { return Some(TokenKind::KwDo); }
-    if eq_ignore_ascii_case(s, "downto") { return Some(TokenKind::KwDownto); }
-    if eq_ignore_ascii_case(s, "else") { return Some(TokenKind::KwElse); }
-    if eq_ignore_ascii_case(s, "end") { return Some(TokenKind::KwEnd); }
-    if eq_ignore_ascii_case(s, "false") { return Some(TokenKind::KwFalse); }
-    if eq_ignore_ascii_case(s, "for") { return Some(TokenKind::KwFor); }
-    if eq_ignore_ascii_case(s, "function") { return Some(TokenKind::KwFunction); }
-    if eq_ignore_ascii_case(s, "goto") { return Some(TokenKind::KwGoto); }
-    if eq_ignore_ascii_case(s, "label") { return Some(TokenKind::KwLabel); }
-    if eq_ignore_ascii_case(s, "if") { return Some(TokenKind::KwIf); }
-    if eq_ignore_ascii_case(s, "in") { return Some(TokenKind::KwIn); }
-    if eq_ignore_ascii_case(s, "helper") { return Some(TokenKind::KwHelper); }
-    if eq_ignore_ascii_case(s, "inherited") { return Some(TokenKind::KwInherited); }
-    if eq_ignore_ascii_case(s, "integer") { return Some(TokenKind::KwInteger); }
-    if eq_ignore_ascii_case(s, "is") { return Some(TokenKind::KwIs); }
-    if eq_ignore_ascii_case(s, "as") { return Some(TokenKind::KwAs); }
-    if eq_ignore_ascii_case(s, "mod") { return Some(TokenKind::KwMod); }
-    if eq_ignore_ascii_case(s, "not") { return Some(TokenKind::KwNot); }
-    if eq_ignore_ascii_case(s, "of") { return Some(TokenKind::KwOf); }
-    if eq_ignore_ascii_case(s, "or") { return Some(TokenKind::KwOr); }
-    if eq_ignore_ascii_case(s, "packed") { return Some(TokenKind::KwPacked); }
-    if eq_ignore_ascii_case(s, "procedure") { return Some(TokenKind::KwProcedure); }
-    if eq_ignore_ascii_case(s, "program") { return Some(TokenKind::KwProgram); }
-    if eq_ignore_ascii_case(s, "record") { return Some(TokenKind::KwRecord); }
-    if eq_ignore_ascii_case(s, "repeat") { return Some(TokenKind::KwRepeat); }
-    if eq_ignore_ascii_case(s, "set") { return Some(TokenKind::KwSet); }
-    if eq_ignore_ascii_case(s, "string") { return Some(TokenKind::KwString); }
-    if eq_ignore_ascii_case(s, "struct") { return Some(TokenKind::KwStruct); }
-    if eq_ignore_ascii_case(s, "then") { return Some(TokenKind::KwThen); }
-    if eq_ignore_ascii_case(s, "to") { return Some(TokenKind::KwTo); }
-    if eq_ignore_ascii_case(s, "true") { return Some(TokenKind::KwTrue); }
-    if eq_ignore_ascii_case(s, "type") { return Some(TokenKind::KwType); }
-    if eq_ignore_ascii_case(s, "until") { return Some(TokenKind::KwUntil); }
-    if eq_ignore_ascii_case(s, "var") { return Some(TokenKind::KwVar); }
-    if eq_ignore_ascii_case(s, "threadvar") { return Some(TokenKind::KwThreadvar); }
-    if eq_ignore_ascii_case(s, "resourcestring") { return Some(TokenKind::KwResourcestring); }
-    if eq_ignore_ascii_case(s, "while") { return Some(TokenKind::KwWhile); }
-    if eq_ignore_ascii_case(s, "with") { return Some(TokenKind::KwWith); }
-    if eq_ignore_ascii_case(s, "word") { return Some(TokenKind::KwWord); }
+    if eq_ignore_ascii_case(s, "and") {
+        return Some(TokenKind::KwAnd);
+    }
+    if eq_ignore_ascii_case(s, "array") {
+        return Some(TokenKind::KwArray);
+    }
+    if eq_ignore_ascii_case(s, "asm") {
+        return Some(TokenKind::KwAsm);
+    }
+    if eq_ignore_ascii_case(s, "begin") {
+        return Some(TokenKind::KwBegin);
+    }
+    if eq_ignore_ascii_case(s, "boolean") {
+        return Some(TokenKind::KwBoolean);
+    }
+    if eq_ignore_ascii_case(s, "byte") {
+        return Some(TokenKind::KwByte);
+    }
+    if eq_ignore_ascii_case(s, "case") {
+        return Some(TokenKind::KwCase);
+    }
+    if eq_ignore_ascii_case(s, "char") {
+        return Some(TokenKind::KwChar);
+    }
+    if eq_ignore_ascii_case(s, "const") {
+        return Some(TokenKind::KwConst);
+    }
+    if eq_ignore_ascii_case(s, "constref") {
+        return Some(TokenKind::KwConstref);
+    }
+    if eq_ignore_ascii_case(s, "out") {
+        return Some(TokenKind::KwOut);
+    }
+    if eq_ignore_ascii_case(s, "absolute") {
+        return Some(TokenKind::KwAbsolute);
+    }
+    if eq_ignore_ascii_case(s, "div") {
+        return Some(TokenKind::KwDiv);
+    }
+    if eq_ignore_ascii_case(s, "do") {
+        return Some(TokenKind::KwDo);
+    }
+    if eq_ignore_ascii_case(s, "downto") {
+        return Some(TokenKind::KwDownto);
+    }
+    if eq_ignore_ascii_case(s, "else") {
+        return Some(TokenKind::KwElse);
+    }
+    if eq_ignore_ascii_case(s, "end") {
+        return Some(TokenKind::KwEnd);
+    }
+    if eq_ignore_ascii_case(s, "false") {
+        return Some(TokenKind::KwFalse);
+    }
+    if eq_ignore_ascii_case(s, "for") {
+        return Some(TokenKind::KwFor);
+    }
+    if eq_ignore_ascii_case(s, "function") {
+        return Some(TokenKind::KwFunction);
+    }
+    if eq_ignore_ascii_case(s, "goto") {
+        return Some(TokenKind::KwGoto);
+    }
+    if eq_ignore_ascii_case(s, "label") {
+        return Some(TokenKind::KwLabel);
+    }
+    if eq_ignore_ascii_case(s, "if") {
+        return Some(TokenKind::KwIf);
+    }
+    if eq_ignore_ascii_case(s, "in") {
+        return Some(TokenKind::KwIn);
+    }
+    if eq_ignore_ascii_case(s, "helper") {
+        return Some(TokenKind::KwHelper);
+    }
+    if eq_ignore_ascii_case(s, "inherited") {
+        return Some(TokenKind::KwInherited);
+    }
+    if eq_ignore_ascii_case(s, "integer") {
+        return Some(TokenKind::KwInteger);
+    }
+    if eq_ignore_ascii_case(s, "is") {
+        return Some(TokenKind::KwIs);
+    }
+    if eq_ignore_ascii_case(s, "as") {
+        return Some(TokenKind::KwAs);
+    }
+    if eq_ignore_ascii_case(s, "mod") {
+        return Some(TokenKind::KwMod);
+    }
+    if eq_ignore_ascii_case(s, "not") {
+        return Some(TokenKind::KwNot);
+    }
+    if eq_ignore_ascii_case(s, "of") {
+        return Some(TokenKind::KwOf);
+    }
+    if eq_ignore_ascii_case(s, "or") {
+        return Some(TokenKind::KwOr);
+    }
+    if eq_ignore_ascii_case(s, "packed") {
+        return Some(TokenKind::KwPacked);
+    }
+    if eq_ignore_ascii_case(s, "procedure") {
+        return Some(TokenKind::KwProcedure);
+    }
+    if eq_ignore_ascii_case(s, "program") {
+        return Some(TokenKind::KwProgram);
+    }
+    if eq_ignore_ascii_case(s, "record") {
+        return Some(TokenKind::KwRecord);
+    }
+    if eq_ignore_ascii_case(s, "repeat") {
+        return Some(TokenKind::KwRepeat);
+    }
+    if eq_ignore_ascii_case(s, "set") {
+        return Some(TokenKind::KwSet);
+    }
+    if eq_ignore_ascii_case(s, "string") {
+        return Some(TokenKind::KwString);
+    }
+    if eq_ignore_ascii_case(s, "struct") {
+        return Some(TokenKind::KwStruct);
+    }
+    if eq_ignore_ascii_case(s, "then") {
+        return Some(TokenKind::KwThen);
+    }
+    if eq_ignore_ascii_case(s, "to") {
+        return Some(TokenKind::KwTo);
+    }
+    if eq_ignore_ascii_case(s, "true") {
+        return Some(TokenKind::KwTrue);
+    }
+    if eq_ignore_ascii_case(s, "type") {
+        return Some(TokenKind::KwType);
+    }
+    if eq_ignore_ascii_case(s, "until") {
+        return Some(TokenKind::KwUntil);
+    }
+    if eq_ignore_ascii_case(s, "var") {
+        return Some(TokenKind::KwVar);
+    }
+    if eq_ignore_ascii_case(s, "threadvar") {
+        return Some(TokenKind::KwThreadvar);
+    }
+    if eq_ignore_ascii_case(s, "resourcestring") {
+        return Some(TokenKind::KwResourcestring);
+    }
+    if eq_ignore_ascii_case(s, "while") {
+        return Some(TokenKind::KwWhile);
+    }
+    if eq_ignore_ascii_case(s, "with") {
+        return Some(TokenKind::KwWith);
+    }
+    if eq_ignore_ascii_case(s, "word") {
+        return Some(TokenKind::KwWord);
+    }
     // Tier 2: Unit keywords
-    if eq_ignore_ascii_case(s, "implementation") { return Some(TokenKind::KwImplementation); }
-    if eq_ignore_ascii_case(s, "interface") { return Some(TokenKind::KwInterface); }
-    if eq_ignore_ascii_case(s, "unit") { return Some(TokenKind::KwUnit); }
-    if eq_ignore_ascii_case(s, "uses") { return Some(TokenKind::KwUses); }
-    if eq_ignore_ascii_case(s, "library") { return Some(TokenKind::KwLibrary); }
-    if eq_ignore_ascii_case(s, "initialization") { return Some(TokenKind::KwInitialization); }
-    if eq_ignore_ascii_case(s, "finalization") { return Some(TokenKind::KwFinalization); }
-    if eq_ignore_ascii_case(s, "namespace") { return Some(TokenKind::KwNamespace); }
-    if eq_ignore_ascii_case(s, "using") { return Some(TokenKind::KwUsing); }
+    if eq_ignore_ascii_case(s, "implementation") {
+        return Some(TokenKind::KwImplementation);
+    }
+    if eq_ignore_ascii_case(s, "interface") {
+        return Some(TokenKind::KwInterface);
+    }
+    if eq_ignore_ascii_case(s, "unit") {
+        return Some(TokenKind::KwUnit);
+    }
+    if eq_ignore_ascii_case(s, "uses") {
+        return Some(TokenKind::KwUses);
+    }
+    if eq_ignore_ascii_case(s, "library") {
+        return Some(TokenKind::KwLibrary);
+    }
+    if eq_ignore_ascii_case(s, "initialization") {
+        return Some(TokenKind::KwInitialization);
+    }
+    if eq_ignore_ascii_case(s, "finalization") {
+        return Some(TokenKind::KwFinalization);
+    }
+    if eq_ignore_ascii_case(s, "namespace") {
+        return Some(TokenKind::KwNamespace);
+    }
+    if eq_ignore_ascii_case(s, "using") {
+        return Some(TokenKind::KwUsing);
+    }
     // Tier 3: Object Pascal
-    if eq_ignore_ascii_case(s, "class") { return Some(TokenKind::KwClass); }
-    if eq_ignore_ascii_case(s, "object") { return Some(TokenKind::KwObject); }
-    if eq_ignore_ascii_case(s, "constructor") { return Some(TokenKind::KwConstructor); }
-    if eq_ignore_ascii_case(s, "destructor") { return Some(TokenKind::KwDestructor); }
-    if eq_ignore_ascii_case(s, "override") { return Some(TokenKind::KwOverride); }
-    if eq_ignore_ascii_case(s, "private") { return Some(TokenKind::KwPrivate); }
-    if eq_ignore_ascii_case(s, "protected") { return Some(TokenKind::KwProtected); }
-    if eq_ignore_ascii_case(s, "public") { return Some(TokenKind::KwPublic); }
-    if eq_ignore_ascii_case(s, "published") { return Some(TokenKind::KwPublished); }
-    if eq_ignore_ascii_case(s, "strict") { return Some(TokenKind::KwStrict); }
-    if eq_ignore_ascii_case(s, "virtual") { return Some(TokenKind::KwVirtual); }
-    if eq_ignore_ascii_case(s, "forward") { return Some(TokenKind::KwForward); }
-    if eq_ignore_ascii_case(s, "external") { return Some(TokenKind::KwExternal); }
-    if eq_ignore_ascii_case(s, "operator") { return Some(TokenKind::KwOperator); }
-    if eq_ignore_ascii_case(s, "property") { return Some(TokenKind::KwProperty); }
-    if eq_ignore_ascii_case(s, "read") { return Some(TokenKind::KwRead); }
-    if eq_ignore_ascii_case(s, "write") { return Some(TokenKind::KwWrite); }
-    if eq_ignore_ascii_case(s, "index") { return Some(TokenKind::KwIndex); }
-    if eq_ignore_ascii_case(s, "default") { return Some(TokenKind::KwDefault); }
-    if eq_ignore_ascii_case(s, "stored") { return Some(TokenKind::KwStored); }
+    if eq_ignore_ascii_case(s, "class") {
+        return Some(TokenKind::KwClass);
+    }
+    if eq_ignore_ascii_case(s, "object") {
+        return Some(TokenKind::KwObject);
+    }
+    if eq_ignore_ascii_case(s, "constructor") {
+        return Some(TokenKind::KwConstructor);
+    }
+    if eq_ignore_ascii_case(s, "destructor") {
+        return Some(TokenKind::KwDestructor);
+    }
+    if eq_ignore_ascii_case(s, "override") {
+        return Some(TokenKind::KwOverride);
+    }
+    if eq_ignore_ascii_case(s, "private") {
+        return Some(TokenKind::KwPrivate);
+    }
+    if eq_ignore_ascii_case(s, "protected") {
+        return Some(TokenKind::KwProtected);
+    }
+    if eq_ignore_ascii_case(s, "public") {
+        return Some(TokenKind::KwPublic);
+    }
+    if eq_ignore_ascii_case(s, "published") {
+        return Some(TokenKind::KwPublished);
+    }
+    if eq_ignore_ascii_case(s, "strict") {
+        return Some(TokenKind::KwStrict);
+    }
+    if eq_ignore_ascii_case(s, "virtual") {
+        return Some(TokenKind::KwVirtual);
+    }
+    if eq_ignore_ascii_case(s, "forward") {
+        return Some(TokenKind::KwForward);
+    }
+    if eq_ignore_ascii_case(s, "external") {
+        return Some(TokenKind::KwExternal);
+    }
+    if eq_ignore_ascii_case(s, "operator") {
+        return Some(TokenKind::KwOperator);
+    }
+    if eq_ignore_ascii_case(s, "property") {
+        return Some(TokenKind::KwProperty);
+    }
+    if eq_ignore_ascii_case(s, "read") {
+        return Some(TokenKind::KwRead);
+    }
+    if eq_ignore_ascii_case(s, "write") {
+        return Some(TokenKind::KwWrite);
+    }
+    if eq_ignore_ascii_case(s, "index") {
+        return Some(TokenKind::KwIndex);
+    }
+    if eq_ignore_ascii_case(s, "default") {
+        return Some(TokenKind::KwDefault);
+    }
+    if eq_ignore_ascii_case(s, "stored") {
+        return Some(TokenKind::KwStored);
+    }
     // Exceptions
-    if eq_ignore_ascii_case(s, "except") { return Some(TokenKind::KwExcept); }
-    if eq_ignore_ascii_case(s, "finally") { return Some(TokenKind::KwFinally); }
-    if eq_ignore_ascii_case(s, "raise") { return Some(TokenKind::KwRaise); }
-    if eq_ignore_ascii_case(s, "try") { return Some(TokenKind::KwTry); }
-    if eq_ignore_ascii_case(s, "on") { return Some(TokenKind::KwOn); }
-    if eq_ignore_ascii_case(s, "file") { return Some(TokenKind::KwFile); }
+    if eq_ignore_ascii_case(s, "except") {
+        return Some(TokenKind::KwExcept);
+    }
+    if eq_ignore_ascii_case(s, "finally") {
+        return Some(TokenKind::KwFinally);
+    }
+    if eq_ignore_ascii_case(s, "raise") {
+        return Some(TokenKind::KwRaise);
+    }
+    if eq_ignore_ascii_case(s, "try") {
+        return Some(TokenKind::KwTry);
+    }
+    if eq_ignore_ascii_case(s, "on") {
+        return Some(TokenKind::KwOn);
+    }
+    if eq_ignore_ascii_case(s, "file") {
+        return Some(TokenKind::KwFile);
+    }
     // Special
-    if eq_ignore_ascii_case(s, "nil") { return Some(TokenKind::KwNil); }
-    if eq_ignore_ascii_case(s, "self") { return Some(TokenKind::KwSelf); }
-    if eq_ignore_ascii_case(s, "helper") { return Some(TokenKind::KwHelper); }
-    if eq_ignore_ascii_case(s, "inherited") { return Some(TokenKind::KwInherited); }
+    if eq_ignore_ascii_case(s, "nil") {
+        return Some(TokenKind::KwNil);
+    }
+    if eq_ignore_ascii_case(s, "self") {
+        return Some(TokenKind::KwSelf);
+    }
+    if eq_ignore_ascii_case(s, "helper") {
+        return Some(TokenKind::KwHelper);
+    }
+    if eq_ignore_ascii_case(s, "inherited") {
+        return Some(TokenKind::KwInherited);
+    }
     None
 }
 
@@ -606,7 +788,7 @@ mod tests {
         assert_eq!(lookup_keyword("if"), Some(TokenKind::KwIf));
         assert_eq!(lookup_keyword("IF"), Some(TokenKind::KwIf));
         assert_eq!(lookup_keyword("If"), Some(TokenKind::KwIf));
-        
+
         // Non-keywords return None
         assert_eq!(lookup_keyword("myvar"), None);
         assert_eq!(lookup_keyword("x"), None);
@@ -619,16 +801,16 @@ mod tests {
         assert!(eq_ignore_ascii_case("HELLO", "hello"));
         assert!(eq_ignore_ascii_case("Hello", "HELLO"));
         assert!(eq_ignore_ascii_case("HeLlO", "hElLo"));
-        
+
         // Inequality
         assert!(!eq_ignore_ascii_case("hello", "world"));
         assert!(!eq_ignore_ascii_case("hello", "hell"));
         assert!(!eq_ignore_ascii_case("hello", "helloo"));
-        
+
         // Empty strings
         assert!(eq_ignore_ascii_case("", ""));
         assert!(!eq_ignore_ascii_case("", "a"));
-        
+
         // Single character
         assert!(eq_ignore_ascii_case("A", "a"));
         assert!(eq_ignore_ascii_case("z", "Z"));
@@ -640,12 +822,12 @@ mod tests {
         assert_eq!(compare_ignore_ascii_case("hello", "hello"), None);
         assert_eq!(compare_ignore_ascii_case("HELLO", "hello"), None);
         assert_eq!(compare_ignore_ascii_case("Hello", "HELLO"), None);
-        
+
         // Different strings
         assert_eq!(compare_ignore_ascii_case("hello", "world"), Some(0));
         assert_eq!(compare_ignore_ascii_case("hello", "hell"), Some(4));
         assert_eq!(compare_ignore_ascii_case("hello", "helloo"), Some(5));
-        
+
         // Different lengths
         assert_eq!(compare_ignore_ascii_case("", "a"), Some(0));
         assert_eq!(compare_ignore_ascii_case("a", ""), Some(0));
@@ -654,36 +836,24 @@ mod tests {
     #[test]
     fn test_token_kind_precedence() {
         // Unary operators (not keyword has unary precedence)
-        assert_eq!(
-            TokenKind::KwNot.precedence(),
-            Some(Precedence::Unary)
-        );
-        
+        assert_eq!(TokenKind::KwNot.precedence(), Some(Precedence::Unary));
+
         // Multiplicative operators
-        assert_eq!(
-            TokenKind::Star.precedence(),
-            Some(Precedence::Mul)
-        );
-        
+        assert_eq!(TokenKind::Star.precedence(), Some(Precedence::Mul));
+
         // Additive operators (Plus/Minus can be binary, so they return Add)
         // Note: Parser will determine if they're unary or binary based on context
         assert_eq!(
             TokenKind::Plus.precedence(),
-            Some(Precedence::Add)  // Binary plus has Add precedence
+            Some(Precedence::Add) // Binary plus has Add precedence
         );
-        
+
         // Comparison operators
-        assert_eq!(
-            TokenKind::Equal.precedence(),
-            Some(Precedence::Comparison)
-        );
-        
+        assert_eq!(TokenKind::Equal.precedence(), Some(Precedence::Comparison));
+
         // Logical operators
-        assert_eq!(
-            TokenKind::KwAnd.precedence(),
-            Some(Precedence::And)
-        );
-        
+        assert_eq!(TokenKind::KwAnd.precedence(), Some(Precedence::And));
+
         // Non-operators return None
         assert_eq!(TokenKind::KwIf.precedence(), None);
     }
@@ -693,27 +863,21 @@ mod tests {
         let span1 = Span::new(0, 5, 1, 1);
         let span2 = Span::new(10, 15, 1, 11);
         let merged = span1.merge(span2);
-        
+
         assert_eq!(merged.start, 0);
         assert_eq!(merged.end, 15);
     }
 
     #[test]
     fn test_token_checks() {
-        let token = Token::new(
-            TokenKind::KwIf,
-            Span::new(0, 2, 1, 1),
-        );
-        
+        let token = Token::new(TokenKind::KwIf, Span::new(0, 2, 1, 1));
+
         assert!(token.is_keyword());
         assert!(!token.is_operator());
         assert!(!token.is_literal());
-        
-        let op_token = Token::new(
-            TokenKind::Plus,
-            Span::new(0, 1, 1, 1),
-        );
-        
+
+        let op_token = Token::new(TokenKind::Plus, Span::new(0, 1, 1, 1));
+
         assert!(!op_token.is_keyword());
         assert!(op_token.is_operator());
         assert!(!op_token.is_literal());

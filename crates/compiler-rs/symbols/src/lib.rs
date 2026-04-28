@@ -40,7 +40,7 @@ pub enum SymbolKind {
         name: String,
         param_names: Vec<String>, // Generic parameter names (e.g., ["T", "U"])
         param_constraints: Vec<Option<Type>>, // Constraints for each parameter (e.g., [Some(Type::class()), None])
-        template_type: Type,      // The base type with placeholders
+        template_type: Type,                  // The base type with placeholders
         span: Span,
     },
     /// Procedure symbol
@@ -81,50 +81,50 @@ pub struct Parameter {
 /// Parameter passing mode
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ParameterMode {
-    Value,  // Pass by value
-    Var,    // Pass by reference (var)
-    Const,  // Pass by constant reference (const)
+    Value, // Pass by value
+    Var,   // Pass by reference (var)
+    Const, // Pass by constant reference (const)
 }
 
 // ===== Turbo Pascal Hash Function =====
 
 /// Calculate hash value for an identifier using Turbo Pascal's hash function.
-/// 
+///
 /// Algorithm (from Turbo Pascal):
 /// 1. Start with negative length: `hash = -length`
 /// 2. For each character: `hash += (byte[i] & 0xDF)` (uppercase conversion)
 /// 3. Shift left by 1: `hash <<= 1`
-/// 
+///
 /// This produces a case-insensitive hash suitable for identifier lookup.
-/// 
+///
 /// # Arguments
 /// * `identifier` - The identifier string to hash
-/// 
+///
 /// # Returns
 /// A 16-bit hash value (u16)
 pub fn turbopascal_hash(identifier: &str) -> u16 {
     let mut hash = -(identifier.len() as i16);
-    
+
     for byte in identifier.bytes() {
         // Convert to uppercase: byte & 0xDF
         // 0xDF = 0b11011111, which clears bit 5 (converts lowercase to uppercase)
         let upper_byte = byte & 0xDF;
         hash = hash.wrapping_add(upper_byte as i16);
     }
-    
+
     // Shift left by 1 (multiply by 2)
     (hash << 1) as u16
 }
 
 /// Calculate hash bucket index from hash value using a mask.
-/// 
+///
 /// The mask parameter defines the number of buckets (2^N).
 /// Uses the last N bits of the hash to select the bucket.
-/// 
+///
 /// # Arguments
 /// * `hash` - The hash value
 /// * `mask` - The mask (bucket count - 1, must be power of 2)
-/// 
+///
 /// # Returns
 /// Bucket index (0 to mask)
 pub fn hash_bucket(hash: u16, mask: u16) -> usize {
@@ -203,10 +203,7 @@ impl SymbolTable {
         let current_scope_map = &mut self.scopes[self.current_scope];
 
         if current_scope_map.contains_key(&name) {
-            return Err(format!(
-                "Symbol '{}' already declared in this scope",
-                name
-            ));
+            return Err(format!("Symbol '{}' already declared in this scope", name));
         }
 
         current_scope_map.insert(name, symbol);
@@ -250,21 +247,21 @@ impl SymbolTable {
     }
 
     /// Compact symbol tables to remove unused space.
-    /// 
+    ///
     /// This is called after each module is compiled to reduce memory footprint.
     /// Following Turbo Pascal's approach, this removes unused space from symbol tables.
-    /// 
+    ///
     /// For our HashMap-based implementation, this primarily:
     /// 1. Shrinks hash maps to remove excess capacity
     /// 2. Removes any unused scopes (if any were created but not used)
-    /// 
+    ///
     /// This is critical for memory efficiency on resource-constrained systems (Tier 1 platforms).
     pub fn compact(&mut self) {
         // Shrink all hash maps to remove excess capacity
         for scope in &mut self.scopes {
             scope.shrink_to_fit();
         }
-        
+
         // Remove empty scopes (except global scope)
         // Keep at least the global scope
         if self.scopes.len() > 1 {
@@ -286,7 +283,7 @@ impl SymbolTable {
                 }
             }
         }
-        
+
         // Shrink the scopes vector itself
         self.scopes.shrink_to_fit();
     }
@@ -295,7 +292,7 @@ impl SymbolTable {
     pub fn stats(&self) -> SymbolTableStats {
         let total_symbols: usize = self.scopes.iter().map(|s| s.len()).sum();
         let total_capacity: usize = self.scopes.iter().map(|s| s.capacity()).sum();
-        
+
         SymbolTableStats {
             scope_count: self.scopes.len(),
             current_scope: self.current_scope,
@@ -548,7 +545,7 @@ mod tests {
         // Shadowing is allowed across scopes (preparation for Tier 2)
         // Lookup will find local first, then global
         assert!(table.insert(local_symbol).is_ok());
-        
+
         // Lookup should find the local symbol first
         let found = table.lookup("x");
         assert!(found.is_some());
@@ -1131,52 +1128,62 @@ mod tests {
         let span = Span::new(0, 5, 1, 1);
 
         // Global: a, b
-        table.insert(Symbol {
-            kind: SymbolKind::Variable {
-                name: "a".to_string(),
-                var_type: Type::integer(),
-                span,
-            },
-            scope_level: 0,
-        }).unwrap();
-        table.insert(Symbol {
-            kind: SymbolKind::Variable {
-                name: "b".to_string(),
-                var_type: Type::integer(),
-                span,
-            },
-            scope_level: 0,
-        }).unwrap();
+        table
+            .insert(Symbol {
+                kind: SymbolKind::Variable {
+                    name: "a".to_string(),
+                    var_type: Type::integer(),
+                    span,
+                },
+                scope_level: 0,
+            })
+            .unwrap();
+        table
+            .insert(Symbol {
+                kind: SymbolKind::Variable {
+                    name: "b".to_string(),
+                    var_type: Type::integer(),
+                    span,
+                },
+                scope_level: 0,
+            })
+            .unwrap();
 
         // Scope 1: c (shadows nothing)
         table.enter_scope();
-        table.insert(Symbol {
-            kind: SymbolKind::Variable {
-                name: "c".to_string(),
-                var_type: Type::byte(),
-                span,
-            },
-            scope_level: 1,
-        }).unwrap();
+        table
+            .insert(Symbol {
+                kind: SymbolKind::Variable {
+                    name: "c".to_string(),
+                    var_type: Type::byte(),
+                    span,
+                },
+                scope_level: 1,
+            })
+            .unwrap();
 
         // Scope 2: a (shadows global a), d
         table.enter_scope();
-        table.insert(Symbol {
-            kind: SymbolKind::Variable {
-                name: "a".to_string(),
-                var_type: Type::word(),
-                span,
-            },
-            scope_level: 2,
-        }).unwrap();
-        table.insert(Symbol {
-            kind: SymbolKind::Variable {
-                name: "d".to_string(),
-                var_type: Type::boolean(),
-                span,
-            },
-            scope_level: 2,
-        }).unwrap();
+        table
+            .insert(Symbol {
+                kind: SymbolKind::Variable {
+                    name: "a".to_string(),
+                    var_type: Type::word(),
+                    span,
+                },
+                scope_level: 2,
+            })
+            .unwrap();
+        table
+            .insert(Symbol {
+                kind: SymbolKind::Variable {
+                    name: "d".to_string(),
+                    var_type: Type::boolean(),
+                    span,
+                },
+                scope_level: 2,
+            })
+            .unwrap();
 
         // From scope 2, should see: a (local), b (global), c (scope 1), d (local)
         assert!(table.lookup("a").is_some());
@@ -1197,7 +1204,7 @@ mod tests {
         let hash1 = turbopascal_hash("test");
         let hash2 = turbopascal_hash("TEST");
         let hash3 = turbopascal_hash("Test");
-        
+
         // Hash should be case-insensitive
         assert_eq!(hash1, hash2);
         assert_eq!(hash1, hash3);
@@ -1209,7 +1216,7 @@ mod tests {
         let hash1 = turbopascal_hash("x");
         let hash2 = turbopascal_hash("y");
         let hash3 = turbopascal_hash("variable");
-        
+
         // They should be different (collisions are possible but unlikely for these)
         assert_ne!(hash1, hash2);
         assert_ne!(hash1, hash3);
@@ -1226,11 +1233,15 @@ mod tests {
             "IdEnTiFiEr",
             "iDeNtIfIeR",
         ];
-        
+
         let first_hash = turbopascal_hash(variants[0]);
         for variant in variants.iter().skip(1) {
-            assert_eq!(first_hash, turbopascal_hash(variant), 
-                "Hash should be case-insensitive for: {}", variant);
+            assert_eq!(
+                first_hash,
+                turbopascal_hash(variant),
+                "Hash should be case-insensitive for: {}",
+                variant
+            );
         }
     }
 
@@ -1240,7 +1251,7 @@ mod tests {
         let hash1 = turbopascal_hash("a");
         let hash2 = turbopascal_hash("ab");
         let hash3 = turbopascal_hash("abc");
-        
+
         assert_ne!(hash1, hash2);
         assert_ne!(hash1, hash3);
         assert_ne!(hash2, hash3);
@@ -1250,15 +1261,15 @@ mod tests {
     fn test_hash_bucket() {
         // Test bucket selection with different masks
         let hash = turbopascal_hash("test");
-        
+
         // Mask 0xFF (256 buckets)
         let bucket1 = hash_bucket(hash, 0xFF);
         assert!(bucket1 < 256);
-        
+
         // Mask 0x0F (16 buckets)
         let bucket2 = hash_bucket(hash, 0x0F);
         assert!(bucket2 < 16);
-        
+
         // Mask 0x03 (4 buckets)
         let bucket3 = hash_bucket(hash, 0x03);
         assert!(bucket3 < 4);
@@ -1269,17 +1280,20 @@ mod tests {
         // Test that different identifiers map to different buckets (usually)
         let identifiers = vec!["x", "y", "z", "variable", "function", "type", "constant"];
         let mask = 0x0F; // 16 buckets
-        
+
         let mut buckets = std::collections::HashSet::new();
         for ident in &identifiers {
             let hash = turbopascal_hash(ident);
             let bucket = hash_bucket(hash, mask);
             buckets.insert(bucket);
         }
-        
+
         // Most identifiers should map to different buckets
         // (some collisions are expected, but not all)
-        assert!(buckets.len() > 1, "Identifiers should distribute across multiple buckets");
+        assert!(
+            buckets.len() > 1,
+            "Identifiers should distribute across multiple buckets"
+        );
     }
 
     // ===== Symbol Table Compacting Tests =====

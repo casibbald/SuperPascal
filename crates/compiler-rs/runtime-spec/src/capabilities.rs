@@ -10,60 +10,60 @@ use crate::TargetPlatform;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LanguageFeature {
     // Core features (all backends)
-    BasicTypes,           // integer, boolean, char, byte, word
-    Arrays,               // Static arrays
-    Records,              // Basic records
-    Procedures,           // Procedures and functions
-    ControlFlow,          // if, while, for, repeat, case
-    
+    BasicTypes,  // integer, boolean, char, byte, word
+    Arrays,      // Static arrays
+    Records,     // Basic records
+    Procedures,  // Procedures and functions
+    ControlFlow, // if, while, for, repeat, case
+
     // Advanced types
-    DynamicArrays,        // array of T (not fixed-size)
-    Sets,                 // SET OF type
-    Strings,              // STRING and STRING[n]
-    VariantRecords,       // RECORD ... CASE ... OF ... END
-    EnumeratedTypes,      // type Color = (Red, Green, Blue)
-    Pointers,             // ^type syntax
-    ProceduralTypes,      // PROCEDURE/FUNCTION types
-    FileTypes,            // FILE and FILE OF type
-    
+    DynamicArrays,   // array of T (not fixed-size)
+    Sets,            // SET OF type
+    Strings,         // STRING and STRING[n]
+    VariantRecords,  // RECORD ... CASE ... OF ... END
+    EnumeratedTypes, // type Color = (Red, Green, Blue)
+    Pointers,        // ^type syntax
+    ProceduralTypes, // PROCEDURE/FUNCTION types
+    FileTypes,       // FILE and FILE OF type
+
     // Object Pascal
-    Classes,              // CLASS declarations
-    Interfaces,           // INTERFACE types
-    Properties,           // PROPERTY declarations
-    OperatorOverloading,  // OPERATOR keyword
-    MethodPointers,       // OF OBJECT for procedural types
-    
+    Classes,             // CLASS declarations
+    Interfaces,          // INTERFACE types
+    Properties,          // PROPERTY declarations
+    OperatorOverloading, // OPERATOR keyword
+    MethodPointers,      // OF OBJECT for procedural types
+
     // Advanced features
-    Generics,             // Generic types and routines
-    AnonymousFunctions,   // Lambda expressions
-    NestedRoutines,       // Procedures/functions inside other routines
-    ExceptionHandling,    // TRY/EXCEPT/FINALLY
-    WithStatement,        // WITH record_expr DO statement
-    GotoLabels,           // LABEL and GOTO
-    InlineAssembly,       // ASM ... END blocks
-    ForInLoops,           // for item in collection do
-    
+    Generics,           // Generic types and routines
+    AnonymousFunctions, // Lambda expressions
+    NestedRoutines,     // Procedures/functions inside other routines
+    ExceptionHandling,  // TRY/EXCEPT/FINALLY
+    WithStatement,      // WITH record_expr DO statement
+    GotoLabels,         // LABEL and GOTO
+    InlineAssembly,     // ASM ... END blocks
+    ForInLoops,         // for item in collection do
+
     // Advanced declarations
-    ThreadVar,           // THREADVAR declarations
-    ConstRef,             // CONSTREF parameters
-    OutParams,            // OUT parameters
-    Resourcestring,       // RESOURCESTRING declarations
-    Absolute,             // ABSOLUTE variable addressing
-    DefaultParams,        // Default parameter values
-    ForwardExternal,      // FORWARD and EXTERNAL declarations
-    
+    ThreadVar,       // THREADVAR declarations
+    ConstRef,        // CONSTREF parameters
+    OutParams,       // OUT parameters
+    Resourcestring,  // RESOURCESTRING declarations
+    Absolute,        // ABSOLUTE variable addressing
+    DefaultParams,   // Default parameter values
+    ForwardExternal, // FORWARD and EXTERNAL declarations
+
     // Class features
-    ClassMethods,         // class procedure/function
-    ClassProperties,     // Properties on the class itself
-    ClassVariables,       // Variables shared across all instances
-    ClassHelpers,         // Extension mechanism for existing classes
-    NestedClasses,        // Classes inside other classes
-    
+    ClassMethods,    // class procedure/function
+    ClassProperties, // Properties on the class itself
+    ClassVariables,  // Variables shared across all instances
+    ClassHelpers,    // Extension mechanism for existing classes
+    NestedClasses,   // Classes inside other classes
+
     // Runtime features
-    ReferenceCounting,    // Automatic memory management
-    GarbageCollection,    // GC support
-    Multithreading,       // Thread support
-    DynamicLinking,       // Dynamic library loading
+    ReferenceCounting, // Automatic memory management
+    GarbageCollection, // GC support
+    Multithreading,    // Thread support
+    DynamicLinking,    // Dynamic library loading
 }
 
 /// Backend capabilities configuration
@@ -80,10 +80,11 @@ impl BackendCapabilities {
     pub fn supports(&self, feature: LanguageFeature) -> bool {
         self.features.contains(&feature)
     }
-    
+
     /// Get all unsupported features from a list
     pub fn unsupported(&self, features: &[LanguageFeature]) -> Vec<LanguageFeature> {
-        features.iter()
+        features
+            .iter()
             .filter(|f| !self.supports(**f))
             .copied()
             .collect()
@@ -106,14 +107,14 @@ pub fn get_capabilities(platform: TargetPlatform) -> BackendCapabilities {
 /// Limited memory and processing power, supports core Pascal features
 fn zealz80_capabilities() -> BackendCapabilities {
     let mut features = std::collections::HashSet::new();
-    
+
     // Core features
     features.insert(LanguageFeature::BasicTypes);
     features.insert(LanguageFeature::Arrays);
     features.insert(LanguageFeature::Records);
     features.insert(LanguageFeature::Procedures);
     features.insert(LanguageFeature::ControlFlow);
-    
+
     // Advanced types (limited)
     features.insert(LanguageFeature::Sets);
     features.insert(LanguageFeature::Strings);
@@ -121,23 +122,23 @@ fn zealz80_capabilities() -> BackendCapabilities {
     features.insert(LanguageFeature::EnumeratedTypes);
     features.insert(LanguageFeature::Pointers);
     features.insert(LanguageFeature::FileTypes);
-    
+
     // Object Pascal (limited)
     features.insert(LanguageFeature::Classes);
     features.insert(LanguageFeature::Properties);
     features.insert(LanguageFeature::MethodPointers);
-    
+
     // Advanced features (limited)
     features.insert(LanguageFeature::NestedRoutines);
     features.insert(LanguageFeature::WithStatement);
     features.insert(LanguageFeature::GotoLabels);
     features.insert(LanguageFeature::InlineAssembly);
     features.insert(LanguageFeature::ForInLoops);
-    
+
     // Advanced declarations
     features.insert(LanguageFeature::ForwardExternal);
     features.insert(LanguageFeature::Absolute);
-    
+
     // NOT SUPPORTED:
     // - DynamicArrays (no heap management)
     // - ProceduralTypes (complex for 8-bit)
@@ -149,7 +150,7 @@ fn zealz80_capabilities() -> BackendCapabilities {
     // - ThreadVar, ConstRef, OutParams, Resourcestring, DefaultParams
     // - ClassMethods, ClassProperties, ClassVariables, ClassHelpers, NestedClasses
     // - ReferenceCounting, GarbageCollection, Multithreading, DynamicLinking
-    
+
     BackendCapabilities {
         platform: TargetPlatform::ZealZ80,
         features,
@@ -162,14 +163,14 @@ fn zealz80_capabilities() -> BackendCapabilities {
 /// Similar to ZealZ80 but 6502-compatible
 fn commanderx16_capabilities() -> BackendCapabilities {
     let mut features = std::collections::HashSet::new();
-    
+
     // Core features
     features.insert(LanguageFeature::BasicTypes);
     features.insert(LanguageFeature::Arrays);
     features.insert(LanguageFeature::Records);
     features.insert(LanguageFeature::Procedures);
     features.insert(LanguageFeature::ControlFlow);
-    
+
     // Advanced types (limited)
     features.insert(LanguageFeature::Sets);
     features.insert(LanguageFeature::Strings);
@@ -177,23 +178,23 @@ fn commanderx16_capabilities() -> BackendCapabilities {
     features.insert(LanguageFeature::EnumeratedTypes);
     features.insert(LanguageFeature::Pointers);
     features.insert(LanguageFeature::FileTypes);
-    
+
     // Object Pascal (limited)
     features.insert(LanguageFeature::Classes);
     features.insert(LanguageFeature::Properties);
     features.insert(LanguageFeature::MethodPointers);
-    
+
     // Advanced features (limited)
     features.insert(LanguageFeature::NestedRoutines);
     features.insert(LanguageFeature::WithStatement);
     features.insert(LanguageFeature::GotoLabels);
     features.insert(LanguageFeature::InlineAssembly);
     features.insert(LanguageFeature::ForInLoops);
-    
+
     // Advanced declarations
     features.insert(LanguageFeature::ForwardExternal);
     features.insert(LanguageFeature::Absolute);
-    
+
     BackendCapabilities {
         platform: TargetPlatform::CommanderX16,
         features,
@@ -206,14 +207,14 @@ fn commanderx16_capabilities() -> BackendCapabilities {
 /// More capable than 8-bit platforms but still limited
 fn foenix65c816_capabilities() -> BackendCapabilities {
     let mut features = std::collections::HashSet::new();
-    
+
     // Core features
     features.insert(LanguageFeature::BasicTypes);
     features.insert(LanguageFeature::Arrays);
     features.insert(LanguageFeature::Records);
     features.insert(LanguageFeature::Procedures);
     features.insert(LanguageFeature::ControlFlow);
-    
+
     // Advanced types
     features.insert(LanguageFeature::Sets);
     features.insert(LanguageFeature::Strings);
@@ -222,14 +223,14 @@ fn foenix65c816_capabilities() -> BackendCapabilities {
     features.insert(LanguageFeature::Pointers);
     features.insert(LanguageFeature::ProceduralTypes);
     features.insert(LanguageFeature::FileTypes);
-    
+
     // Object Pascal
     features.insert(LanguageFeature::Classes);
     features.insert(LanguageFeature::Interfaces);
     features.insert(LanguageFeature::Properties);
     features.insert(LanguageFeature::OperatorOverloading);
     features.insert(LanguageFeature::MethodPointers);
-    
+
     // Advanced features
     features.insert(LanguageFeature::NestedRoutines);
     features.insert(LanguageFeature::ExceptionHandling);
@@ -237,7 +238,7 @@ fn foenix65c816_capabilities() -> BackendCapabilities {
     features.insert(LanguageFeature::GotoLabels);
     features.insert(LanguageFeature::InlineAssembly);
     features.insert(LanguageFeature::ForInLoops);
-    
+
     // Advanced declarations
     features.insert(LanguageFeature::ThreadVar);
     features.insert(LanguageFeature::ConstRef);
@@ -246,17 +247,17 @@ fn foenix65c816_capabilities() -> BackendCapabilities {
     features.insert(LanguageFeature::Absolute);
     features.insert(LanguageFeature::DefaultParams);
     features.insert(LanguageFeature::ForwardExternal);
-    
+
     // Class features (limited)
     features.insert(LanguageFeature::ClassMethods);
-    
+
     // NOT SUPPORTED:
     // - DynamicArrays (limited heap)
     // - Generics (too complex)
     // - AnonymousFunctions (too complex)
     // - ClassProperties, ClassVariables, ClassHelpers, NestedClasses
     // - ReferenceCounting, GarbageCollection, Multithreading, DynamicLinking
-    
+
     BackendCapabilities {
         platform: TargetPlatform::Foenix65C816,
         features,
@@ -269,14 +270,14 @@ fn foenix65c816_capabilities() -> BackendCapabilities {
 /// More capable than 16-bit but still retro
 fn foenix_a2560m_capabilities() -> BackendCapabilities {
     let mut features = std::collections::HashSet::new();
-    
+
     // Core features
     features.insert(LanguageFeature::BasicTypes);
     features.insert(LanguageFeature::Arrays);
     features.insert(LanguageFeature::Records);
     features.insert(LanguageFeature::Procedures);
     features.insert(LanguageFeature::ControlFlow);
-    
+
     // Advanced types
     features.insert(LanguageFeature::DynamicArrays);
     features.insert(LanguageFeature::Sets);
@@ -286,14 +287,14 @@ fn foenix_a2560m_capabilities() -> BackendCapabilities {
     features.insert(LanguageFeature::Pointers);
     features.insert(LanguageFeature::ProceduralTypes);
     features.insert(LanguageFeature::FileTypes);
-    
+
     // Object Pascal
     features.insert(LanguageFeature::Classes);
     features.insert(LanguageFeature::Interfaces);
     features.insert(LanguageFeature::Properties);
     features.insert(LanguageFeature::OperatorOverloading);
     features.insert(LanguageFeature::MethodPointers);
-    
+
     // Advanced features
     features.insert(LanguageFeature::NestedRoutines);
     features.insert(LanguageFeature::ExceptionHandling);
@@ -301,7 +302,7 @@ fn foenix_a2560m_capabilities() -> BackendCapabilities {
     features.insert(LanguageFeature::GotoLabels);
     features.insert(LanguageFeature::InlineAssembly);
     features.insert(LanguageFeature::ForInLoops);
-    
+
     // Advanced declarations
     features.insert(LanguageFeature::ThreadVar);
     features.insert(LanguageFeature::ConstRef);
@@ -310,18 +311,18 @@ fn foenix_a2560m_capabilities() -> BackendCapabilities {
     features.insert(LanguageFeature::Absolute);
     features.insert(LanguageFeature::DefaultParams);
     features.insert(LanguageFeature::ForwardExternal);
-    
+
     // Class features
     features.insert(LanguageFeature::ClassMethods);
     features.insert(LanguageFeature::ClassProperties);
     features.insert(LanguageFeature::ClassVariables);
-    
+
     // NOT SUPPORTED:
     // - Generics (too complex for retro)
     // - AnonymousFunctions (too complex)
     // - ClassHelpers, NestedClasses
     // - ReferenceCounting, GarbageCollection, Multithreading, DynamicLinking
-    
+
     BackendCapabilities {
         platform: TargetPlatform::FoenixA2560M,
         features,
@@ -334,22 +335,22 @@ fn foenix_a2560m_capabilities() -> BackendCapabilities {
 /// Very limited, minimal feature set
 fn intel8051_capabilities() -> BackendCapabilities {
     let mut features = std::collections::HashSet::new();
-    
+
     // Core features only
     features.insert(LanguageFeature::BasicTypes);
     features.insert(LanguageFeature::Arrays);
     features.insert(LanguageFeature::Records);
     features.insert(LanguageFeature::Procedures);
     features.insert(LanguageFeature::ControlFlow);
-    
+
     // Limited advanced types
     features.insert(LanguageFeature::EnumeratedTypes);
     features.insert(LanguageFeature::Pointers);
-    
+
     // Advanced features (minimal)
     features.insert(LanguageFeature::InlineAssembly);
     features.insert(LanguageFeature::Absolute);
-    
+
     BackendCapabilities {
         platform: TargetPlatform::Intel8051,
         features,
@@ -362,7 +363,7 @@ fn intel8051_capabilities() -> BackendCapabilities {
 /// Supports ALL modern Pascal features
 fn raspberry_pi5_capabilities() -> BackendCapabilities {
     let mut features = std::collections::HashSet::new();
-    
+
     // ALL features supported on modern platform
     features.insert(LanguageFeature::BasicTypes);
     features.insert(LanguageFeature::Arrays);
@@ -406,7 +407,7 @@ fn raspberry_pi5_capabilities() -> BackendCapabilities {
     features.insert(LanguageFeature::GarbageCollection);
     features.insert(LanguageFeature::Multithreading);
     features.insert(LanguageFeature::DynamicLinking);
-    
+
     BackendCapabilities {
         platform: TargetPlatform::RaspberryPi5,
         features,
@@ -418,7 +419,7 @@ fn raspberry_pi5_capabilities() -> BackendCapabilities {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_zealz80_capabilities() {
         let caps = zealz80_capabilities();
@@ -428,7 +429,7 @@ mod tests {
         assert!(!caps.supports(LanguageFeature::Generics));
         assert!(!caps.supports(LanguageFeature::ExceptionHandling));
     }
-    
+
     #[test]
     fn test_raspberry_pi5_capabilities() {
         let caps = raspberry_pi5_capabilities();
@@ -439,7 +440,7 @@ mod tests {
         assert!(caps.supports(LanguageFeature::AnonymousFunctions));
         assert!(caps.supports(LanguageFeature::Multithreading));
     }
-    
+
     #[test]
     fn test_unsupported_features() {
         let caps = zealz80_capabilities();
@@ -454,4 +455,3 @@ mod tests {
         assert!(unsupported.contains(&LanguageFeature::ExceptionHandling));
     }
 }
-

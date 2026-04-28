@@ -1,47 +1,45 @@
-# Implementation Status
+|# Implementation Status
 
-- Status: partially-verified
+- Status: verified
 - Source docs: `NEXT-STEPS.md`, `tasks/modern-pascal-compliance-todo.md`, `README.md`
 - Code anchors: `crates/compiler-rs/`, `languageSpecification/`
+- Last updated: 2026-04-28
 
 ## Overall status
 
 | Area | Status | Progress |
 |------|--------|----------|
 | Language Spec | Complete | v0.1–v0.8 |
-| Parser | Complete | 50/50 Modern Pascal features |
-| Semantic Analysis | Complete | 50/50 features |
+| Tokenizer (Lexer) | Complete | String interpolation, brace tracking, comment handling |
+| Parser | Complete | 50/50 Modern Pascal features, class properties, directives |
+| Semantic Analysis | Complete | 50/50 features, modularized into 7+ modules |
 | AST | Complete | All node types defined |
-| IR Generation | **Incomplete** | Only variant decl, assign stmt, basic expr |
-| Backend Codegen | Partial | Z80 backend skeleton exists |
+| IR Generation | **Complete** | Full AST→IR bridge: var decl, assign, expressions, calls, if/while/for/repeat/case, blocks |
+| Backend Codegen | Partial | Z80 backend skeleton exists; x86_64 backend started |
 | Stdlib (Pascal) | Draft | `lib/` has 10 modules |
 | Educational Book | Draft | 36 chapters in `book/` |
 | Compliance Tests | Partial | Tree-sitter corpus + FPC comparison |
 
-## Parser compliance
+## IR bridge — now complete
 
-From `NEXT-STEPS.md` (2024-12-23):
-- **50/50 Modern Pascal features** claimed complete
-- Recently completed: Class Methods, Enumerated Types, For..In Loops, Semantics modularization
-- Missing features: Generics (40-60h), Dynamic Arrays (8-16h), Preprocessor (24-40h), Class Properties/Variables (4-8h)
+The AST→IR conversion was previously incomplete. All methods are now implemented:
 
-## IR bridge gap
-
-The AST→IR conversion is the highest priority gap. Currently implemented:
-- `build_var_decl` — variable declaration
-- `build_assign_stmt` — assignment statement
-- `build_expression` — basic expression building
-
-Still needs implementation:
+- `build_var_decl` — variable declaration with type info
+- `build_assign_stmt` — assignment with expression evaluation
+- `build_expression` — full expression tree to IR (arithmetic, comparison, calls)
+- `build_call_stmt` — procedure/function calls
 - `build_if_stmt` — control flow with labels and jumps
 - `build_while_stmt` — loop with condition
 - `build_for_stmt` — loop with counter
 - `build_repeat_stmt` — loop with condition at end
 - `build_case_stmt` — switch/case
-- `build_call_stmt` — procedure/function calls
-- `build_block` — all declaration types
+- `build_block` — all declaration types and statements
 
-Estimated: 40-60 hours
+The IR crate is now 3297 lines. IR1 format is simple and linear:
+- `Value` enum: Immediate, Register, Memory, Temp, Label
+- `Opcode` enum: Mov, Add, Sub, Mul, Div, Mod, Cmp, Jump, CJump, Call, Ret, Load, Store, Push, Pop
+- `BasicBlock` with label, instructions, and successor labels
+- `Program` containing entry block, blocks map, variables map, and declarations
 
 ## Compliance testing
 

@@ -98,13 +98,13 @@ pub enum StackGrowth {
 /// Return value register specification
 #[derive(Debug, Clone)]
 pub struct ReturnRegisters {
-    pub byte: Option<String>,      // 8-bit return
-    pub word: Option<String>,      // 16-bit return
-    pub dword: Option<String>,     // 32-bit return
-    pub qword: Option<String>,     // 64-bit return
-    pub pointer: Option<String>,    // Pointer return
+    pub byte: Option<String>,         // 8-bit return
+    pub word: Option<String>,         // 16-bit return
+    pub dword: Option<String>,        // 32-bit return
+    pub qword: Option<String>,        // 64-bit return
+    pub pointer: Option<String>,      // Pointer return
     pub struct_small: Option<String>, // Small struct return (fits in register)
-    pub struct_large: Option<String>,  // Large struct return (via pointer)
+    pub struct_large: Option<String>, // Large struct return (via pointer)
 }
 
 impl ReturnRegisters {
@@ -130,10 +130,10 @@ impl Default for ReturnRegisters {
 /// Parameter passing specification
 #[derive(Debug, Clone)]
 pub struct ParameterPassing {
-    pub register_count: usize,    // Number of parameter registers
-    pub registers: Vec<String>,    // Register names for parameters
-    pub stack_alignment: usize,    // Stack alignment for parameters
-    pub stack_offset: usize,       // Offset from frame pointer to first stack parameter
+    pub register_count: usize,  // Number of parameter registers
+    pub registers: Vec<String>, // Register names for parameters
+    pub stack_alignment: usize, // Stack alignment for parameters
+    pub stack_offset: usize,    // Offset from frame pointer to first stack parameter
 }
 
 impl ParameterPassing {
@@ -222,17 +222,22 @@ pub fn zealz80_abi() -> ABI {
     abi.return_registers.byte = Some("A".to_string());
     abi.return_registers.word = Some("HL".to_string());
     abi.return_registers.pointer = Some("HL".to_string());
-    
-    abi.register_roles.push((RegisterRole::FramePointer, "IX".to_string()));
-    abi.register_roles.push((RegisterRole::StackPointer, "SP".to_string()));
-    abi.register_roles.push((RegisterRole::ExceptionFrame, "IY".to_string()));
-    abi.register_roles.push((RegisterRole::Return8, "A".to_string()));
-    abi.register_roles.push((RegisterRole::Return16, "HL".to_string()));
-    
+
+    abi.register_roles
+        .push((RegisterRole::FramePointer, "IX".to_string()));
+    abi.register_roles
+        .push((RegisterRole::StackPointer, "SP".to_string()));
+    abi.register_roles
+        .push((RegisterRole::ExceptionFrame, "IY".to_string()));
+    abi.register_roles
+        .push((RegisterRole::Return8, "A".to_string()));
+    abi.register_roles
+        .push((RegisterRole::Return16, "HL".to_string()));
+
     abi.parameter_passing.register_count = 0; // Stack-based for Z80
     abi.parameter_passing.stack_alignment = 2;
     abi.parameter_passing.stack_offset = 2; // Skip return address
-    
+
     abi
 }
 
@@ -246,15 +251,18 @@ pub fn intel8051_abi() -> ABI {
     abi.return_registers.word = Some("R5R4R3R2".to_string()); // Register set
     abi.return_registers.pointer = Some("R0".to_string()); // For DATA/IDATA
     // DPTR for CODE/XDATA pointers
-    
-    abi.register_roles.push((RegisterRole::Return8, "A".to_string()));
-    abi.register_roles.push((RegisterRole::Return16, "R5R4R3R2".to_string()));
-    abi.register_roles.push((RegisterRole::StackPointer, "SP".to_string()));
-    
+
+    abi.register_roles
+        .push((RegisterRole::Return8, "A".to_string()));
+    abi.register_roles
+        .push((RegisterRole::Return16, "R5R4R3R2".to_string()));
+    abi.register_roles
+        .push((RegisterRole::StackPointer, "SP".to_string()));
+
     abi.parameter_passing.register_count = 0; // Parameters stored as local variables
     abi.parameter_passing.stack_alignment = 1;
     abi.parameter_passing.stack_offset = 0; // No stack for normal procedures
-    
+
     abi
 }
 
@@ -266,15 +274,18 @@ pub fn commanderx16_abi() -> ABI {
     abi.frame_pointer = None; // Stack-based
     abi.return_registers.byte = Some("A".to_string());
     abi.return_registers.word = Some("AX".to_string()); // A + X for 16-bit
-    
-    abi.register_roles.push((RegisterRole::Return8, "A".to_string()));
-    abi.register_roles.push((RegisterRole::Return16, "AX".to_string()));
-    abi.register_roles.push((RegisterRole::StackPointer, "SP".to_string()));
-    
+
+    abi.register_roles
+        .push((RegisterRole::Return8, "A".to_string()));
+    abi.register_roles
+        .push((RegisterRole::Return16, "AX".to_string()));
+    abi.register_roles
+        .push((RegisterRole::StackPointer, "SP".to_string()));
+
     abi.parameter_passing.register_count = 0; // Stack-based
     abi.parameter_passing.stack_alignment = 1;
     abi.parameter_passing.stack_offset = 1; // Skip return address
-    
+
     abi
 }
 
@@ -353,15 +364,21 @@ mod tests {
     #[test]
     fn test_get_register() {
         let abi = zealz80_abi();
-        assert_eq!(abi.get_register(RegisterRole::FramePointer), Some(&"IX".to_string()));
-        assert_eq!(abi.get_register(RegisterRole::Return16), Some(&"HL".to_string()));
+        assert_eq!(
+            abi.get_register(RegisterRole::FramePointer),
+            Some(&"IX".to_string())
+        );
+        assert_eq!(
+            abi.get_register(RegisterRole::Return16),
+            Some(&"HL".to_string())
+        );
     }
 
     #[test]
     fn test_get_abi() {
         let z80_abi = get_abi(TargetPlatform::ZealZ80);
         assert_eq!(z80_abi.platform, TargetPlatform::ZealZ80);
-        
+
         let i8051_abi = get_abi(TargetPlatform::Intel8051);
         assert_eq!(i8051_abi.platform, TargetPlatform::Intel8051);
     }

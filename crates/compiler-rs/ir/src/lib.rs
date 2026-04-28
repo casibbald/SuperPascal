@@ -8,9 +8,9 @@
 //! - Easy to translate to target assembly
 
 use ast::Node;
+use runtime::variant::VariantType as RuntimeVariantType;
 use tokens::Span;
 use types::Type;
-use runtime::variant::VariantType as RuntimeVariantType;
 
 /// Represents an IR value (immediate, register, memory, temporary)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -31,26 +31,26 @@ pub enum Value {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Opcode {
     // Data movement
-    Mov,  // MOV dst, src
+    Mov, // MOV dst, src
     // Arithmetic
-    Add,  // ADD dst, src1, src2
-    Sub,  // SUB dst, src1, src2
-    Mul,  // MUL dst, src1, src2
-    Div,  // DIV dst, src1, src2
-    Mod,  // MOD dst, src1, src2
+    Add, // ADD dst, src1, src2
+    Sub, // SUB dst, src1, src2
+    Mul, // MUL dst, src1, src2
+    Div, // DIV dst, src1, src2
+    Mod, // MOD dst, src1, src2
     // Comparison
-    Cmp,  // CMP src1, src2 (sets condition flags)
+    Cmp, // CMP src1, src2 (sets condition flags)
     // Control flow
-    Jump,   // JUMP label
-    CJump,  // CJUMP condition, label_true, label_false
-    Call,   // CALL function, result
-    Ret,    // RET value (optional)
+    Jump,  // JUMP label
+    CJump, // CJUMP condition, label_true, label_false
+    Call,  // CALL function, result
+    Ret,   // RET value (optional)
     // Memory operations
-    Load,   // LOAD dst, src (load from memory)
-    Store,  // STORE dst, src (store to memory)
+    Load,  // LOAD dst, src (load from memory)
+    Store, // STORE dst, src (store to memory)
     // Stack operations
-    Push,   // PUSH src
-    Pop,    // POP dst
+    Push, // PUSH src
+    Pop,  // POP dst
 }
 
 /// Condition codes for conditional jumps
@@ -129,7 +129,7 @@ impl Function {
     pub fn new(name: String, return_type: Option<Type>) -> Self {
         let entry_label = format!("{}_entry", name);
         let entry_block = BasicBlock::new(entry_label.clone());
-        
+
         Self {
             name,
             params: vec![],
@@ -298,16 +298,16 @@ impl IRBuilder {
         // Save current function state
         let current_func = self.current_function.take();
         let saved_variable_types = self.variable_types.clone();
-        
+
         // Create a temporary function to build into
         let temp_func_name = format!("temp_{}", self.label_counter);
         self.start_function(temp_func_name.clone(), None);
-        
+
         // Build statements
         for stmt in statements {
             self.build_node(stmt);
         }
-        
+
         // Extract instructions from the temporary function's entry block
         let mut instructions = Vec::new();
         if let Some(temp_func) = self.current_function.take() {
@@ -315,11 +315,11 @@ impl IRBuilder {
                 instructions = entry.instructions.clone();
             }
         }
-        
+
         // Restore state
         self.current_function = current_func;
         self.variable_types = saved_variable_types;
-        
+
         instructions
     }
 
@@ -327,7 +327,7 @@ impl IRBuilder {
     fn build_var_decl(&mut self, var_decl: &ast::VarDecl) {
         // Determine the type of the variable
         let var_type = self.analyze_type_expr(&var_decl.type_expr);
-        
+
         // Register variable types for later use
         for name in &var_decl.names {
             self.variable_types.insert(name.clone(), var_type.clone());
@@ -343,7 +343,7 @@ impl IRBuilder {
                 let (inst, _result) = self.generate_variant_new_empty();
                 instructions.push(inst);
             }
-            
+
             // Then add instructions to the function
             if let Some(func) = self.current_function_mut() {
                 let entry_label = func.entry_block.clone();
@@ -386,17 +386,11 @@ impl IRBuilder {
                 // Store function address in procedural type variable
                 let dest_ptr = self.get_variable_address(&target_name.unwrap());
                 let func_addr = Value::Label(ident.name.clone());
-                instructions.push(Instruction::new(
-                    Opcode::Mov,
-                    vec![dest_ptr, func_addr],
-                ));
+                instructions.push(Instruction::new(Opcode::Mov, vec![dest_ptr, func_addr]));
             } else {
                 // Value is already a procedural type variable - copy it
                 let dest_ptr = self.get_variable_address(&target_name.unwrap());
-                instructions.push(Instruction::new(
-                    Opcode::Mov,
-                    vec![dest_ptr, value_result],
-                ));
+                instructions.push(Instruction::new(Opcode::Mov, vec![dest_ptr, value_result]));
             }
         }
         // Check if target is Variant type
@@ -413,7 +407,7 @@ impl IRBuilder {
                     // Variant assignment: use variant_assign runtime function
                     let variant_ptr = self.get_variable_address(&target_name.unwrap());
                     let type_id = self.get_variant_type_id(&value_ty);
-                    
+
                     // Generate variant_assign call
                     let inst = self.generate_variant_assign(variant_ptr, type_id, value_result);
                     instructions.push(inst);
@@ -430,12 +424,13 @@ impl IRBuilder {
             if value_ty == Type::variant() {
                 // Variant to other type assignment: use conversion function
                 let target_ptr = self.get_variable_address(&target_name.unwrap());
-                
+
                 // Determine target type and use appropriate conversion
                 if let Some(target_ty) = target_type {
                     match target_ty {
                         Type::Primitive(types::PrimitiveType::Integer) => {
-                            let (inst, converted_value) = self.generate_variant_to_integer(value_result);
+                            let (inst, converted_value) =
+                                self.generate_variant_to_integer(value_result);
                             instructions.push(inst);
                             instructions.push(Instruction::new(
                                 Opcode::Store,
@@ -444,7 +439,8 @@ impl IRBuilder {
                         }
                         Type::Primitive(types::PrimitiveType::Boolean) => {
                             // Use variant_to_boolean (would need to add this helper)
-                            let (inst, converted_value) = self.generate_variant_to_integer(value_result); // Placeholder
+                            let (inst, converted_value) =
+                                self.generate_variant_to_integer(value_result); // Placeholder
                             instructions.push(inst);
                             instructions.push(Instruction::new(
                                 Opcode::Store,
@@ -510,7 +506,7 @@ impl IRBuilder {
                 let left = self.build_expression(bin.left.as_ref());
                 let right = self.build_expression(bin.right.as_ref());
                 let result = self.new_temp();
-                
+
                 if let Some(func) = self.current_function_mut() {
                     let entry_label = func.entry_block.clone();
                     if let Some(entry) = func.get_block_mut(&entry_label) {
@@ -608,7 +604,7 @@ impl IRBuilder {
             Node::UnaryExpr(unary) => {
                 let expr_val = self.build_expression(unary.expr.as_ref());
                 let result = self.new_temp();
-                
+
                 if let Some(func) = self.current_function_mut() {
                     let entry_label = func.entry_block.clone();
                     if let Some(entry) = func.get_block_mut(&entry_label) {
@@ -651,19 +647,16 @@ impl IRBuilder {
                 for arg in &call.args {
                     args.push(self.build_expression(arg));
                 }
-                
+
                 let result = self.new_temp();
-                
+
                 if let Some(func) = self.current_function_mut() {
                     let entry_label = func.entry_block.clone();
                     if let Some(entry) = func.get_block_mut(&entry_label) {
                         // Build CALL instruction: CALL function_name, result, arg1, arg2, ...
                         let mut operands = vec![Value::Label(call.name.clone()), result.clone()];
                         operands.extend(args);
-                        entry.add_instruction(Instruction::new(
-                            Opcode::Call,
-                            operands,
-                        ));
+                        entry.add_instruction(Instruction::new(Opcode::Call, operands));
                     }
                 }
                 result
@@ -674,7 +667,7 @@ impl IRBuilder {
                 let index_val = self.build_expression(index.index.as_ref());
                 let result = self.new_temp();
                 let temp_offset = self.new_temp();
-                
+
                 if let Some(func) = self.current_function_mut() {
                     let entry_label = func.entry_block.clone();
                     if let Some(entry) = func.get_block_mut(&entry_label) {
@@ -701,33 +694,33 @@ impl IRBuilder {
                 // Array slicing: array[start:end:step]
                 // This generates a call to array_slice runtime function
                 let array_val = self.build_expression(slice.array.as_ref());
-                
+
                 // Build start index (or -1 for None)
                 let start_val = if let Some(start) = &slice.start {
                     self.build_expression(start)
                 } else {
                     Value::Immediate(-1) // -1 indicates None
                 };
-                
+
                 // Build end index (or -1 for None)
                 let end_val = if let Some(end) = &slice.end {
                     self.build_expression(end)
                 } else {
                     Value::Immediate(-1) // -1 indicates None
                 };
-                
+
                 // Build step (or 0 for None, which means step of 1)
                 let step_val = if let Some(step) = &slice.step {
                     self.build_expression(step)
                 } else {
                     Value::Immediate(0) // 0 indicates None (default step of 1)
                 };
-                
+
                 // For now, we'll use placeholders for array_length and element_size
                 // In a full implementation, these would come from type information
                 let array_length = Value::Immediate(0); // Placeholder - would need type info
                 let element_size = Value::Immediate(4); // Placeholder - would need type info
-                
+
                 // Generate IR using the helper function
                 let (inst, result) = self.generate_array_slice(
                     array_val,
@@ -737,7 +730,7 @@ impl IRBuilder {
                     end_val,
                     step_val,
                 );
-                
+
                 if let Some(func) = self.current_function_mut() {
                     let entry_label = func.entry_block.clone();
                     if let Some(entry) = func.get_block_mut(&entry_label) {
@@ -751,7 +744,7 @@ impl IRBuilder {
                 let record_val = self.build_expression(field.record.as_ref());
                 let result = self.new_temp();
                 let temp_addr = self.new_temp();
-                
+
                 if let Some(func) = self.current_function_mut() {
                     let entry_label = func.entry_block.clone();
                     if let Some(entry) = func.get_block_mut(&entry_label) {
@@ -774,7 +767,7 @@ impl IRBuilder {
                 // Pointer dereference: ^pointer
                 let pointer_val = self.build_expression(deref.pointer.as_ref());
                 let result = self.new_temp();
-                
+
                 if let Some(func) = self.current_function_mut() {
                     let entry_label = func.entry_block.clone();
                     if let Some(entry) = func.get_block_mut(&entry_label) {
@@ -803,17 +796,15 @@ impl IRBuilder {
     /// Analyze a type expression to get the Type
     fn analyze_type_expr(&self, type_expr: &Node) -> Type {
         match type_expr {
-            Node::NamedType(named) => {
-                match named.name.to_lowercase().as_str() {
-                    "integer" => Type::integer(),
-                    "boolean" => Type::boolean(),
-                    "char" => Type::char(),
-                    "byte" => Type::byte(),
-                    "word" => Type::word(),
-                    "variant" => Type::variant(),
-                    _ => Type::Error,
-                }
-            }
+            Node::NamedType(named) => match named.name.to_lowercase().as_str() {
+                "integer" => Type::integer(),
+                "boolean" => Type::boolean(),
+                "char" => Type::char(),
+                "byte" => Type::byte(),
+                "word" => Type::word(),
+                "variant" => Type::variant(),
+                _ => Type::Error,
+            },
             _ => Type::Error,
         }
     }
@@ -821,17 +812,13 @@ impl IRBuilder {
     /// Analyze an expression to determine its type
     fn analyze_expression_type(&self, expr: &Node) -> Option<Type> {
         match expr {
-            Node::LiteralExpr(lit) => {
-                match &lit.value {
-                    ast::LiteralValue::Integer(_) => Some(Type::integer()),
-                    ast::LiteralValue::Boolean(_) => Some(Type::boolean()),
-                    ast::LiteralValue::Char(_) => Some(Type::char()),
-                    ast::LiteralValue::String(_) => Some(Type::array(Type::integer(), Type::char())),
-                }
-            }
-            Node::IdentExpr(ident) => {
-                self.variable_types.get(&ident.name).cloned()
-            }
+            Node::LiteralExpr(lit) => match &lit.value {
+                ast::LiteralValue::Integer(_) => Some(Type::integer()),
+                ast::LiteralValue::Boolean(_) => Some(Type::boolean()),
+                ast::LiteralValue::Char(_) => Some(Type::char()),
+                ast::LiteralValue::String(_) => Some(Type::array(Type::integer(), Type::char())),
+            },
+            Node::IdentExpr(ident) => self.variable_types.get(&ident.name).cloned(),
             _ => None,
         }
     }
@@ -859,17 +846,14 @@ impl IRBuilder {
         for arg in &call.args {
             args.push(self.build_expression(arg));
         }
-        
+
         if let Some(func) = self.current_function_mut() {
             let entry_label = func.entry_block.clone();
             if let Some(entry) = func.get_block_mut(&entry_label) {
                 // Build CALL instruction: CALL procedure_name, arg1, arg2, ...
                 let mut operands = vec![Value::Label(call.name.clone())];
                 operands.extend(args);
-                entry.add_instruction(Instruction::new(
-                    Opcode::Call,
-                    operands,
-                ));
+                entry.add_instruction(Instruction::new(Opcode::Call, operands));
             }
         }
     }
@@ -884,10 +868,10 @@ impl IRBuilder {
             None
         };
         let end_label = self.new_label("if_end");
-        
+
         // Evaluate condition (before borrowing func)
         let cond_val = self.build_expression(if_stmt.condition.as_ref());
-        
+
         // Build then block statements (before borrowing func)
         let then_instructions = if let Node::Block(block) = if_stmt.then_block.as_ref() {
             self.build_statements_to_instructions(&block.statements)
@@ -895,7 +879,7 @@ impl IRBuilder {
             // Single statement
             self.build_statements_to_instructions(&[if_stmt.then_block.as_ref().clone()])
         };
-        
+
         // Build else block statements if present (before borrowing func)
         let else_instructions = if let Some(else_block_node) = &if_stmt.else_block {
             if let Some(else_lbl) = &else_label {
@@ -912,17 +896,14 @@ impl IRBuilder {
         } else {
             None
         };
-        
+
         if let Some(func) = self.current_function_mut() {
             let entry_label = func.entry_block.clone();
             if let Some(entry) = func.get_block_mut(&entry_label) {
                 // Compare condition with 0 (false)
                 let zero = Value::Immediate(0);
-                entry.add_instruction(Instruction::new(
-                    Opcode::Cmp,
-                    vec![cond_val, zero],
-                ));
-                
+                entry.add_instruction(Instruction::new(Opcode::Cmp, vec![cond_val, zero]));
+
                 // Conditional jump: if condition is false (0), jump to else or end
                 if let Some(else_lbl) = &else_label {
                     entry.add_instruction(Instruction::new(
@@ -941,14 +922,14 @@ impl IRBuilder {
                         ],
                     ));
                 }
-                
+
                 // Update entry block to point to then/else (before dropping entry borrow)
                 entry.successors.push(then_label.clone());
                 if let Some(else_lbl) = &else_label {
                     entry.successors.push(else_lbl.clone());
                 }
             } // Drop entry borrow here
-            
+
             // Now we can add blocks without conflicting borrows
             // Add then block
             let mut then_block = BasicBlock::new(then_label.clone());
@@ -960,7 +941,7 @@ impl IRBuilder {
             ));
             then_block.successors.push(end_label.clone());
             func.add_block(then_block);
-            
+
             // Add else block if present
             if let Some((else_lbl, instructions)) = else_instructions {
                 let mut else_block = BasicBlock::new(else_lbl.clone());
@@ -973,7 +954,7 @@ impl IRBuilder {
                 else_block.successors.push(end_label.clone());
                 func.add_block(else_block);
             }
-            
+
             // Add end block (merge point)
             let end_block = BasicBlock::new(end_label.clone());
             func.add_block(end_block);
@@ -986,10 +967,10 @@ impl IRBuilder {
         let loop_label = self.new_label("while_loop");
         let body_label = self.new_label("while_body");
         let end_label = self.new_label("while_end");
-        
+
         // Evaluate condition (before borrowing func)
         let cond_val = self.build_expression(while_stmt.condition.as_ref());
-        
+
         // Build body statements (before borrowing func)
         let body_instructions = if let Node::Block(block) = while_stmt.body.as_ref() {
             self.build_statements_to_instructions(&block.statements)
@@ -997,7 +978,7 @@ impl IRBuilder {
             // Single statement
             self.build_statements_to_instructions(&[while_stmt.body.as_ref().clone()])
         };
-        
+
         if let Some(func) = self.current_function_mut() {
             let entry_label = func.entry_block.clone();
             if let Some(entry) = func.get_block_mut(&entry_label) {
@@ -1007,14 +988,11 @@ impl IRBuilder {
                     vec![Value::Label(loop_label.clone())],
                 ));
                 entry.successors.push(loop_label.clone());
-                
+
                 // Loop condition block
                 let mut loop_block = BasicBlock::new(loop_label.clone());
                 let zero = Value::Immediate(0);
-                loop_block.add_instruction(Instruction::new(
-                    Opcode::Cmp,
-                    vec![cond_val, zero],
-                ));
+                loop_block.add_instruction(Instruction::new(Opcode::Cmp, vec![cond_val, zero]));
                 // If condition is false, jump to end; otherwise jump to body
                 loop_block.add_instruction(Instruction::new(
                     Opcode::CJump,
@@ -1026,7 +1004,7 @@ impl IRBuilder {
                 loop_block.successors.push(end_label.clone());
                 loop_block.successors.push(body_label.clone());
                 func.add_block(loop_block);
-                
+
                 // Body block
                 let mut body_block = BasicBlock::new(body_label.clone());
                 body_block.instructions = body_instructions;
@@ -1037,7 +1015,7 @@ impl IRBuilder {
                 ));
                 body_block.successors.push(loop_label.clone());
                 func.add_block(body_block);
-                
+
                 // End block (after loop)
                 let end_block = BasicBlock::new(end_label.clone());
                 func.add_block(end_block);
@@ -1049,18 +1027,18 @@ impl IRBuilder {
     fn build_for_stmt(&mut self, for_stmt: &ast::ForStmt) {
         // Get loop variable name
         let var_name = for_stmt.var_name.clone();
-        
+
         // Generate labels first (before borrowing func)
         let loop_label = self.new_label("for_loop");
         let body_label = self.new_label("for_body");
         let inc_label = self.new_label("for_inc");
         let end_label = self.new_label("for_end");
-        
+
         // Build expressions (before borrowing func)
         let start_val = self.build_expression(for_stmt.start_expr.as_ref());
         let end_val = self.build_expression(for_stmt.end_expr.as_ref());
         let var_addr = self.get_variable_address(&var_name);
-        
+
         // Build body statements (before borrowing func)
         let body_instructions = if let Node::Block(block) = for_stmt.body.as_ref() {
             self.build_statements_to_instructions(&block.statements)
@@ -1068,7 +1046,7 @@ impl IRBuilder {
             // Single statement
             self.build_statements_to_instructions(&[for_stmt.body.as_ref().clone()])
         };
-        
+
         if let Some(func) = self.current_function_mut() {
             let entry_label = func.entry_block.clone();
             if let Some(entry) = func.get_block_mut(&entry_label) {
@@ -1082,7 +1060,7 @@ impl IRBuilder {
                     vec![Value::Label(loop_label.clone())],
                 ));
                 entry.successors.push(loop_label.clone());
-                
+
                 // Loop condition check
                 let mut loop_block = BasicBlock::new(loop_label.clone());
                 // Compare loop variable with end value
@@ -1102,7 +1080,7 @@ impl IRBuilder {
                 loop_block.successors.push(end_label.clone());
                 loop_block.successors.push(body_label.clone());
                 func.add_block(loop_block);
-                
+
                 // Body block
                 let mut body_block = BasicBlock::new(body_label.clone());
                 body_block.instructions = body_instructions;
@@ -1112,7 +1090,7 @@ impl IRBuilder {
                 ));
                 body_block.successors.push(inc_label.clone());
                 func.add_block(body_block);
-                
+
                 // Increment/decrement block
                 let mut inc_block = BasicBlock::new(inc_label.clone());
                 let one = Value::Immediate(1);
@@ -1136,7 +1114,7 @@ impl IRBuilder {
                 ));
                 inc_block.successors.push(loop_label.clone());
                 func.add_block(inc_block);
-                
+
                 // End block
                 let end_block = BasicBlock::new(end_label.clone());
                 func.add_block(end_block);
@@ -1150,13 +1128,13 @@ impl IRBuilder {
         let body_label = self.new_label("repeat_body");
         let cond_label = self.new_label("repeat_cond");
         let end_label = self.new_label("repeat_end");
-        
+
         // Build body statements (before borrowing func)
         let body_instructions = self.build_statements_to_instructions(&repeat.statements);
-        
+
         // Evaluate condition (before borrowing func)
         let cond_val = self.build_expression(repeat.condition.as_ref());
-        
+
         if let Some(func) = self.current_function_mut() {
             let entry_label = func.entry_block.clone();
             if let Some(entry) = func.get_block_mut(&entry_label) {
@@ -1166,7 +1144,7 @@ impl IRBuilder {
                     vec![Value::Label(body_label.clone())],
                 ));
                 entry.successors.push(body_label.clone());
-                
+
                 // Body block
                 let mut body_block = BasicBlock::new(body_label.clone());
                 body_block.instructions = body_instructions;
@@ -1176,14 +1154,11 @@ impl IRBuilder {
                 ));
                 body_block.successors.push(cond_label.clone());
                 func.add_block(body_block);
-                
+
                 // Condition check block
                 let mut cond_block = BasicBlock::new(cond_label.clone());
                 let zero = Value::Immediate(0);
-                cond_block.add_instruction(Instruction::new(
-                    Opcode::Cmp,
-                    vec![cond_val, zero],
-                ));
+                cond_block.add_instruction(Instruction::new(Opcode::Cmp, vec![cond_val, zero]));
                 // If condition is false, jump back to body; otherwise jump to end
                 cond_block.add_instruction(Instruction::new(
                     Opcode::CJump,
@@ -1195,7 +1170,7 @@ impl IRBuilder {
                 cond_block.successors.push(body_label.clone());
                 cond_block.successors.push(end_label.clone());
                 func.add_block(cond_block);
-                
+
                 // End block
                 let end_block = BasicBlock::new(end_label.clone());
                 func.add_block(end_block);
@@ -1207,16 +1182,16 @@ impl IRBuilder {
     fn build_case_stmt(&mut self, case_stmt: &ast::CaseStmt) {
         // Evaluate selector expression (before borrowing func)
         let selector_val = self.build_expression(case_stmt.expr.as_ref());
-        
+
         // Create labels and build branch instructions (before borrowing func)
         let mut case_labels = Vec::new();
         let end_label = self.new_label("case_end");
         let mut branch_instructions = Vec::new();
-        
+
         for (i, branch) in case_stmt.cases.iter().enumerate() {
             let branch_label = self.new_label(&format!("case_branch_{}", i));
             case_labels.push(branch_label.clone());
-            
+
             // Build branch statement instructions
             let instructions = if let Node::Block(block) = branch.statement.as_ref() {
                 self.build_statements_to_instructions(&block.statements)
@@ -1226,7 +1201,7 @@ impl IRBuilder {
             };
             branch_instructions.push((branch_label, instructions));
         }
-        
+
         // Build else branch instructions if present (before borrowing func)
         let else_instructions = if let Some(else_block) = &case_stmt.else_branch {
             let else_label = self.new_label("case_else");
@@ -1240,7 +1215,7 @@ impl IRBuilder {
         } else {
             None
         };
-        
+
         // Build case value expressions (before borrowing func)
         let mut case_value_pairs = Vec::new();
         for (i, branch) in case_stmt.cases.iter().enumerate() {
@@ -1249,7 +1224,7 @@ impl IRBuilder {
                 case_value_pairs.push((i, case_val));
             }
         }
-        
+
         if let Some(func) = self.current_function_mut() {
             let entry_label = func.entry_block.clone();
             if let Some(entry) = func.get_block_mut(&entry_label) {
@@ -1268,12 +1243,12 @@ impl IRBuilder {
                         ],
                     ));
                 }
-                
+
                 // Update entry block successors (before dropping entry borrow)
                 entry.successors.extend(case_labels.clone());
                 entry.successors.push(end_label.clone());
             } // Drop entry borrow here
-            
+
             // Now we can add blocks without conflicting borrows
             // Add case branch blocks
             for (branch_label, instructions) in branch_instructions {
@@ -1287,7 +1262,7 @@ impl IRBuilder {
                 branch_block.successors.push(end_label.clone());
                 func.add_block(branch_block);
             }
-            
+
             // Handle else branch if present
             if let Some((else_label, instructions)) = else_instructions {
                 let mut else_block_ir = BasicBlock::new(else_label.clone());
@@ -1299,7 +1274,7 @@ impl IRBuilder {
                 else_block_ir.successors.push(end_label.clone());
                 func.add_block(else_block_ir);
             }
-            
+
             // End block
             let end_block = BasicBlock::new(end_label.clone());
             func.add_block(end_block);
@@ -1350,7 +1325,12 @@ impl IRBuilder {
     /// Generate IR for Variant assignment: variant := value
     /// This generates a call to variant_assign runtime function
     /// Parameters: variant_ptr (pointer to Variant), type_id (VariantType enum value), value (the value to assign)
-    pub fn generate_variant_assign(&mut self, variant_ptr: Value, type_id: Value, value: Value) -> Instruction {
+    pub fn generate_variant_assign(
+        &mut self,
+        variant_ptr: Value,
+        type_id: Value,
+        value: Value,
+    ) -> Instruction {
         // CALL variant_assign(variant_ptr, type_id, value)
         // Note: In actual implementation, parameters would be pushed on stack or passed in registers
         Instruction::new(
@@ -1370,17 +1350,17 @@ impl IRBuilder {
         // CALL variant_copy, dest_ptr, src_ptr
         Instruction::new(
             Opcode::Call,
-            vec![
-                Value::Label("variant_copy".to_string()),
-                dest_ptr,
-                src_ptr,
-            ],
+            vec![Value::Label("variant_copy".to_string()), dest_ptr, src_ptr],
         )
     }
 
     /// Generate IR for Variant type check: variant_is_type(variant_ptr, type_id)
     /// Returns a temporary value with the boolean result
-    pub fn generate_variant_is_type(&mut self, variant_ptr: Value, type_id: Value) -> (Instruction, Value) {
+    pub fn generate_variant_is_type(
+        &mut self,
+        variant_ptr: Value,
+        type_id: Value,
+    ) -> (Instruction, Value) {
         let result_temp = self.new_temp();
         // CALL variant_is_type, variant_ptr, type_id -> result_temp
         let inst = Instruction::new(
@@ -1490,10 +1470,7 @@ impl IRBuilder {
         returns_value: Value,
     ) -> (Instruction, Value) {
         let result_temp = self.new_temp();
-        let mut operands = vec![
-            Value::Label("closure_new".to_string()),
-            function_id,
-        ];
+        let mut operands = vec![Value::Label("closure_new".to_string()), function_id];
         // Add captured names count and array
         operands.push(Value::Immediate(captured_names.len() as i32));
         for name in captured_names {
@@ -1506,7 +1483,7 @@ impl IRBuilder {
         operands.push(param_count);
         operands.push(returns_value);
         operands.push(result_temp.clone());
-        
+
         let inst = Instruction::new(Opcode::Call, operands);
         (inst, result_temp)
     }
@@ -1541,10 +1518,7 @@ impl IRBuilder {
         params: Vec<Value>,
     ) -> (Instruction, Value) {
         let result_temp = self.new_temp();
-        let mut operands = vec![
-            Value::Label("closure_call".to_string()),
-            closure_ptr,
-        ];
+        let mut operands = vec![Value::Label("closure_call".to_string()), closure_ptr];
         // Add parameter count
         operands.push(Value::Immediate(params.len() as i32));
         // Add parameters
@@ -1552,7 +1526,7 @@ impl IRBuilder {
             operands.push(param);
         }
         operands.push(result_temp.clone());
-        
+
         let inst = Instruction::new(Opcode::Call, operands);
         (inst, result_temp)
     }
@@ -1599,10 +1573,7 @@ impl IRBuilder {
     pub fn generate_closure_free(&mut self, closure_ptr: Value) -> Instruction {
         Instruction::new(
             Opcode::Call,
-            vec![
-                Value::Label("closure_free".to_string()),
-                closure_ptr,
-            ],
+            vec![Value::Label("closure_free".to_string()), closure_ptr],
         )
     }
 
@@ -1643,7 +1614,11 @@ impl IRBuilder {
     /// Generate IR for assigning an interface: interface_assign(dest_ptr, source_ptr)
     /// This handles reference counting: releases old interface, adds reference to new
     /// Returns a temporary value with the assigned interface pointer
-    pub fn generate_interface_assign(&mut self, dest_ptr: Value, source_ptr: Value) -> (Instruction, Value) {
+    pub fn generate_interface_assign(
+        &mut self,
+        dest_ptr: Value,
+        source_ptr: Value,
+    ) -> (Instruction, Value) {
         let result_temp = self.new_temp();
         let inst = Instruction::new(
             Opcode::Call,
@@ -1660,7 +1635,11 @@ impl IRBuilder {
     /// Generate IR for creating an interface from an object: interface_from_object(object_ptr, guid)
     /// This is called when casting an object to an interface
     /// Returns a temporary value with the interface pointer
-    pub fn generate_interface_from_object(&mut self, object_ptr: Value, guid: Option<Value>) -> (Instruction, Value) {
+    pub fn generate_interface_from_object(
+        &mut self,
+        object_ptr: Value,
+        guid: Option<Value>,
+    ) -> (Instruction, Value) {
         let result_temp = self.new_temp();
         let mut operands = vec![
             Value::Label("interface_from_object".to_string()),
@@ -1672,14 +1651,18 @@ impl IRBuilder {
             operands.push(Value::Immediate(0)); // Null GUID
         }
         operands.push(result_temp.clone());
-        
+
         let inst = Instruction::new(Opcode::Call, operands);
         (inst, result_temp)
     }
 
     /// Generate IR for querying an interface: interface_query_interface(object_ptr, guid)
     /// Returns a temporary value with the interface pointer (0 if not supported)
-    pub fn generate_interface_query_interface(&mut self, object_ptr: Value, guid: Value) -> (Instruction, Value) {
+    pub fn generate_interface_query_interface(
+        &mut self,
+        object_ptr: Value,
+        guid: Value,
+    ) -> (Instruction, Value) {
         let result_temp = self.new_temp();
         let inst = Instruction::new(
             Opcode::Call,
@@ -1722,9 +1705,24 @@ mod tests {
 
     #[test]
     fn test_value_memory() {
-        let mem = Value::Memory { base: "sp".to_string(), offset: 4 };
-        assert_eq!(mem, Value::Memory { base: "sp".to_string(), offset: 4 });
-        assert_ne!(mem, Value::Memory { base: "sp".to_string(), offset: 8 });
+        let mem = Value::Memory {
+            base: "sp".to_string(),
+            offset: 4,
+        };
+        assert_eq!(
+            mem,
+            Value::Memory {
+                base: "sp".to_string(),
+                offset: 4
+            }
+        );
+        assert_ne!(
+            mem,
+            Value::Memory {
+                base: "sp".to_string(),
+                offset: 8
+            }
+        );
     }
 
     #[test]
@@ -1766,13 +1764,9 @@ mod tests {
     fn test_instruction_creation() {
         let inst = Instruction::new(
             Opcode::Add,
-            vec![
-                Value::Temp(0),
-                Value::Immediate(1),
-                Value::Immediate(2),
-            ],
+            vec![Value::Temp(0), Value::Immediate(1), Value::Immediate(2)],
         );
-        
+
         assert_eq!(inst.opcode, Opcode::Add);
         assert_eq!(inst.operands.len(), 3);
         assert_eq!(inst.span, None);
@@ -1781,11 +1775,9 @@ mod tests {
     #[test]
     fn test_instruction_with_span() {
         let span = Span::new(0, 10, 1, 1);
-        let inst = Instruction::new(Opcode::Mov, vec![
-            Value::Temp(0),
-            Value::Immediate(42),
-        ]).with_span(span);
-        
+        let inst = Instruction::new(Opcode::Mov, vec![Value::Temp(0), Value::Immediate(42)])
+            .with_span(span);
+
         assert_eq!(inst.opcode, Opcode::Mov);
         assert_eq!(inst.span, Some(span));
     }
@@ -1793,12 +1785,23 @@ mod tests {
     #[test]
     fn test_instruction_all_opcodes() {
         let ops = vec![
-            Opcode::Mov, Opcode::Add, Opcode::Sub, Opcode::Mul,
-            Opcode::Div, Opcode::Mod, Opcode::Cmp, Opcode::Jump,
-            Opcode::CJump, Opcode::Call, Opcode::Ret, Opcode::Load,
-            Opcode::Store, Opcode::Push, Opcode::Pop,
+            Opcode::Mov,
+            Opcode::Add,
+            Opcode::Sub,
+            Opcode::Mul,
+            Opcode::Div,
+            Opcode::Mod,
+            Opcode::Cmp,
+            Opcode::Jump,
+            Opcode::CJump,
+            Opcode::Call,
+            Opcode::Ret,
+            Opcode::Load,
+            Opcode::Store,
+            Opcode::Push,
+            Opcode::Pop,
         ];
-        
+
         for op in &ops {
             let inst = Instruction::new(op.clone(), vec![]);
             assert_eq!(inst.opcode, *op);
@@ -1817,16 +1820,15 @@ mod tests {
     #[test]
     fn test_basic_block_add_instruction() {
         let mut block = BasicBlock::new("label1".to_string());
-        block.add_instruction(Instruction::new(Opcode::Mov, vec![
-            Value::Temp(0),
-            Value::Immediate(42),
-        ]));
-        block.add_instruction(Instruction::new(Opcode::Add, vec![
-            Value::Temp(1),
-            Value::Temp(0),
-            Value::Immediate(1),
-        ]));
-        
+        block.add_instruction(Instruction::new(
+            Opcode::Mov,
+            vec![Value::Temp(0), Value::Immediate(42)],
+        ));
+        block.add_instruction(Instruction::new(
+            Opcode::Add,
+            vec![Value::Temp(1), Value::Temp(0), Value::Immediate(1)],
+        ));
+
         assert_eq!(block.instructions.len(), 2);
         assert_eq!(block.instructions[0].opcode, Opcode::Mov);
         assert_eq!(block.instructions[1].opcode, Opcode::Add);
@@ -1837,7 +1839,7 @@ mod tests {
         let mut block = BasicBlock::new("label1".to_string());
         block.add_successor("label2".to_string());
         block.add_successor("label3".to_string());
-        
+
         assert_eq!(block.successors.len(), 2);
         assert!(block.successors.contains(&"label2".to_string()));
         assert!(block.successors.contains(&"label3".to_string()));
@@ -1848,7 +1850,7 @@ mod tests {
         let mut block = BasicBlock::new("label1".to_string());
         block.add_successor("label2".to_string());
         block.add_successor("label2".to_string()); // Duplicate
-        
+
         assert_eq!(block.successors.len(), 1); // Should not add duplicate
     }
 
@@ -1877,7 +1879,7 @@ mod tests {
         let block2 = BasicBlock::new("block2".to_string());
         func.add_block(block1);
         func.add_block(block2);
-        
+
         assert_eq!(func.blocks.len(), 3); // Entry + 2 blocks
     }
 
@@ -1887,20 +1889,20 @@ mod tests {
         let mut block = BasicBlock::new("block1".to_string());
         block.add_instruction(Instruction::new(Opcode::Mov, vec![]));
         func.add_block(block);
-        
+
         if let Some(entry_block) = func.get_block_mut("test_entry") {
             entry_block.add_instruction(Instruction::new(Opcode::Ret, vec![]));
             assert_eq!(entry_block.instructions.len(), 1);
         } else {
             panic!("Entry block not found");
         }
-        
+
         if let Some(block) = func.get_block_mut("block1") {
             assert_eq!(block.instructions.len(), 1);
         } else {
             panic!("Block1 not found");
         }
-        
+
         assert!(func.get_block_mut("nonexistent").is_none());
     }
 
@@ -1926,7 +1928,7 @@ mod tests {
         let func2 = Function::new("func2".to_string(), None);
         program.add_function(func1);
         program.add_function(func2);
-        
+
         assert_eq!(program.functions.len(), 2);
         assert_eq!(program.functions[0].name, "func1");
         assert_eq!(program.functions[1].name, "func2");
@@ -1953,7 +1955,7 @@ mod tests {
         let temp1 = builder.new_temp();
         let temp2 = builder.new_temp();
         let temp3 = builder.new_temp();
-        
+
         assert_eq!(temp1, Value::Temp(0));
         assert_eq!(temp2, Value::Temp(1));
         assert_eq!(temp3, Value::Temp(2));
@@ -1965,7 +1967,7 @@ mod tests {
         let label1 = builder.new_label("loop");
         let label2 = builder.new_label("loop");
         let label3 = builder.new_label("end");
-        
+
         assert_eq!(label1, "loop_0");
         assert_eq!(label2, "loop_1");
         assert_eq!(label3, "end_2");
@@ -1975,7 +1977,7 @@ mod tests {
     fn test_ir_builder_start_function() {
         let mut builder = IRBuilder::new();
         builder.start_function("test".to_string(), Some(Type::integer()));
-        
+
         assert!(builder.current_function.is_some());
         let func = builder.current_function.as_ref().unwrap();
         assert_eq!(func.name, "test");
@@ -1987,7 +1989,7 @@ mod tests {
         let mut builder = IRBuilder::new();
         builder.start_function("test".to_string(), None);
         builder.finish_function();
-        
+
         assert!(builder.current_function.is_none());
         assert_eq!(builder.program.functions.len(), 1);
         assert_eq!(builder.program.functions[0].name, "test");
@@ -1997,7 +1999,7 @@ mod tests {
     fn test_ir_builder_current_function_mut() {
         let mut builder = IRBuilder::new();
         assert!(builder.current_function_mut().is_none());
-        
+
         builder.start_function("test".to_string(), None);
         if let Some(func) = builder.current_function_mut() {
             func.add_block(BasicBlock::new("block1".to_string()));
@@ -2014,7 +2016,7 @@ mod tests {
         builder.finish_function();
         builder.start_function("func2".to_string(), Some(Type::integer()));
         builder.finish_function();
-        
+
         let program = builder.into_program();
         assert_eq!(program.functions.len(), 2);
     }
@@ -2023,32 +2025,29 @@ mod tests {
     #[test]
     fn test_complete_ir_program() {
         let mut program = Program::new();
-        
+
         // Create main function
         let mut main_func = Function::new("main".to_string(), None);
         let mut entry_block = BasicBlock::new("main_entry".to_string());
-        entry_block.add_instruction(Instruction::new(Opcode::Mov, vec![
-            Value::Temp(0),
-            Value::Immediate(42),
-        ]));
+        entry_block.add_instruction(Instruction::new(
+            Opcode::Mov,
+            vec![Value::Temp(0), Value::Immediate(42)],
+        ));
         entry_block.add_instruction(Instruction::new(Opcode::Ret, vec![]));
         main_func.add_block(entry_block);
         program.add_function(main_func);
-        
+
         // Create helper function
         let mut helper_func = Function::new("helper".to_string(), Some(Type::integer()));
         let mut helper_entry = BasicBlock::new("helper_entry".to_string());
-        helper_entry.add_instruction(Instruction::new(Opcode::Add, vec![
-            Value::Temp(0),
-            Value::Temp(1),
-            Value::Immediate(1),
-        ]));
-        helper_entry.add_instruction(Instruction::new(Opcode::Ret, vec![
-            Value::Temp(0),
-        ]));
+        helper_entry.add_instruction(Instruction::new(
+            Opcode::Add,
+            vec![Value::Temp(0), Value::Temp(1), Value::Immediate(1)],
+        ));
+        helper_entry.add_instruction(Instruction::new(Opcode::Ret, vec![Value::Temp(0)]));
         helper_func.add_block(helper_entry);
         program.add_function(helper_func);
-        
+
         assert_eq!(program.functions.len(), 2);
         assert_eq!(program.functions[0].name, "main");
         assert_eq!(program.functions[1].name, "helper");
@@ -2057,25 +2056,25 @@ mod tests {
     #[test]
     fn test_ir_builder_complete_workflow() {
         let mut builder = IRBuilder::new();
-        
+
         // Build main function
         builder.start_function("main".to_string(), None);
         let temp = builder.new_temp(); // Generate temp before borrowing func
         if let Some(func) = builder.current_function_mut() {
             if let Some(entry) = func.get_block_mut("main_entry") {
-                entry.add_instruction(Instruction::new(Opcode::Mov, vec![
-                    temp.clone(),
-                    Value::Immediate(10),
-                ]));
+                entry.add_instruction(Instruction::new(
+                    Opcode::Mov,
+                    vec![temp.clone(), Value::Immediate(10)],
+                ));
                 entry.add_instruction(Instruction::new(Opcode::Ret, vec![]));
             }
         }
         builder.finish_function();
-        
+
         // Build helper function
         builder.start_function("helper".to_string(), Some(Type::integer()));
         builder.finish_function();
-        
+
         let program = builder.into_program();
         assert_eq!(program.functions.len(), 2);
         assert_eq!(program.functions[0].blocks[0].instructions.len(), 2);
@@ -2086,11 +2085,15 @@ mod tests {
     #[test]
     fn test_generate_variant_assign() {
         let mut builder = IRBuilder::new();
-        let variant_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let variant_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let type_id = Value::Immediate(1); // VariantType::Integer
         let value = Value::Immediate(42);
 
-        let inst = builder.generate_variant_assign(variant_ptr.clone(), type_id.clone(), value.clone());
+        let inst =
+            builder.generate_variant_assign(variant_ptr.clone(), type_id.clone(), value.clone());
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 4);
@@ -2103,8 +2106,14 @@ mod tests {
     #[test]
     fn test_generate_variant_copy() {
         let mut builder = IRBuilder::new();
-        let dest_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
-        let src_ptr = Value::Memory { base: "sp".to_string(), offset: -8 };
+        let dest_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
+        let src_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -8,
+        };
 
         let inst = builder.generate_variant_copy(dest_ptr.clone(), src_ptr.clone());
 
@@ -2122,7 +2131,10 @@ mod tests {
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 2);
-        assert_eq!(inst.operands[0], Value::Label("variant_new_empty".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("variant_new_empty".to_string())
+        );
         assert_eq!(inst.operands[1], result);
         assert_eq!(result, Value::Temp(0));
     }
@@ -2146,13 +2158,19 @@ mod tests {
     #[test]
     fn test_generate_variant_is_type() {
         let mut builder = IRBuilder::new();
-        let variant_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let variant_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let type_id = Value::Immediate(1); // VariantType::Integer
         let (inst, result) = builder.generate_variant_is_type(variant_ptr.clone(), type_id.clone());
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 4);
-        assert_eq!(inst.operands[0], Value::Label("variant_is_type".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("variant_is_type".to_string())
+        );
         assert_eq!(inst.operands[1], variant_ptr);
         assert_eq!(inst.operands[2], type_id);
         assert_eq!(inst.operands[3], result);
@@ -2162,12 +2180,18 @@ mod tests {
     #[test]
     fn test_generate_variant_to_integer() {
         let mut builder = IRBuilder::new();
-        let variant_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let variant_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let (inst, result) = builder.generate_variant_to_integer(variant_ptr.clone());
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 3);
-        assert_eq!(inst.operands[0], Value::Label("variant_to_integer".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("variant_to_integer".to_string())
+        );
         assert_eq!(inst.operands[1], variant_ptr);
         assert_eq!(inst.operands[2], result);
         assert_eq!(result, Value::Temp(0));
@@ -2176,12 +2200,18 @@ mod tests {
     #[test]
     fn test_generate_variant_to_string() {
         let mut builder = IRBuilder::new();
-        let variant_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let variant_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let (inst, result) = builder.generate_variant_to_string(variant_ptr.clone());
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 3);
-        assert_eq!(inst.operands[0], Value::Label("variant_to_string".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("variant_to_string".to_string())
+        );
         assert_eq!(inst.operands[1], variant_ptr);
         assert_eq!(inst.operands[2], result);
         assert_eq!(result, Value::Temp(0));
@@ -2190,12 +2220,18 @@ mod tests {
     #[test]
     fn test_generate_variant_get_type() {
         let mut builder = IRBuilder::new();
-        let variant_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let variant_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let (inst, result) = builder.generate_variant_get_type(variant_ptr.clone());
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 3);
-        assert_eq!(inst.operands[0], Value::Label("variant_get_type".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("variant_get_type".to_string())
+        );
         assert_eq!(inst.operands[1], variant_ptr);
         assert_eq!(inst.operands[2], result);
         assert_eq!(result, Value::Temp(0));
@@ -2209,11 +2245,18 @@ mod tests {
         let function_id = Value::Label("func_123".to_string());
         let param_count = Value::Immediate(2);
         let returns_value = Value::Immediate(1); // true
-        let (inst, result) = builder.generate_closure_new_simple(function_id.clone(), param_count.clone(), returns_value.clone());
+        let (inst, result) = builder.generate_closure_new_simple(
+            function_id.clone(),
+            param_count.clone(),
+            returns_value.clone(),
+        );
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 5);
-        assert_eq!(inst.operands[0], Value::Label("closure_new_simple".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("closure_new_simple".to_string())
+        );
         assert_eq!(inst.operands[1], function_id);
         assert_eq!(inst.operands[2], param_count);
         assert_eq!(inst.operands[3], returns_value);
@@ -2225,14 +2268,8 @@ mod tests {
     fn test_generate_closure_new_with_captures() {
         let mut builder = IRBuilder::new();
         let function_id = Value::Label("func_456".to_string());
-        let captured_names = vec![
-            Value::Label("x".to_string()),
-            Value::Label("y".to_string()),
-        ];
-        let captured_values = vec![
-            Value::Immediate(42),
-            Value::Immediate(100),
-        ];
+        let captured_names = vec![Value::Label("x".to_string()), Value::Label("y".to_string())];
+        let captured_values = vec![Value::Immediate(42), Value::Immediate(100)];
         let param_count = Value::Immediate(1);
         let returns_value = Value::Immediate(0); // false
         let (inst, result) = builder.generate_closure_new(
@@ -2255,11 +2292,11 @@ mod tests {
     #[test]
     fn test_generate_closure_call() {
         let mut builder = IRBuilder::new();
-        let closure_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
-        let params = vec![
-            Value::Immediate(42),
-            Value::Immediate(100),
-        ];
+        let closure_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
+        let params = vec![Value::Immediate(42), Value::Immediate(100)];
         let (inst, result) = builder.generate_closure_call(closure_ptr.clone(), params);
 
         assert_eq!(inst.opcode, Opcode::Call);
@@ -2273,13 +2310,20 @@ mod tests {
     #[test]
     fn test_generate_closure_get_captured() {
         let mut builder = IRBuilder::new();
-        let closure_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let closure_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let name = Value::Label("x".to_string());
-        let (inst, result) = builder.generate_closure_get_captured(closure_ptr.clone(), name.clone());
+        let (inst, result) =
+            builder.generate_closure_get_captured(closure_ptr.clone(), name.clone());
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 4);
-        assert_eq!(inst.operands[0], Value::Label("closure_get_captured".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("closure_get_captured".to_string())
+        );
         assert_eq!(inst.operands[1], closure_ptr);
         assert_eq!(inst.operands[2], name);
         assert_eq!(inst.operands[3], result);
@@ -2289,14 +2333,21 @@ mod tests {
     #[test]
     fn test_generate_closure_set_captured() {
         let mut builder = IRBuilder::new();
-        let closure_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let closure_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let name = Value::Label("counter".to_string());
         let value = Value::Immediate(5);
-        let inst = builder.generate_closure_set_captured(closure_ptr.clone(), name.clone(), value.clone());
+        let inst =
+            builder.generate_closure_set_captured(closure_ptr.clone(), name.clone(), value.clone());
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 4);
-        assert_eq!(inst.operands[0], Value::Label("closure_set_captured".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("closure_set_captured".to_string())
+        );
         assert_eq!(inst.operands[1], closure_ptr);
         assert_eq!(inst.operands[2], name);
         assert_eq!(inst.operands[3], value);
@@ -2305,7 +2356,10 @@ mod tests {
     #[test]
     fn test_generate_closure_free() {
         let mut builder = IRBuilder::new();
-        let closure_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let closure_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let inst = builder.generate_closure_free(closure_ptr.clone());
 
         assert_eq!(inst.opcode, Opcode::Call);
@@ -2319,12 +2373,18 @@ mod tests {
     #[test]
     fn test_generate_interface_add_ref() {
         let mut builder = IRBuilder::new();
-        let interface_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let interface_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let (inst, result) = builder.generate_interface_add_ref(interface_ptr.clone());
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 3);
-        assert_eq!(inst.operands[0], Value::Label("interface_add_ref".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("interface_add_ref".to_string())
+        );
         assert_eq!(inst.operands[1], interface_ptr);
         assert_eq!(inst.operands[2], result);
     }
@@ -2332,12 +2392,18 @@ mod tests {
     #[test]
     fn test_generate_interface_release() {
         let mut builder = IRBuilder::new();
-        let interface_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let interface_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let (inst, result) = builder.generate_interface_release(interface_ptr.clone());
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 3);
-        assert_eq!(inst.operands[0], Value::Label("interface_release".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("interface_release".to_string())
+        );
         assert_eq!(inst.operands[1], interface_ptr);
         assert_eq!(inst.operands[2], result);
     }
@@ -2345,13 +2411,23 @@ mod tests {
     #[test]
     fn test_generate_interface_assign() {
         let mut builder = IRBuilder::new();
-        let dest_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
-        let source_ptr = Value::Memory { base: "sp".to_string(), offset: -8 };
-        let (inst, result) = builder.generate_interface_assign(dest_ptr.clone(), source_ptr.clone());
+        let dest_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
+        let source_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -8,
+        };
+        let (inst, result) =
+            builder.generate_interface_assign(dest_ptr.clone(), source_ptr.clone());
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 4);
-        assert_eq!(inst.operands[0], Value::Label("interface_assign".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("interface_assign".to_string())
+        );
         assert_eq!(inst.operands[1], dest_ptr);
         assert_eq!(inst.operands[2], source_ptr);
         assert_eq!(inst.operands[3], result);
@@ -2360,13 +2436,20 @@ mod tests {
     #[test]
     fn test_generate_interface_from_object() {
         let mut builder = IRBuilder::new();
-        let object_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let object_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let guid = Value::Label("{12345678-1234-1234-1234-123456789ABC}".to_string());
-        let (inst, result) = builder.generate_interface_from_object(object_ptr.clone(), Some(guid.clone()));
+        let (inst, result) =
+            builder.generate_interface_from_object(object_ptr.clone(), Some(guid.clone()));
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 4);
-        assert_eq!(inst.operands[0], Value::Label("interface_from_object".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("interface_from_object".to_string())
+        );
         assert_eq!(inst.operands[1], object_ptr);
         assert_eq!(inst.operands[2], guid);
         assert_eq!(inst.operands[3], result);
@@ -2375,12 +2458,18 @@ mod tests {
     #[test]
     fn test_generate_interface_from_object_no_guid() {
         let mut builder = IRBuilder::new();
-        let object_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let object_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let (inst, result) = builder.generate_interface_from_object(object_ptr.clone(), None);
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 4);
-        assert_eq!(inst.operands[0], Value::Label("interface_from_object".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("interface_from_object".to_string())
+        );
         assert_eq!(inst.operands[1], object_ptr);
         assert_eq!(inst.operands[2], Value::Immediate(0)); // Null GUID
         assert_eq!(inst.operands[3], result);
@@ -2389,13 +2478,20 @@ mod tests {
     #[test]
     fn test_generate_interface_query_interface() {
         let mut builder = IRBuilder::new();
-        let object_ptr = Value::Memory { base: "sp".to_string(), offset: -4 };
+        let object_ptr = Value::Memory {
+            base: "sp".to_string(),
+            offset: -4,
+        };
         let guid = Value::Label("{87654321-4321-4321-4321-CBA987654321}".to_string());
-        let (inst, result) = builder.generate_interface_query_interface(object_ptr.clone(), guid.clone());
+        let (inst, result) =
+            builder.generate_interface_query_interface(object_ptr.clone(), guid.clone());
 
         assert_eq!(inst.opcode, Opcode::Call);
         assert_eq!(inst.operands.len(), 4);
-        assert_eq!(inst.operands[0], Value::Label("interface_query_interface".to_string()));
+        assert_eq!(
+            inst.operands[0],
+            Value::Label("interface_query_interface".to_string())
+        );
         assert_eq!(inst.operands[1], object_ptr);
         assert_eq!(inst.operands[2], guid);
         assert_eq!(inst.operands[3], result);
@@ -2434,7 +2530,10 @@ mod tests {
             if let Some(entry) = func.get_block_mut(&entry_label) {
                 assert!(entry.instructions.len() >= 1);
                 assert_eq!(entry.instructions[0].opcode, Opcode::Call);
-                assert_eq!(entry.instructions[0].operands[0], Value::Label("variant_new_empty".to_string()));
+                assert_eq!(
+                    entry.instructions[0].operands[0],
+                    Value::Label("variant_new_empty".to_string())
+                );
             }
         }
     }
@@ -2445,7 +2544,9 @@ mod tests {
         builder.start_function("test".to_string(), None);
 
         // Register Variant variable
-        builder.variable_types.insert("v".to_string(), Type::variant());
+        builder
+            .variable_types
+            .insert("v".to_string(), Type::variant());
 
         // Create: v := 42;
         let assign = Node::AssignStmt(ast::AssignStmt {
@@ -2472,7 +2573,10 @@ mod tests {
                 let variant_assign_inst = entry.instructions.iter()
                     .find(|inst| inst.opcode == Opcode::Call && 
                           matches!(&inst.operands[0], Value::Label(label) if label == "variant_assign"));
-                assert!(variant_assign_inst.is_some(), "Should have variant_assign instruction");
+                assert!(
+                    variant_assign_inst.is_some(),
+                    "Should have variant_assign instruction"
+                );
             }
         }
     }
@@ -2483,8 +2587,12 @@ mod tests {
         builder.start_function("test".to_string(), None);
 
         // Register variables
-        builder.variable_types.insert("v".to_string(), Type::variant());
-        builder.variable_types.insert("i".to_string(), Type::integer());
+        builder
+            .variable_types
+            .insert("v".to_string(), Type::variant());
+        builder
+            .variable_types
+            .insert("i".to_string(), Type::integer());
 
         // Create: i := v;
         let assign = Node::AssignStmt(ast::AssignStmt {
@@ -2511,7 +2619,10 @@ mod tests {
                 let variant_to_int = entry.instructions.iter()
                     .find(|inst| inst.opcode == Opcode::Call && 
                           matches!(&inst.operands[0], Value::Label(label) if label == "variant_to_integer"));
-                assert!(variant_to_int.is_some(), "Should have variant_to_integer instruction");
+                assert!(
+                    variant_to_int.is_some(),
+                    "Should have variant_to_integer instruction"
+                );
             }
         }
     }
@@ -2522,7 +2633,9 @@ mod tests {
         builder.start_function("test".to_string(), None);
 
         // Register Variant variable
-        builder.variable_types.insert("v".to_string(), Type::variant());
+        builder
+            .variable_types
+            .insert("v".to_string(), Type::variant());
 
         // Create: v := 'Hello';
         let assign = Node::AssignStmt(ast::AssignStmt {
@@ -2548,7 +2661,10 @@ mod tests {
                 let variant_assign_inst = entry.instructions.iter()
                     .find(|inst| inst.opcode == Opcode::Call && 
                           matches!(&inst.operands[0], Value::Label(label) if label == "variant_assign"));
-                assert!(variant_assign_inst.is_some(), "Should have variant_assign instruction");
+                assert!(
+                    variant_assign_inst.is_some(),
+                    "Should have variant_assign instruction"
+                );
             }
         }
     }
@@ -2559,8 +2675,12 @@ mod tests {
         builder.start_function("test".to_string(), None);
 
         // Register Variant variables
-        builder.variable_types.insert("v1".to_string(), Type::variant());
-        builder.variable_types.insert("v2".to_string(), Type::variant());
+        builder
+            .variable_types
+            .insert("v1".to_string(), Type::variant());
+        builder
+            .variable_types
+            .insert("v2".to_string(), Type::variant());
 
         // Create: v2 := v1;
         let assign = Node::AssignStmt(ast::AssignStmt {
@@ -2586,7 +2706,10 @@ mod tests {
                 let variant_copy_inst = entry.instructions.iter()
                     .find(|inst| inst.opcode == Opcode::Call && 
                           matches!(&inst.operands[0], Value::Label(label) if label == "variant_copy"));
-                assert!(variant_copy_inst.is_some(), "Should have variant_copy instruction");
+                assert!(
+                    variant_copy_inst.is_some(),
+                    "Should have variant_copy instruction"
+                );
             }
         }
     }
@@ -2594,7 +2717,7 @@ mod tests {
     #[test]
     fn test_build_program_with_variant() {
         let mut builder = IRBuilder::new();
-        
+
         // Create a simple program: var v: Variant; v := 42;
         let program = Node::Program(ast::Program {
             name: "test".to_string(),
@@ -2642,7 +2765,7 @@ mod tests {
 
         // Verify the program was built
         assert_eq!(builder.program.functions.len(), 1);
-        
+
         // Verify Variant variable was registered
         assert_eq!(builder.variable_types.get("v"), Some(&Type::variant()));
     }
@@ -2653,16 +2776,16 @@ mod tests {
     fn test_build_if_statement() {
         use ast::{IfStmt, LiteralExpr, LiteralValue};
         use tokens::Span;
-        
+
         let mut builder = IRBuilder::new();
         builder.start_function("test".to_string(), None);
-        
+
         // Create: if true then x := 1 else x := 2
         let condition = Node::LiteralExpr(LiteralExpr {
             value: LiteralValue::Boolean(true),
             span: Span::at(0, 1, 1),
         });
-        
+
         let then_stmt = Node::AssignStmt(ast::AssignStmt {
             target: Box::new(Node::IdentExpr(ast::IdentExpr {
                 name: "x".to_string(),
@@ -2674,7 +2797,7 @@ mod tests {
             })),
             span: Span::at(10, 1, 15),
         });
-        
+
         let else_stmt = Node::AssignStmt(ast::AssignStmt {
             target: Box::new(Node::IdentExpr(ast::IdentExpr {
                 name: "x".to_string(),
@@ -2686,17 +2809,17 @@ mod tests {
             })),
             span: Span::at(20, 1, 25),
         });
-        
+
         let if_stmt = IfStmt {
             condition: Box::new(condition),
             then_block: Box::new(then_stmt),
             else_block: Some(Box::new(else_stmt)),
             span: Span::at(0, 1, 25),
         };
-        
+
         builder.build_if_stmt(&if_stmt);
         builder.finish_function();
-        
+
         let program = builder.into_program();
         assert_eq!(program.functions.len(), 1);
         let func = &program.functions[0];
@@ -2706,12 +2829,12 @@ mod tests {
 
     #[test]
     fn test_build_while_statement() {
-        use ast::{WhileStmt, LiteralExpr, LiteralValue};
+        use ast::{LiteralExpr, LiteralValue, WhileStmt};
         use tokens::Span;
-        
+
         let mut builder = IRBuilder::new();
         builder.start_function("test".to_string(), None);
-        
+
         // Create: while x < 10 do x := x + 1
         let condition = Node::BinaryExpr(ast::BinaryExpr {
             op: ast::BinaryOp::Less,
@@ -2725,7 +2848,7 @@ mod tests {
             })),
             span: Span::at(6, 1, 12),
         });
-        
+
         let body = Node::AssignStmt(ast::AssignStmt {
             target: Box::new(Node::IdentExpr(ast::IdentExpr {
                 name: "x".to_string(),
@@ -2745,16 +2868,16 @@ mod tests {
             })),
             span: Span::at(16, 1, 25),
         });
-        
+
         let while_stmt = WhileStmt {
             condition: Box::new(condition),
             body: Box::new(body),
             span: Span::at(0, 1, 25),
         };
-        
+
         builder.build_while_stmt(&while_stmt);
         builder.finish_function();
-        
+
         let program = builder.into_program();
         assert_eq!(program.functions.len(), 1);
         let func = &program.functions[0];
@@ -2764,12 +2887,12 @@ mod tests {
 
     #[test]
     fn test_build_for_statement() {
-        use ast::{ForStmt, ForDirection, LiteralExpr, LiteralValue};
+        use ast::{ForDirection, ForStmt, LiteralExpr, LiteralValue};
         use tokens::Span;
-        
+
         let mut builder = IRBuilder::new();
         builder.start_function("test".to_string(), None);
-        
+
         // Create: for i := 1 to 10 do x := x + i
         let for_stmt = ForStmt {
             var_name: "i".to_string(),
@@ -2803,10 +2926,10 @@ mod tests {
             })),
             span: Span::at(0, 1, 28),
         };
-        
+
         builder.build_for_stmt(&for_stmt);
         builder.finish_function();
-        
+
         let program = builder.into_program();
         assert_eq!(program.functions.len(), 1);
         let func = &program.functions[0];
@@ -2816,35 +2939,33 @@ mod tests {
 
     #[test]
     fn test_build_repeat_statement() {
-        use ast::{RepeatStmt, LiteralExpr, LiteralValue};
+        use ast::{LiteralExpr, LiteralValue, RepeatStmt};
         use tokens::Span;
-        
+
         let mut builder = IRBuilder::new();
         builder.start_function("test".to_string(), None);
-        
+
         // Create: repeat x := x + 1 until x > 10
         let repeat_stmt = RepeatStmt {
-            statements: vec![
-                Node::AssignStmt(ast::AssignStmt {
-                    target: Box::new(Node::IdentExpr(ast::IdentExpr {
+            statements: vec![Node::AssignStmt(ast::AssignStmt {
+                target: Box::new(Node::IdentExpr(ast::IdentExpr {
+                    name: "x".to_string(),
+                    span: Span::at(7, 1, 8),
+                })),
+                value: Box::new(Node::BinaryExpr(ast::BinaryExpr {
+                    op: ast::BinaryOp::Add,
+                    left: Box::new(Node::IdentExpr(ast::IdentExpr {
                         name: "x".to_string(),
-                        span: Span::at(7, 1, 8),
+                        span: Span::at(11, 1, 12),
                     })),
-                    value: Box::new(Node::BinaryExpr(ast::BinaryExpr {
-                        op: ast::BinaryOp::Add,
-                        left: Box::new(Node::IdentExpr(ast::IdentExpr {
-                            name: "x".to_string(),
-                            span: Span::at(11, 1, 12),
-                        })),
-                        right: Box::new(Node::LiteralExpr(LiteralExpr {
-                            value: LiteralValue::Integer(1),
-                            span: Span::at(15, 1, 16),
-                        })),
-                        span: Span::at(11, 1, 16),
+                    right: Box::new(Node::LiteralExpr(LiteralExpr {
+                        value: LiteralValue::Integer(1),
+                        span: Span::at(15, 1, 16),
                     })),
-                    span: Span::at(7, 1, 16),
-                }),
-            ],
+                    span: Span::at(11, 1, 16),
+                })),
+                span: Span::at(7, 1, 16),
+            })],
             condition: Box::new(Node::BinaryExpr(ast::BinaryExpr {
                 op: ast::BinaryOp::Greater,
                 left: Box::new(Node::IdentExpr(ast::IdentExpr {
@@ -2859,10 +2980,10 @@ mod tests {
             })),
             span: Span::at(0, 1, 29),
         };
-        
+
         builder.build_repeat_stmt(&repeat_stmt);
         builder.finish_function();
-        
+
         let program = builder.into_program();
         assert_eq!(program.functions.len(), 1);
         let func = &program.functions[0];
@@ -2872,12 +2993,12 @@ mod tests {
 
     #[test]
     fn test_build_case_statement() {
-        use ast::{CaseStmt, CaseBranch, LiteralExpr, LiteralValue};
+        use ast::{CaseBranch, CaseStmt, LiteralExpr, LiteralValue};
         use tokens::Span;
-        
+
         let mut builder = IRBuilder::new();
         builder.start_function("test".to_string(), None);
-        
+
         // Create: case x of 1: y := 10; 2: y := 20; else y := 0; end
         let case_stmt = CaseStmt {
             expr: Box::new(Node::IdentExpr(ast::IdentExpr {
@@ -2886,12 +3007,10 @@ mod tests {
             })),
             cases: vec![
                 CaseBranch {
-                    values: vec![
-                        Node::LiteralExpr(LiteralExpr {
-                            value: LiteralValue::Integer(1),
-                            span: Span::at(10, 1, 11),
-                        }),
-                    ],
+                    values: vec![Node::LiteralExpr(LiteralExpr {
+                        value: LiteralValue::Integer(1),
+                        span: Span::at(10, 1, 11),
+                    })],
                     statement: Box::new(Node::AssignStmt(ast::AssignStmt {
                         target: Box::new(Node::IdentExpr(ast::IdentExpr {
                             name: "y".to_string(),
@@ -2906,12 +3025,10 @@ mod tests {
                     span: Span::at(10, 1, 19),
                 },
                 CaseBranch {
-                    values: vec![
-                        Node::LiteralExpr(LiteralExpr {
-                            value: LiteralValue::Integer(2),
-                            span: Span::at(21, 1, 22),
-                        }),
-                    ],
+                    values: vec![Node::LiteralExpr(LiteralExpr {
+                        value: LiteralValue::Integer(2),
+                        span: Span::at(21, 1, 22),
+                    })],
                     statement: Box::new(Node::AssignStmt(ast::AssignStmt {
                         target: Box::new(Node::IdentExpr(ast::IdentExpr {
                             name: "y".to_string(),
@@ -2939,10 +3056,10 @@ mod tests {
             }))),
             span: Span::at(0, 1, 42),
         };
-        
+
         builder.build_case_stmt(&case_stmt);
         builder.finish_function();
-        
+
         let program = builder.into_program();
         assert_eq!(program.functions.len(), 1);
         let func = &program.functions[0];
@@ -2954,10 +3071,10 @@ mod tests {
     fn test_build_call_statement() {
         use ast::CallStmt;
         use tokens::Span;
-        
+
         let mut builder = IRBuilder::new();
         builder.start_function("test".to_string(), None);
-        
+
         // Create: WriteLn(42, "hello")
         let call_stmt = CallStmt {
             name: "WriteLn".to_string(),
@@ -2973,26 +3090,35 @@ mod tests {
             ],
             span: Span::at(0, 1, 19),
         };
-        
+
         builder.build_call_stmt(&call_stmt);
         builder.finish_function();
-        
+
         let program = builder.into_program();
         assert_eq!(program.functions.len(), 1);
         let func = &program.functions[0];
         // Should have a CALL instruction in the entry block
-        let entry = func.blocks.iter().find(|b| b.label == func.entry_block).unwrap();
-        assert!(entry.instructions.iter().any(|inst| inst.opcode == Opcode::Call));
+        let entry = func
+            .blocks
+            .iter()
+            .find(|b| b.label == func.entry_block)
+            .unwrap();
+        assert!(
+            entry
+                .instructions
+                .iter()
+                .any(|inst| inst.opcode == Opcode::Call)
+        );
     }
 
     #[test]
     fn test_build_expression_binary_ops() {
         use ast::{BinaryExpr, BinaryOp, LiteralExpr, LiteralValue};
         use tokens::Span;
-        
+
         let mut builder = IRBuilder::new();
         builder.start_function("test".to_string(), None);
-        
+
         // Test: 5 + 3
         let expr = Node::BinaryExpr(BinaryExpr {
             op: BinaryOp::Add,
@@ -3006,18 +3132,27 @@ mod tests {
             })),
             span: Span::at(0, 1, 5),
         });
-        
+
         let result = builder.build_expression(&expr);
         builder.finish_function();
-        
+
         // Should return a temp value
         assert!(matches!(result, Value::Temp(_)));
-        
+
         let program = builder.into_program();
         let func = &program.functions[0];
-        let entry = func.blocks.iter().find(|b| b.label == func.entry_block).unwrap();
+        let entry = func
+            .blocks
+            .iter()
+            .find(|b| b.label == func.entry_block)
+            .unwrap();
         // Should have an ADD instruction
-        assert!(entry.instructions.iter().any(|inst| inst.opcode == Opcode::Add));
+        assert!(
+            entry
+                .instructions
+                .iter()
+                .any(|inst| inst.opcode == Opcode::Add)
+        );
     }
 
     // ===== Procedural Type Tests =====
@@ -3025,18 +3160,23 @@ mod tests {
     #[test]
     fn test_procedural_type_creation() {
         use types::Type;
-        
+
         // Create a procedural type: function(x, y: integer): integer
         let proc_type = Type::procedural(
-            true, // is_function
+            true,                                   // is_function
             vec![Type::integer(), Type::integer()], // params
-            Some(Type::integer()), // return_type
-            false, // is_method_pointer
+            Some(Type::integer()),                  // return_type
+            false,                                  // is_method_pointer
         );
-        
+
         // Verify it's a procedural type
         match proc_type {
-            Type::Procedural { is_function, params, return_type, is_method_pointer } => {
+            Type::Procedural {
+                is_function,
+                params,
+                return_type,
+                is_method_pointer,
+            } => {
                 assert!(is_function);
                 assert_eq!(params.len(), 2);
                 assert_eq!(params[0], Type::integer());
@@ -3051,28 +3191,18 @@ mod tests {
     #[test]
     fn test_procedural_type_equality() {
         use types::Type;
-        
-        let proc1 = Type::procedural(
-            true,
-            vec![Type::integer()],
-            Some(Type::integer()),
-            false,
-        );
-        
-        let proc2 = Type::procedural(
-            true,
-            vec![Type::integer()],
-            Some(Type::integer()),
-            false,
-        );
-        
+
+        let proc1 = Type::procedural(true, vec![Type::integer()], Some(Type::integer()), false);
+
+        let proc2 = Type::procedural(true, vec![Type::integer()], Some(Type::integer()), false);
+
         let proc3 = Type::procedural(
             false, // procedure, not function
             vec![Type::integer()],
             None,
             false,
         );
-        
+
         assert!(proc1.equals(&proc2));
         assert!(!proc1.equals(&proc3));
     }
@@ -3080,24 +3210,14 @@ mod tests {
     #[test]
     fn test_procedural_type_assignment_compatibility() {
         use types::Type;
-        
-        let proc1 = Type::procedural(
-            true,
-            vec![Type::integer()],
-            Some(Type::integer()),
-            false,
-        );
-        
-        let proc2 = Type::procedural(
-            true,
-            vec![Type::integer()],
-            Some(Type::integer()),
-            false,
-        );
-        
+
+        let proc1 = Type::procedural(true, vec![Type::integer()], Some(Type::integer()), false);
+
+        let proc2 = Type::procedural(true, vec![Type::integer()], Some(Type::integer()), false);
+
         // Same procedural types should be assignable
         assert!(proc1.is_assignable_to(&proc2));
-        
+
         // Different parameter types should not be assignable
         let proc3 = Type::procedural(
             true,
@@ -3112,23 +3232,17 @@ mod tests {
     fn test_generate_array_slice() {
         let mut builder = IRBuilder::new();
         builder.start_function("test".to_string(), None);
-        
+
         let array_ptr = Value::Temp(1);
         let array_length = Value::Immediate(10);
         let element_size = Value::Immediate(4);
         let start = Value::Immediate(1);
         let end = Value::Immediate(5);
         let step = Value::Immediate(1);
-        
-        let (inst, result) = builder.generate_array_slice(
-            array_ptr,
-            array_length,
-            element_size,
-            start,
-            end,
-            step,
-        );
-        
+
+        let (inst, result) =
+            builder.generate_array_slice(array_ptr, array_length, element_size, start, end, step);
+
         // Verify instruction
         assert_eq!(inst.opcode, Opcode::Call);
         if let Value::Label(label) = &inst.operands[0] {
@@ -3136,7 +3250,7 @@ mod tests {
         } else {
             panic!("Expected Label for function name");
         }
-        
+
         // Verify result is a temp
         assert!(matches!(result, Value::Temp(_)));
     }
@@ -3145,7 +3259,7 @@ mod tests {
     fn test_build_slice_expression() {
         let mut builder = IRBuilder::new();
         builder.start_function("test".to_string(), None);
-        
+
         // Create a slice expression: arr[1:5]
         let slice = Node::SliceExpr(ast::SliceExpr {
             array: Box::new(Node::IdentExpr(ast::IdentExpr {
@@ -3163,12 +3277,12 @@ mod tests {
             step: None,
             span: Span::new(0, 8, 1, 1),
         });
-        
+
         let result = builder.build_expression(&slice);
-        
+
         // Verify result is a temp
         assert!(matches!(result, Value::Temp(_)));
-        
+
         // Verify array_slice instruction was generated
         if let Some(func) = builder.current_function_mut() {
             let entry_label = func.entry_block.clone();

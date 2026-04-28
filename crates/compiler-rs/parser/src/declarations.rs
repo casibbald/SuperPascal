@@ -33,36 +33,43 @@ impl super::Parser {
                 // Continue to check for more directives or PROGRAM
                 continue;
             }
-            
+
             // If we're in an inactive conditional branch, skip tokens
             if !self.directive_evaluator().is_active() {
                 if self.check(&TokenKind::Eof) {
                     // Reached EOF while in inactive branch - this is an error
                     return Err(ParserError::InvalidSyntax {
-                        message: "Unmatched {$IFDEF} or {$IFNDEF} - reached end of file".to_string(),
-                        span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                        message: "Unmatched {$IFDEF} or {$IFNDEF} - reached end of file"
+                            .to_string(),
+                        span: self
+                            .current()
+                            .map(|t| t.span)
+                            .unwrap_or_else(|| Span::at(0, 1, 1)),
                     });
                 }
                 // Skip this token (including PROGRAM if it's in an inactive branch)
                 self.advance()?;
                 continue;
             }
-            
+
             // We're active and not at a directive - check if we're at PROGRAM
             if self.check(&TokenKind::KwProgram) {
                 break; // Found PROGRAM, exit loop
             }
-            
+
             // Not a directive, not PROGRAM, and we're active - this is unexpected
             // This might be whitespace or comments, but PROGRAM should be next
             // Let's check if we should break or continue
             if self.check(&TokenKind::Eof) {
                 return Err(ParserError::InvalidSyntax {
                     message: "Expected PROGRAM, UNIT, or LIBRARY".to_string(),
-                    span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                    span: self
+                        .current()
+                        .map(|t| t.span)
+                        .unwrap_or_else(|| Span::at(0, 1, 1)),
                 });
             }
-            
+
             // Skip non-directive, non-PROGRAM tokens (whitespace/comments should be handled by lexer)
             // But if we get here, something unexpected happened
             self.advance()?;
@@ -75,10 +82,12 @@ impl super::Parser {
         let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
         let name = match &name_token.kind {
             TokenKind::Identifier(name) => name.clone(),
-            _ => return Err(ParserError::InvalidSyntax {
-                message: "Expected identifier after PROGRAM".to_string(),
-                span: name_token.span,
-            }),
+            _ => {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected identifier after PROGRAM".to_string(),
+                    span: name_token.span,
+                });
+            }
         };
 
         // Semicolon
@@ -86,22 +95,42 @@ impl super::Parser {
 
         // Block
         let mut block = self.parse_block()?;
-        
+
         // Merge any included blocks from directives collected before PROGRAM
         if let Node::Block(ref mut program_block) = block {
             for directive in &directives {
                 if let Node::Block(included_block) = directive {
                     // Merge included block's content into program block
-                    program_block.directives.extend(included_block.directives.clone());
-                    program_block.label_decls.extend(included_block.label_decls.clone());
-                    program_block.const_decls.extend(included_block.const_decls.clone());
-                    program_block.type_decls.extend(included_block.type_decls.clone());
-                    program_block.var_decls.extend(included_block.var_decls.clone());
-                    program_block.threadvar_decls.extend(included_block.threadvar_decls.clone());
-                    program_block.proc_decls.extend(included_block.proc_decls.clone());
-                    program_block.func_decls.extend(included_block.func_decls.clone());
-                    program_block.operator_decls.extend(included_block.operator_decls.clone());
-                    program_block.statements.extend(included_block.statements.clone());
+                    program_block
+                        .directives
+                        .extend(included_block.directives.clone());
+                    program_block
+                        .label_decls
+                        .extend(included_block.label_decls.clone());
+                    program_block
+                        .const_decls
+                        .extend(included_block.const_decls.clone());
+                    program_block
+                        .type_decls
+                        .extend(included_block.type_decls.clone());
+                    program_block
+                        .var_decls
+                        .extend(included_block.var_decls.clone());
+                    program_block
+                        .threadvar_decls
+                        .extend(included_block.threadvar_decls.clone());
+                    program_block
+                        .proc_decls
+                        .extend(included_block.proc_decls.clone());
+                    program_block
+                        .func_decls
+                        .extend(included_block.func_decls.clone());
+                    program_block
+                        .operator_decls
+                        .extend(included_block.operator_decls.clone());
+                    program_block
+                        .statements
+                        .extend(included_block.statements.clone());
                 } else {
                     // Regular directive - add to directives list
                     program_block.directives.push(directive.clone());
@@ -147,25 +176,30 @@ impl super::Parser {
         let token = self.consume(TokenKind::Directive(String::new()), "directive")?;
         let content = match &token.kind {
             TokenKind::Directive(content) => content.clone(),
-            _ => return Err(ParserError::InvalidSyntax {
-                message: "Expected directive".to_string(),
-                span: token.span,
-            }),
+            _ => {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected directive".to_string(),
+                    span: token.span,
+                });
+            }
         };
 
         // Parse directive type
         let directive_type = DirectiveEvaluator::parse_directive(&content);
-        
+
         // Evaluate directive
-        let (should_include, should_skip) = self.directive_evaluator_mut().evaluate(&directive_type, token.span)?;
-        
+        let (should_include, should_skip) = self
+            .directive_evaluator_mut()
+            .evaluate(&directive_type, token.span)?;
+
         // Handle conditional compilation - skip tokens if needed
         if should_skip {
             let stopped_at_else = self.skip_until_conditional_end()?;
             // If we stopped at ELSE, we've already evaluated it in skip_until_conditional_end
             // Get the ELSE token and return it
             if stopped_at_else {
-                let is_directive = self.current()
+                let is_directive = self
+                    .current()
                     .map(|t| matches!(t.kind, TokenKind::Directive(_)))
                     .unwrap_or(false);
                 if is_directive {
@@ -186,7 +220,7 @@ impl super::Parser {
             // If we stopped at ENDIF, it was already consumed, return None
             return Ok(None);
         }
-        
+
         // Handle INCLUDE directive specially - read and parse the file
         if let DirectiveType::Include(filename) = &directive_type {
             if should_include {
@@ -197,7 +231,7 @@ impl super::Parser {
                 return Ok(None);
             }
         }
-        
+
         // Only include directive in AST if it's active or if it's a control directive
         // Control directives (IFDEF, IFNDEF, IF, ELSEIF, ELSE, ENDIF) are included for debugging
         // DEFINE/UNDEF are included if active
@@ -208,11 +242,10 @@ impl super::Parser {
             | DirectiveType::ElseIf(_)
             | DirectiveType::Else
             | DirectiveType::EndIf => true, // Always include control directives
-            DirectiveType::Define(_)
-            | DirectiveType::Undef(_) => should_include, // Only if active
+            DirectiveType::Define(_) | DirectiveType::Undef(_) => should_include, // Only if active
             _ => should_include, // Other directives only if active
         };
-        
+
         if include_in_ast {
             Ok(Some(Node::Directive(ast::Directive {
                 content,
@@ -224,65 +257,73 @@ impl super::Parser {
     }
 
     /// Handle {$INCLUDE} directive - read file and parse it
-    fn handle_include_directive(&mut self, filename: &str, span: tokens::Span) -> ParserResult<Option<Node>> {
+    fn handle_include_directive(
+        &mut self,
+        filename: &str,
+        span: tokens::Span,
+    ) -> ParserResult<Option<Node>> {
         use std::fs;
-        
+
         // Resolve file path
         let file_path = self.resolve_include_path(filename)?;
-        
+
         // Check for circular includes
-        let canonical_path = fs::canonicalize(&file_path)
-            .map_err(|e| ParserError::InvalidSyntax {
+        let canonical_path =
+            fs::canonicalize(&file_path).map_err(|e| ParserError::InvalidSyntax {
                 message: format!("Cannot resolve include path '{}': {}", filename, e),
                 span,
             })?;
         let canonical_str = canonical_path.to_string_lossy().to_string();
-        
+
         if self.included_files.contains(&canonical_str) {
             return Err(ParserError::InvalidSyntax {
                 message: format!("Circular include detected: '{}'", filename),
                 span,
             });
         }
-        
+
         // Read the file
-        let file_content = fs::read_to_string(&file_path)
-            .map_err(|e| ParserError::InvalidSyntax {
+        let file_content =
+            fs::read_to_string(&file_path).map_err(|e| ParserError::InvalidSyntax {
                 message: format!("Cannot read include file '{}': {}", filename, e),
                 span,
             })?;
-        
+
         // Mark file as included
         self.included_files.insert(canonical_str.clone());
-        
+
         // Create a new parser for the included file
         let included_filename = Some(file_path.to_string_lossy().to_string());
         let mut included_parser = super::Parser::new_with_file_and_symbols(
             &file_content,
             included_filename.clone(),
-            self.directive_evaluator().defined_symbols().iter().cloned().collect(),
+            self.directive_evaluator()
+                .defined_symbols()
+                .iter()
+                .cloned()
+                .collect(),
         )?;
-        
+
         // Copy include paths and included files to the new parser
         included_parser.include_paths = self.include_paths.clone();
         included_parser.included_files = self.included_files.clone();
-        
+
         // Parse the included file - it can contain:
         // 1. A block (declarations and statements with BEGIN...END)
         // 2. Just declarations (for header files)
         // 3. Just statements (for code files)
         // Try to parse as declarations-only first (most common for header files)
         let included_ast = included_parser.parse_declarations_only()?;
-        
+
         // Return the included content
         // The included block will be merged into the current context by the caller
         Ok(Some(included_ast))
     }
-    
+
     /// Resolve include file path (check current directory, then include paths)
     fn resolve_include_path(&self, filename: &str) -> ParserResult<std::path::PathBuf> {
         use std::path::PathBuf;
-        
+
         // If filename is absolute, use it directly
         let path = PathBuf::from(filename);
         if path.is_absolute() {
@@ -290,7 +331,7 @@ impl super::Parser {
                 return Ok(path);
             }
         }
-        
+
         // Try relative to current file's directory
         if let Some(ref current_file) = self.filename {
             if let Some(parent) = std::path::Path::new(current_file).parent() {
@@ -300,7 +341,7 @@ impl super::Parser {
                 }
             }
         }
-        
+
         // Try include paths
         for include_path in &self.include_paths {
             let candidate = PathBuf::from(include_path).join(filename);
@@ -308,13 +349,13 @@ impl super::Parser {
                 return Ok(candidate);
             }
         }
-        
+
         // Try current directory
         let candidate = PathBuf::from(filename);
         if candidate.exists() {
             return Ok(candidate);
         }
-        
+
         // Not found
         Err(ParserError::InvalidSyntax {
             message: format!("Include file not found: '{}'", filename),
@@ -327,11 +368,15 @@ impl super::Parser {
     fn skip_until_conditional_end(&mut self) -> ParserResult<bool> {
         let mut depth = 1; // We're already inside one conditional
         while depth > 0 {
-            let token_span = self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1));
-            let is_directive = self.current()
+            let token_span = self
+                .current()
+                .map(|t| t.span)
+                .unwrap_or_else(|| Span::at(0, 1, 1));
+            let is_directive = self
+                .current()
                 .map(|t| matches!(t.kind, TokenKind::Directive(_)))
                 .unwrap_or(false);
-            
+
             if is_directive {
                 let content = match &self.current().unwrap().kind {
                     TokenKind::Directive(content) => content.clone(),
@@ -341,33 +386,34 @@ impl super::Parser {
                     }
                 };
                 let directive_type = DirectiveEvaluator::parse_directive(&content);
-                
+
                 // Evaluate the directive to update state
-                let (_, _) = self.directive_evaluator_mut().evaluate(&directive_type, token_span)?;
-                
+                let (_, _) = self
+                    .directive_evaluator_mut()
+                    .evaluate(&directive_type, token_span)?;
+
                 match directive_type {
-                    DirectiveType::IfDef(_)
-                    | DirectiveType::IfNDef(_) => {
+                    DirectiveType::IfDef(_) | DirectiveType::IfNDef(_) => {
                         depth += 1; // Nested conditional
                         self.advance()?;
                     }
-                        DirectiveType::Else => {
-                            if depth == 1 {
-                                // This ELSE matches our IFDEF - stop skipping
-                                // Don't advance - the ELSE will be processed normally
-                                return Ok(true); // Stopped at ELSE
-                            }
-                            self.advance()?;
+                    DirectiveType::Else => {
+                        if depth == 1 {
+                            // This ELSE matches our IFDEF - stop skipping
+                            // Don't advance - the ELSE will be processed normally
+                            return Ok(true); // Stopped at ELSE
                         }
-                        DirectiveType::EndIf => {
-                            depth -= 1;
-                            if depth == 0 {
-                                // This ENDIF matches our IFDEF - consume it and stop skipping
-                                self.advance()?;
-                                return Ok(false); // Stopped at ENDIF
-                            }
+                        self.advance()?;
+                    }
+                    DirectiveType::EndIf => {
+                        depth -= 1;
+                        if depth == 0 {
+                            // This ENDIF matches our IFDEF - consume it and stop skipping
                             self.advance()?;
+                            return Ok(false); // Stopped at ENDIF
                         }
+                        self.advance()?;
+                    }
                     _ => {
                         // Other directives - just skip
                         self.advance()?;
@@ -378,7 +424,8 @@ impl super::Parser {
                 if self.current().is_none() {
                     // EOF - error, unmatched conditional
                     return Err(ParserError::InvalidSyntax {
-                        message: "Unmatched {$IFDEF} or {$IFNDEF} - reached end of file".to_string(),
+                        message: "Unmatched {$IFDEF} or {$IFNDEF} - reached end of file"
+                            .to_string(),
                         span: token_span,
                     });
                 }
@@ -429,13 +476,13 @@ impl super::Parser {
                 }
                 continue;
             }
-            
+
             // Skip tokens if we're in an inactive conditional branch
             if !self.directive_evaluator().is_active() {
                 self.advance()?;
                 continue;
             }
-            
+
             // Check for BEGIN - if present, parse statements
             if self.check(&TokenKind::KwBegin) {
                 self.advance()?; // consume BEGIN
@@ -450,7 +497,7 @@ impl super::Parser {
                 }
                 break;
             }
-            
+
             // Parse declarations
             if self.check(&TokenKind::KwLabel) {
                 label_decls.extend(self.parse_label_decls()?);
@@ -554,7 +601,7 @@ impl super::Parser {
                 }
                 continue;
             }
-            
+
             // Skip tokens if we're in an inactive conditional branch
             if !self.directive_evaluator().is_active() {
                 // Skip this token and continue
@@ -624,7 +671,7 @@ impl super::Parser {
             .current()
             .map(|t| t.span)
             .unwrap_or_else(|| Span::at(0, 1, 1));
-        
+
         let mut labels = vec![];
         loop {
             // Labels can be identifiers or integer literals
@@ -632,36 +679,32 @@ impl super::Parser {
                 expected: "label (identifier or integer)".to_string(),
                 span: start_span,
             })?;
-            
+
             let label_name = match &label_token.kind {
                 TokenKind::Identifier(name) => name.clone(),
                 TokenKind::IntegerLiteral { value, .. } => value.to_string(),
-                _ => return Err(ParserError::InvalidSyntax {
-                    message: "Expected identifier or integer literal for label".to_string(),
-                    span: label_token.span,
-                }),
+                _ => {
+                    return Err(ParserError::InvalidSyntax {
+                        message: "Expected identifier or integer literal for label".to_string(),
+                        span: label_token.span,
+                    });
+                }
             };
             labels.push(label_name);
             self.advance()?;
-            
+
             if !self.check(&TokenKind::Comma) {
                 break;
             }
             self.advance()?; // consume comma
         }
-        
+
         self.consume(TokenKind::Semicolon, ";")?;
-        
-        let end_span = self
-            .current()
-            .map(|t| t.span)
-            .unwrap_or_else(|| start_span);
+
+        let end_span = self.current().map(|t| t.span).unwrap_or_else(|| start_span);
         let span = start_span.merge(end_span);
-        
-        Ok(vec![Node::LabelDecl(ast::LabelDecl {
-            labels,
-            span,
-        })])
+
+        Ok(vec![Node::LabelDecl(ast::LabelDecl { labels, span })])
     }
 
     /// Parse constant declarations: CONST const_decl { ; const_decl }
@@ -674,7 +717,10 @@ impl super::Parser {
                 break;
             }
             self.advance()?;
-            if !matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+            if !matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::Identifier(_))
+            ) {
                 break;
             }
         }
@@ -691,10 +737,12 @@ impl super::Parser {
         let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
         let name = match &name_token.kind {
             TokenKind::Identifier(name) => name.clone(),
-            _ => return Err(ParserError::InvalidSyntax {
-                message: "Expected identifier".to_string(),
-                span: name_token.span,
-            }),
+            _ => {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected identifier".to_string(),
+                    span: name_token.span,
+                });
+            }
         };
 
         self.consume(TokenKind::Equal, "=")?;
@@ -719,7 +767,10 @@ impl super::Parser {
                 break;
             }
             self.advance()?;
-            if !matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+            if !matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::Identifier(_))
+            ) {
                 break;
             }
         }
@@ -741,7 +792,10 @@ impl super::Parser {
                 break;
             }
             self.advance()?;
-            if !matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+            if !matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::Identifier(_))
+            ) {
                 break;
             }
         }
@@ -758,7 +812,10 @@ impl super::Parser {
                 break;
             }
             self.advance()?;
-            if !matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+            if !matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::Identifier(_))
+            ) {
                 break;
             }
         }
@@ -775,10 +832,12 @@ impl super::Parser {
         let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
         let name = match &name_token.kind {
             TokenKind::Identifier(name) => name.clone(),
-            _ => return Err(ParserError::InvalidSyntax {
-                message: "Expected identifier".to_string(),
-                span: name_token.span,
-            }),
+            _ => {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected identifier".to_string(),
+                    span: name_token.span,
+                });
+            }
         };
 
         // Check for generic type parameters: <T> or <T: constraint>
@@ -806,7 +865,10 @@ impl super::Parser {
     }
 
     /// Parse variable declarations with optional class var flag
-    pub(crate) fn parse_var_decls_with_class_flag(&mut self, is_class_var: bool) -> ParserResult<Vec<Node>> {
+    pub(crate) fn parse_var_decls_with_class_flag(
+        &mut self,
+        is_class_var: bool,
+    ) -> ParserResult<Vec<Node>> {
         self.consume(TokenKind::KwVar, "VAR")?;
         let mut decls = vec![];
         loop {
@@ -815,7 +877,10 @@ impl super::Parser {
                 break;
             }
             self.advance()?;
-            if !matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+            if !matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::Identifier(_))
+            ) {
                 break;
             }
         }
@@ -839,10 +904,12 @@ impl super::Parser {
             let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
             let name = match &name_token.kind {
                 TokenKind::Identifier(name) => name.clone(),
-                _ => return Err(ParserError::InvalidSyntax {
-                    message: "Expected identifier".to_string(),
-                    span: name_token.span,
-                }),
+                _ => {
+                    return Err(ParserError::InvalidSyntax {
+                        message: "Expected identifier".to_string(),
+                        span: name_token.span,
+                    });
+                }
             };
             names.push(name);
 
@@ -863,7 +930,8 @@ impl super::Parser {
             None
         };
 
-        let end_span = absolute_address.as_ref()
+        let end_span = absolute_address
+            .as_ref()
             .map(|a| a.span())
             .unwrap_or_else(|| type_expr.span());
         let span = start_span.merge(end_span);
@@ -882,10 +950,12 @@ impl super::Parser {
         let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
         let first_name = match &name_token.kind {
             TokenKind::Identifier(name) => name.clone(),
-            _ => return Err(ParserError::InvalidSyntax {
-                message: "Expected identifier".to_string(),
-                span: name_token.span,
-            }),
+            _ => {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected identifier".to_string(),
+                    span: name_token.span,
+                });
+            }
         };
 
         // Check if there's a dot (ClassName.MethodName)
@@ -894,10 +964,12 @@ impl super::Parser {
             let method_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
             let method_name = match &method_token.kind {
                 TokenKind::Identifier(name) => name.clone(),
-                _ => return Err(ParserError::InvalidSyntax {
-                    message: "Expected identifier after dot".to_string(),
-                    span: method_token.span,
-                }),
+                _ => {
+                    return Err(ParserError::InvalidSyntax {
+                        message: "Expected identifier after dot".to_string(),
+                        span: method_token.span,
+                    });
+                }
             };
             Ok((Some(first_name), method_name))
         } else {
@@ -1023,7 +1095,7 @@ impl super::Parser {
     }
 
     /// Parse procedure declaration: PROCEDURE [ClassName.]identifier [ ( params ) ] ; [block | FORWARD | EXTERNAL [name]] ;
-    /// 
+    ///
     /// If `in_class_context` is true, procedures without explicit blocks are treated as forward declarations.
     /// Otherwise, they may be nested routines (if followed by declarations/BEGIN).
     pub(crate) fn parse_procedure_decl(&mut self) -> ParserResult<Node> {
@@ -1069,7 +1141,7 @@ impl super::Parser {
         };
 
         self.consume(TokenKind::Semicolon, ";")?;
-        
+
         // Check for FORWARD or EXTERNAL keyword
         let (is_forward, is_external, external_name) = if self.check(&TokenKind::KwForward) {
             self.advance()?; // consume FORWARD
@@ -1118,13 +1190,14 @@ impl super::Parser {
                 is_class_method,
                 span,
             }));
-        } else if self.check(&TokenKind::KwLabel) ||
-                   self.check(&TokenKind::KwConst) ||
-                   self.check(&TokenKind::KwResourcestring) ||
-                   self.check(&TokenKind::KwType) ||
-                   self.check(&TokenKind::KwVar) ||
-                   self.check(&TokenKind::KwThreadvar) ||
-                   self.check(&TokenKind::KwOperator) {
+        } else if self.check(&TokenKind::KwLabel)
+            || self.check(&TokenKind::KwConst)
+            || self.check(&TokenKind::KwResourcestring)
+            || self.check(&TokenKind::KwType)
+            || self.check(&TokenKind::KwVar)
+            || self.check(&TokenKind::KwThreadvar)
+            || self.check(&TokenKind::KwOperator)
+        {
             // Procedure with nested declarations (VAR, CONST, TYPE, etc. before BEGIN) - parse block
             let block = self.parse_block()?;
             self.consume(TokenKind::Semicolon, ";")?;
@@ -1243,7 +1316,7 @@ impl super::Parser {
         self.consume(TokenKind::Colon, ":")?;
         let return_type = self.parse_type()?;
         self.consume(TokenKind::Semicolon, ";")?;
-        
+
         // Check for FORWARD or EXTERNAL keyword
         let (is_forward, is_external, external_name) = if self.check(&TokenKind::KwForward) {
             self.advance()?; // consume FORWARD
@@ -1293,13 +1366,14 @@ impl super::Parser {
                 is_class_method,
                 span,
             }));
-        } else if self.check(&TokenKind::KwLabel) ||
-                   self.check(&TokenKind::KwConst) ||
-                   self.check(&TokenKind::KwResourcestring) ||
-                   self.check(&TokenKind::KwType) ||
-                   self.check(&TokenKind::KwVar) ||
-                   self.check(&TokenKind::KwThreadvar) ||
-                   self.check(&TokenKind::KwOperator) {
+        } else if self.check(&TokenKind::KwLabel)
+            || self.check(&TokenKind::KwConst)
+            || self.check(&TokenKind::KwResourcestring)
+            || self.check(&TokenKind::KwType)
+            || self.check(&TokenKind::KwVar)
+            || self.check(&TokenKind::KwThreadvar)
+            || self.check(&TokenKind::KwOperator)
+        {
             // Function with nested declarations (VAR, CONST, TYPE, etc. before BEGIN) - parse block
             let block = self.parse_block()?;
             self.consume(TokenKind::Semicolon, ";")?;
@@ -1387,7 +1461,7 @@ impl super::Parser {
                     TokenKind::Identifier(name) => name,
                     _ => unreachable!(),
                 };
-                
+
                 // Check if there's a dot
                 if self.check(&TokenKind::Dot) {
                     self.advance()?; // consume .
@@ -1471,7 +1545,8 @@ impl super::Parser {
                 }
             }
         } else {
-            let span = self.peek_token()
+            let span = self
+                .peek_token()
                 .map(|t| t.span)
                 .unwrap_or_else(|| Span::at(0, 1, 1));
             return Err(ParserError::UnexpectedEof {
@@ -1632,10 +1707,12 @@ impl super::Parser {
             let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
             let name = match &name_token.kind {
                 TokenKind::Identifier(name) => name.clone(),
-                _ => return Err(ParserError::InvalidSyntax {
-                    message: "Expected identifier".to_string(),
-                    span: name_token.span,
-                }),
+                _ => {
+                    return Err(ParserError::InvalidSyntax {
+                        message: "Expected identifier".to_string(),
+                        span: name_token.span,
+                    });
+                }
             };
             names.push(name);
 
@@ -1656,7 +1733,8 @@ impl super::Parser {
             None
         };
 
-        let end_span = default_value.as_ref()
+        let end_span = default_value
+            .as_ref()
             .map(|v| v.span())
             .unwrap_or_else(|| type_expr.span());
         let span = start_span.merge(end_span);
@@ -1711,7 +1789,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.proc_decls.len(), 1);
@@ -1749,7 +1827,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.func_decls.len(), 1);
@@ -1788,7 +1866,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(level1) = &block.proc_decls[0] {
@@ -1827,7 +1905,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(outer_proc) = &block.proc_decls[0] {
@@ -1869,7 +1947,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(outer_proc) = &block.proc_decls[0] {
@@ -1907,7 +1985,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(outer_proc) = &block.proc_decls[0] {
@@ -1937,7 +2015,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.proc_decls.len(), 1);
@@ -1963,7 +2041,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.func_decls.len(), 1);
@@ -1988,7 +2066,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2013,7 +2091,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2041,7 +2119,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.proc_decls.len(), 1);
@@ -2074,7 +2152,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.proc_decls.len(), 2);
@@ -2109,7 +2187,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(outer_proc) = &block.proc_decls[0] {
@@ -2138,7 +2216,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2162,7 +2240,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::FuncDecl(func) = &block.func_decls[0] {
@@ -2186,7 +2264,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2209,7 +2287,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::FuncDecl(func) = &block.func_decls[0] {
@@ -2232,7 +2310,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2257,7 +2335,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2281,7 +2359,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::FuncDecl(func) = &block.func_decls[0] {
@@ -2305,7 +2383,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2328,7 +2406,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::FuncDecl(func) = &block.func_decls[0] {
@@ -2351,7 +2429,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2374,7 +2452,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::FuncDecl(func) = &block.func_decls[0] {
@@ -2397,7 +2475,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2420,7 +2498,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::FuncDecl(func) = &block.func_decls[0] {
@@ -2444,7 +2522,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2471,13 +2549,16 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
                     assert_eq!(proc.name, "MyProc");
                     assert!(!proc.is_forward, "Regular procedure should not be forward");
-                    assert!(!proc.is_external, "Regular procedure should not be external");
+                    assert!(
+                        !proc.is_external,
+                        "Regular procedure should not be external"
+                    );
                     assert_eq!(proc.external_name, None);
                 }
             }
@@ -2498,7 +2579,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::FuncDecl(func) = &block.func_decls[0] {
@@ -2525,31 +2606,31 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.proc_decls.len(), 2);
                 assert_eq!(block.func_decls.len(), 2);
-                
+
                 if let Node::ProcDecl(forward_proc) = &block.proc_decls[0] {
                     assert_eq!(forward_proc.name, "ForwardProc");
                     assert!(forward_proc.is_forward);
                     assert!(!forward_proc.is_external);
                 }
-                
+
                 if let Node::FuncDecl(forward_func) = &block.func_decls[0] {
                     assert_eq!(forward_func.name, "ForwardFunc");
                     assert!(forward_func.is_forward);
                     assert!(!forward_func.is_external);
                 }
-                
+
                 if let Node::ProcDecl(ext_proc) = &block.proc_decls[1] {
                     assert_eq!(ext_proc.name, "ExternalProc");
                     assert!(!ext_proc.is_forward);
                     assert!(ext_proc.is_external);
                     assert_eq!(ext_proc.external_name, Some("ext_proc".to_string()));
                 }
-                
+
                 if let Node::FuncDecl(ext_func) = &block.func_decls[1] {
                     assert_eq!(ext_func.name, "ExternalFunc");
                     assert!(!ext_func.is_forward);
@@ -2576,7 +2657,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.operator_decls.len(), 1);
@@ -2606,7 +2687,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.operator_decls.len(), 1);
@@ -2632,7 +2713,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.operator_decls.len(), 1);
@@ -2655,7 +2736,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::OperatorDecl(op) = &block.operator_decls[0] {
@@ -2678,7 +2759,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::OperatorDecl(op) = &block.operator_decls[0] {
@@ -2710,7 +2791,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.operator_decls.len(), 3);
@@ -2742,7 +2823,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.threadvar_decls.len(), 2);
@@ -2769,7 +2850,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 // RESOURCESTRING constants are added to const_decls
@@ -2795,7 +2876,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2819,7 +2900,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2842,7 +2923,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.var_decls.len(), 1);
@@ -2867,7 +2948,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2898,7 +2979,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2928,13 +3009,15 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(prog)) = result {
             if let Node::Block(block) = &*prog.block {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
                     if let Node::ClassType(class_type) = &*type_decl.type_expr {
                         // Find class variable members
-                        let class_var_members: Vec<_> = class_type.members.iter()
+                        let class_var_members: Vec<_> = class_type
+                            .members
+                            .iter()
                             .filter_map(|(_, m)| {
                                 if let ast::ClassMember::Field(field) = m {
                                     if let Node::VarDecl(var_decl) = field {
@@ -2975,7 +3058,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             assert_eq!(program.name, "Test");
         } else {
@@ -3014,7 +3097,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             assert_eq!(program.name, "Test");
         } else {
@@ -3036,7 +3119,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             // Should parse Test2 (ELSE branch) since DEBUG is not defined
             assert_eq!(program.name, "Test2");
@@ -3057,7 +3140,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             assert_eq!(program.name, "Test");
         } else {
@@ -3073,14 +3156,11 @@ mod tests {
             begin end.
             {$ENDIF}
         "#;
-        let mut parser = Parser::new_with_file_and_symbols(
-            source,
-            None,
-            vec!["DEBUG".to_string()],
-        ).unwrap();
+        let mut parser =
+            Parser::new_with_file_and_symbols(source, None, vec!["DEBUG".to_string()]).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             assert_eq!(program.name, "Test");
         } else {
@@ -3092,41 +3172,41 @@ mod tests {
     fn test_parse_include_directive() {
         use std::fs;
         use std::path::Path;
-        
+
         // Create a unique temporary include directory for this test
         let include_dir = Path::new("test_includes_directive");
         // Ensure directory exists, ignore error if it already exists
         let _ = fs::create_dir_all(include_dir);
         let include_file = include_dir.join("test_header.pas");
-        fs::write(&include_file, "const TestConst = 42;\n")
-            .expect("Failed to write include file");
-        
+        fs::write(&include_file, "const TestConst = 42;\n").expect("Failed to write include file");
+
         let source = r#"
             program Test;
             {$INCLUDE 'test_includes_directive/test_header.pas'}
             begin end.
         "#;
-        
-        let mut parser = Parser::new_with_file_and_symbols(
-            source,
-            Some("test_main.pas".to_string()),
-            vec![],
-        ).unwrap();
+
+        let mut parser =
+            Parser::new_with_file_and_symbols(source, Some("test_main.pas".to_string()), vec![])
+                .unwrap();
         parser.include_paths.push(".".to_string());
-        
+
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             assert_eq!(program.name, "Test");
             // Check that the included constant is in the block
             if let Node::Block(block) = program.block.as_ref() {
-                assert!(!block.const_decls.is_empty(), "Should have included constant declaration");
+                assert!(
+                    !block.const_decls.is_empty(),
+                    "Should have included constant declaration"
+                );
             }
         } else {
             panic!("Expected Program node, got: {:?}", result);
         }
-        
+
         // Cleanup
         fs::remove_file(&include_file).ok();
         fs::remove_dir(include_dir).ok();
@@ -3136,29 +3216,27 @@ mod tests {
     fn test_parse_include_with_quotes() {
         use std::fs;
         use std::path::Path;
-        
+
         let include_dir = Path::new("test_includes_quotes");
         let _ = fs::create_dir_all(include_dir);
         let include_file = include_dir.join("utils.pas");
         fs::write(&include_file, "var GlobalVar: integer;\n")
             .expect("Failed to write include file");
-        
+
         let source = r#"
             {$INCLUDE "test_includes_quotes/utils.pas"}
             program Test;
             begin end.
         "#;
-        
-        let mut parser = Parser::new_with_file_and_symbols(
-            source,
-            Some("test_main.pas".to_string()),
-            vec![],
-        ).unwrap();
+
+        let mut parser =
+            Parser::new_with_file_and_symbols(source, Some("test_main.pas".to_string()), vec![])
+                .unwrap();
         parser.include_paths.push(".".to_string());
-        
+
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         // Cleanup
         let _ = fs::remove_file(&include_file);
         let _ = fs::remove_dir(include_dir);
@@ -3168,41 +3246,48 @@ mod tests {
     fn test_parse_include_circular_detection() {
         use std::fs;
         use std::path::Path;
-        
+
         let include_dir = Path::new("test_includes_circular");
         let _ = fs::create_dir_all(include_dir);
         let include_file1 = include_dir.join("file1.pas");
         let include_file2 = include_dir.join("file2.pas");
-        
+
         // file1 includes file2
-        fs::write(&include_file1, "{$INCLUDE 'test_includes_circular/file2.pas'}\n")
-            .expect("Failed to write include file1");
+        fs::write(
+            &include_file1,
+            "{$INCLUDE 'test_includes_circular/file2.pas'}\n",
+        )
+        .expect("Failed to write include file1");
         // file2 includes file1 (circular)
-        fs::write(&include_file2, "{$INCLUDE 'test_includes_circular/file1.pas'}\n")
-            .expect("Failed to write include file2");
-        
+        fs::write(
+            &include_file2,
+            "{$INCLUDE 'test_includes_circular/file1.pas'}\n",
+        )
+        .expect("Failed to write include file2");
+
         let source = r#"
             {$INCLUDE 'test_includes_circular/file1.pas'}
             program Test;
             begin end.
         "#;
-        
-        let mut parser = Parser::new_with_file_and_symbols(
-            source,
-            Some("test_main.pas".to_string()),
-            vec![],
-        ).unwrap();
+
+        let mut parser =
+            Parser::new_with_file_and_symbols(source, Some("test_main.pas".to_string()), vec![])
+                .unwrap();
         parser.include_paths.push(".".to_string());
-        
+
         let result = parser.parse();
         // Should detect circular include and return an error
         assert!(result.is_err(), "Should detect circular include");
-        
+
         if let Err(e) = result {
-            assert!(format!("{:?}", e).contains("circular") || format!("{:?}", e).contains("Circular"), 
-                "Error should mention circular include: {:?}", e);
+            assert!(
+                format!("{:?}", e).contains("circular") || format!("{:?}", e).contains("Circular"),
+                "Error should mention circular include: {:?}",
+                e
+            );
         }
-        
+
         // Cleanup
         let _ = fs::remove_file(&include_file1);
         let _ = fs::remove_file(&include_file2);
@@ -3213,30 +3298,31 @@ mod tests {
     fn test_parse_include_with_symbols() {
         use std::fs;
         use std::path::Path;
-        
+
         let include_dir = Path::new("test_includes_symbols");
         let _ = fs::create_dir_all(include_dir);
         let include_file = include_dir.join("config.pas");
         // Simple include file - conditional compilation in includes is tested elsewhere
         fs::write(&include_file, "const ConfigValue = 100;\n")
             .expect("Failed to write include file");
-        
+
         let source = r#"
             program Test;
             {$INCLUDE 'test_includes_symbols/config.pas'}
             begin end.
         "#;
-        
+
         let mut parser = Parser::new_with_file_and_symbols(
             source,
             Some("test_main.pas".to_string()),
             vec!["DEBUG".to_string()], // Predefine symbols (not used in this simple test)
-        ).unwrap();
+        )
+        .unwrap();
         parser.include_paths.push(".".to_string());
-        
+
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         // Cleanup
         let _ = fs::remove_file(&include_file);
         let _ = fs::remove_dir(include_dir);
@@ -3246,33 +3332,33 @@ mod tests {
     fn test_parse_include_nested() {
         use std::fs;
         use std::path::Path;
-        
+
         let include_dir = Path::new("test_includes_nested");
         let _ = fs::create_dir_all(include_dir);
         let include_file1 = include_dir.join("header1.pas");
         let include_file2 = include_dir.join("header2.pas");
-        
-        fs::write(&include_file1, "const Const1 = 1;\n{$INCLUDE 'test_includes_nested/header2.pas'}\n")
-            .expect("Failed to write include file1");
-        fs::write(&include_file2, "const Const2 = 2;\n")
-            .expect("Failed to write include file2");
-        
+
+        fs::write(
+            &include_file1,
+            "const Const1 = 1;\n{$INCLUDE 'test_includes_nested/header2.pas'}\n",
+        )
+        .expect("Failed to write include file1");
+        fs::write(&include_file2, "const Const2 = 2;\n").expect("Failed to write include file2");
+
         let source = r#"
             {$INCLUDE 'test_includes_nested/header1.pas'}
             program Test;
             begin end.
         "#;
-        
-        let mut parser = Parser::new_with_file_and_symbols(
-            source,
-            Some("test_main.pas".to_string()),
-            vec![],
-        ).unwrap();
+
+        let mut parser =
+            Parser::new_with_file_and_symbols(source, Some("test_main.pas".to_string()), vec![])
+                .unwrap();
         parser.include_paths.push(".".to_string());
-        
+
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         // Cleanup
         let _ = fs::remove_file(&include_file1);
         let _ = fs::remove_file(&include_file2);

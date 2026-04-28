@@ -4,14 +4,13 @@
 //! that require runtime behavior, such as Variant types, dynamic arrays, closures,
 //! and reference-counted interfaces.
 
-pub mod variant;
+pub mod array;
 pub mod closure;
 pub mod interface;
-pub mod array;
+pub mod variant;
 
-/// Re-export modules for convenience
-pub use variant::*;
+pub use array::*;
 pub use closure::*;
 pub use interface::*;
-pub use array::*;
-
+/// Re-export modules for convenience
+pub use variant::*;

@@ -18,7 +18,7 @@ use compiler::Compiler;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    
+
     if args.len() < 2 {
         print_usage();
         process::exit(1);
@@ -36,7 +36,7 @@ fn main() {
             }
             let input_file = &args[2];
             let output_file = args.get(3).map(|s| s.as_str());
-            
+
             match compiler.compile_file(input_file, output_file) {
                 Ok(_) => {
                     println!("Compilation successful");
@@ -54,7 +54,7 @@ fn main() {
                 process::exit(1);
             }
             let input_file = &args[2];
-            
+
             match compiler.check_file(input_file) {
                 Ok(_) => {
                     println!("Type checking successful");
@@ -72,7 +72,7 @@ fn main() {
                 process::exit(1);
             }
             let input_file = &args[2];
-            
+
             match compiler.emit_ast(input_file) {
                 Ok(_) => {}
                 Err(e) => {
@@ -88,7 +88,7 @@ fn main() {
                 process::exit(1);
             }
             let input_file = &args[2];
-            
+
             match compiler.emit_ir(input_file) {
                 Ok(_) => {}
                 Err(e) => {
@@ -104,7 +104,7 @@ fn main() {
                 process::exit(1);
             }
             let input_file = &args[2];
-            
+
             match compiler.emit_assembly(input_file) {
                 Ok(_) => {}
                 Err(e) => {

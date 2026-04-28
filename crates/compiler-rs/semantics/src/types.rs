@@ -1,15 +1,21 @@
 //! Type analysis (named types, arrays, records, etc.)
 
-use ast::Node;
-use symbols::SymbolKind;
-use ::types::{Field, Type};
 use crate::SemanticAnalyzer;
+use ::types::{Field, Type};
+use ast::Node;
 use std::collections::HashMap;
+use symbols::SymbolKind;
 
 impl SemanticAnalyzer {
     /// Validate that a type argument satisfies its constraint
     /// Returns true if the constraint is satisfied, false otherwise
-    fn validate_generic_constraint(&mut self, arg_type: &Type, constraint: &Type, param_name: &str, span: tokens::Span) -> bool {
+    fn validate_generic_constraint(
+        &mut self,
+        arg_type: &Type,
+        constraint: &Type,
+        param_name: &str,
+        span: tokens::Span,
+    ) -> bool {
         // If arg_type is Error, skip constraint validation (error already reported)
         if *arg_type == Type::Error {
             return true; // Don't add additional constraint errors
@@ -130,7 +136,11 @@ impl SemanticAnalyzer {
 
     /// Substitute generic type parameters with concrete types
     /// This is used when instantiating a generic type (e.g., TList<integer>)
-    fn substitute_type_params(&self, template: &Type, substitutions: &HashMap<String, Type>) -> Type {
+    fn substitute_type_params(
+        &self,
+        template: &Type,
+        substitutions: &HashMap<String, Type>,
+    ) -> Type {
         match template {
             Type::Named { name } => {
                 // If this is a generic parameter, substitute it
@@ -141,24 +151,26 @@ impl SemanticAnalyzer {
                     template.clone()
                 }
             }
-            Type::Array { index_type, element_type, size } => {
-                Type::Array {
-                    index_type: Box::new(self.substitute_type_params(index_type, substitutions)),
-                    element_type: Box::new(self.substitute_type_params(element_type, substitutions)),
-                    size: *size,
-                }
-            }
-            Type::DynamicArray { element_type } => {
-                Type::DynamicArray {
-                    element_type: Box::new(self.substitute_type_params(element_type, substitutions)),
-                }
-            }
+            Type::Array {
+                index_type,
+                element_type,
+                size,
+            } => Type::Array {
+                index_type: Box::new(self.substitute_type_params(index_type, substitutions)),
+                element_type: Box::new(self.substitute_type_params(element_type, substitutions)),
+                size: *size,
+            },
+            Type::DynamicArray { element_type } => Type::DynamicArray {
+                element_type: Box::new(self.substitute_type_params(element_type, substitutions)),
+            },
             Type::Record { fields, size } => {
                 let substituted_fields: Vec<Field> = fields
                     .iter()
                     .map(|f| Field {
                         name: f.name.clone(),
-                        field_type: Box::new(self.substitute_type_params(&f.field_type, substitutions)),
+                        field_type: Box::new(
+                            self.substitute_type_params(&f.field_type, substitutions),
+                        ),
                         offset: f.offset,
                     })
                     .collect();
@@ -169,11 +181,9 @@ impl SemanticAnalyzer {
                 record.calculate_record_offsets();
                 record
             }
-            Type::Pointer { base_type } => {
-                Type::Pointer {
-                    base_type: Box::new(self.substitute_type_params(base_type, substitutions)),
-                }
-            }
+            Type::Pointer { base_type } => Type::Pointer {
+                base_type: Box::new(self.substitute_type_params(base_type, substitutions)),
+            },
             // Primitive types, Error, Generic, Instantiated don't need substitution
             _ => template.clone(),
         }
@@ -182,7 +192,11 @@ impl SemanticAnalyzer {
     /// Analyze type expression with generic parameter context
     /// This is used when analyzing generic type declarations where generic parameters
     /// should be treated as valid type names (Type::Named) rather than errors
-    pub(crate) fn analyze_type_with_generic_params(&mut self, type_expr: &Node, generic_params: &[String]) -> Type {
+    pub(crate) fn analyze_type_with_generic_params(
+        &mut self,
+        type_expr: &Node,
+        generic_params: &[String],
+    ) -> Type {
         match type_expr {
             Node::NamedType(n) => {
                 // Check if this is a generic parameter
@@ -196,12 +210,15 @@ impl SemanticAnalyzer {
                 self.analyze_type(type_expr)
             }
             Node::ArrayType(a) => {
-                let index_type = self.analyze_type_with_generic_params(&a.index_type, generic_params);
-                let element_type = self.analyze_type_with_generic_params(&a.element_type, generic_params);
+                let index_type =
+                    self.analyze_type_with_generic_params(&a.index_type, generic_params);
+                let element_type =
+                    self.analyze_type_with_generic_params(&a.element_type, generic_params);
                 Type::array(index_type, element_type)
             }
             Node::DynamicArrayType(d) => {
-                let element_type = self.analyze_type_with_generic_params(&d.element_type, generic_params);
+                let element_type =
+                    self.analyze_type_with_generic_params(&d.element_type, generic_params);
                 Type::dynamic_array(element_type)
             }
             Node::RecordType(r) => {
@@ -209,7 +226,8 @@ impl SemanticAnalyzer {
                     .fields
                     .iter()
                     .map(|f| {
-                        let field_type = self.analyze_type_with_generic_params(&f.type_expr, generic_params);
+                        let field_type =
+                            self.analyze_type_with_generic_params(&f.type_expr, generic_params);
                         Field {
                             name: f.names[0].clone(),
                             field_type: Box::new(field_type),
@@ -223,25 +241,25 @@ impl SemanticAnalyzer {
             }
             Node::ProceduralType(p) => {
                 // Analyze parameter types
-                let param_types: Vec<Type> = p.params.iter()
+                let param_types: Vec<Type> = p
+                    .params
+                    .iter()
                     .map(|param| {
                         self.analyze_type_with_generic_params(&param.type_expr, generic_params)
                     })
                     .collect();
-                
+
                 // Analyze return type (for functions)
                 let return_type = if p.is_function {
-                    Some(self.analyze_type_with_generic_params(p.return_type.as_ref().unwrap(), generic_params))
+                    Some(self.analyze_type_with_generic_params(
+                        p.return_type.as_ref().unwrap(),
+                        generic_params,
+                    ))
                 } else {
                     None
                 };
-                
-                Type::procedural(
-                    p.is_function,
-                    param_types,
-                    return_type,
-                    p.is_method_pointer,
-                )
+
+                Type::procedural(p.is_function, param_types, return_type, p.is_method_pointer)
             }
             _ => self.analyze_type(type_expr),
         }
@@ -257,15 +275,26 @@ impl SemanticAnalyzer {
                     // Look up the generic type template
                     if let Some(symbol) = self.core.symbol_table.lookup(&n.name) {
                         // Clone necessary data before mutable borrow
-                        let (param_names, param_constraints, template_type) = if let SymbolKind::GenericType { param_names, param_constraints, template_type, .. } = &symbol.kind {
-                            (param_names.clone(), param_constraints.clone(), template_type.clone())
-                        } else {
-                            self.core.add_error(
-                                format!("'{}' is not a generic type", n.name),
-                                n.span,
-                            );
-                            return Type::Error;
-                        };
+                        let (param_names, param_constraints, template_type) =
+                            if let SymbolKind::GenericType {
+                                param_names,
+                                param_constraints,
+                                template_type,
+                                ..
+                            } = &symbol.kind
+                            {
+                                (
+                                    param_names.clone(),
+                                    param_constraints.clone(),
+                                    template_type.clone(),
+                                )
+                            } else {
+                                self.core.add_error(
+                                    format!("'{}' is not a generic type", n.name),
+                                    n.span,
+                                );
+                                return Type::Error;
+                            };
 
                         // Check argument count matches parameter count
                         if n.generic_args.len() != param_names.len() {
@@ -293,9 +322,15 @@ impl SemanticAnalyzer {
 
                         // Validate constraints
                         let mut all_constraints_satisfied = true;
-                        for (i, (param_name, arg_type)) in param_names.iter().zip(arg_types.iter()).enumerate() {
-                            if let Some(constraint) = param_constraints.get(i).and_then(|c| c.as_ref()) {
-                                if !self.validate_generic_constraint(arg_type, constraint, param_name, n.span) {
+                        for (i, (param_name, arg_type)) in
+                            param_names.iter().zip(arg_types.iter()).enumerate()
+                        {
+                            if let Some(constraint) =
+                                param_constraints.get(i).and_then(|c| c.as_ref())
+                            {
+                                if !self.validate_generic_constraint(
+                                    arg_type, constraint, param_name, n.span,
+                                ) {
                                     all_constraints_satisfied = false;
                                 }
                             }
@@ -312,15 +347,14 @@ impl SemanticAnalyzer {
                         }
 
                         // Substitute type parameters in the template
-                        let instantiated_type = self.substitute_type_params(&template_type, &substitutions);
-                        
+                        let instantiated_type =
+                            self.substitute_type_params(&template_type, &substitutions);
+
                         // Return the instantiated (substituted) type
                         instantiated_type
                     } else {
-                        self.core.add_error(
-                            format!("Generic type '{}' not found", n.name),
-                            n.span,
-                        );
+                        self.core
+                            .add_error(format!("Generic type '{}' not found", n.name), n.span);
                         Type::Error
                     }
                 } else {
@@ -329,7 +363,9 @@ impl SemanticAnalyzer {
                     if let Some(symbol) = self.core.symbol_table.lookup(&n.name) {
                         match &symbol.kind {
                             SymbolKind::TypeAlias { aliased_type, .. } => aliased_type.clone(),
-                            SymbolKind::GenericType { name, param_names, .. } => {
+                            SymbolKind::GenericType {
+                                name, param_names, ..
+                            } => {
                                 // Reference to generic type without arguments
                                 Type::Generic {
                                     name: name.clone(),
@@ -338,10 +374,8 @@ impl SemanticAnalyzer {
                                 }
                             }
                             _ => {
-                                self.core.add_error(
-                                    format!("'{}' is not a type", n.name),
-                                    n.span,
-                                );
+                                self.core
+                                    .add_error(format!("'{}' is not a type", n.name), n.span);
                                 Type::Error
                             }
                         }
@@ -356,10 +390,8 @@ impl SemanticAnalyzer {
                             "variant" => Type::variant(),
                             "Variant" => Type::variant(),
                             _ => {
-                                self.core.add_error(
-                                    format!("Type '{}' not found", n.name),
-                                    n.span,
-                                );
+                                self.core
+                                    .add_error(format!("Type '{}' not found", n.name), n.span);
                                 Type::Error
                             }
                         }
@@ -394,28 +426,24 @@ impl SemanticAnalyzer {
             }
             Node::ProceduralType(p) => {
                 // Analyze parameter types
-                let param_types: Vec<Type> = p.params.iter()
-                    .map(|param| {
-                        self.analyze_type(&param.type_expr)
-                    })
+                let param_types: Vec<Type> = p
+                    .params
+                    .iter()
+                    .map(|param| self.analyze_type(&param.type_expr))
                     .collect();
-                
+
                 // Analyze return type (for functions)
                 let return_type = if p.is_function {
                     Some(self.analyze_type(&p.return_type.as_ref().unwrap()))
                 } else {
                     None
                 };
-                
-                Type::procedural(
-                    p.is_function,
-                    param_types,
-                    return_type,
-                    p.is_method_pointer,
-                )
+
+                Type::procedural(p.is_function, param_types, return_type, p.is_method_pointer)
             }
             _ => {
-                self.core.add_error("Invalid type expression".to_string(), type_expr.span());
+                self.core
+                    .add_error("Invalid type expression".to_string(), type_expr.span());
                 Type::Error
             }
         }

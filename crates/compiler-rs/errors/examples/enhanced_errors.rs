@@ -7,7 +7,7 @@ use tokens::Span;
 
 fn main() {
     println!("=== FPC-Compatible Format ===\n");
-    
+
     let span = Span::new(0, 10, 10, 15);
     let diag = Diagnostic::new(
         ErrorSeverity::Error,
@@ -20,7 +20,7 @@ fn main() {
     println!();
 
     println!("=== Enhanced Format (Default) ===\n");
-    
+
     let related = RelatedLocation {
         message: "Variable 'xyz' was used here".to_string(),
         span: Span::new(0, 5, 8, 12),
@@ -41,7 +41,7 @@ fn main() {
     println!();
 
     println!("=== Enhanced Format with Code Snippet ===\n");
-    
+
     let snippet = CodeSnippet {
         lines: vec![
             (8, "  var xyz: integer;".to_string()),
@@ -65,7 +65,7 @@ fn main() {
     println!();
 
     println!("=== Verbose Format ===\n");
-    
+
     let diag = Diagnostic::new(
         ErrorSeverity::Error,
         "Identifier not found \"xyz\"".to_string(),
@@ -78,29 +78,37 @@ fn main() {
         "The identifier 'xyz' is not visible in this scope. \
          The variable 'xyz' was declared in procedure 'OtherProc' but is \
          not accessible from 'DoSomething'. Consider passing it as a parameter \
-         or declaring it in a shared scope.".to_string()
+         or declaring it in a shared scope."
+            .to_string(),
     );
 
     println!("{}", diag.format_verbose());
     println!();
 
     println!("=== Different Severity Levels ===\n");
-    
+
     let warnings = vec![
-        ("Warning", ErrorSeverity::Warning, "Variable 'x' does not seem to be initialized"),
-        ("Hint", ErrorSeverity::Hint, "Local variable 'y' is assigned but never used"),
-        ("Note", ErrorSeverity::Note, "Procedure 'DoSomething' is never called"),
+        (
+            "Warning",
+            ErrorSeverity::Warning,
+            "Variable 'x' does not seem to be initialized",
+        ),
+        (
+            "Hint",
+            ErrorSeverity::Hint,
+            "Local variable 'y' is assigned but never used",
+        ),
+        (
+            "Note",
+            ErrorSeverity::Note,
+            "Procedure 'DoSomething' is never called",
+        ),
     ];
 
     for (name, severity, message) in warnings {
-        let diag = Diagnostic::new(
-            severity,
-            message.to_string(),
-            Span::new(0, 5, 5, 10),
-        )
-        .with_file("test.pas".to_string());
-        
+        let diag = Diagnostic::new(severity, message.to_string(), Span::new(0, 5, 5, 10))
+            .with_file("test.pas".to_string());
+
         println!("{}: {}", name, diag.format_fpc());
     }
 }
-

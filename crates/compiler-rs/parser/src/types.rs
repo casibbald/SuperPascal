@@ -86,10 +86,7 @@ impl super::Parser {
             } else {
                 start_span
             };
-            Ok(Node::StringType(ast::StringType {
-                length,
-                span,
-            }))
+            Ok(Node::StringType(ast::StringType { length, span }))
         } else if self.check(&TokenKind::KwFile) {
             // FILE or FILE OF type
             self.advance()?; // consume FILE
@@ -104,10 +101,7 @@ impl super::Parser {
             } else {
                 start_span
             };
-            Ok(Node::FileType(ast::FileType {
-                element_type,
-                span,
-            }))
+            Ok(Node::FileType(ast::FileType { element_type, span }))
         } else if self.check(&TokenKind::KwClass) && self.check_peek(&TokenKind::KwHelper) {
             // Class helper: class helper for Type (check before regular class)
             self.parse_helper_type(ast::HelperKind::Class)
@@ -121,18 +115,18 @@ impl super::Parser {
             self.advance()?;
             let mut fields = vec![];
             let mut variant = None;
-            
+
             // Parse fixed fields
             while !self.check(&TokenKind::KwCase) && !self.check(&TokenKind::KwEnd) {
                 fields.push(self.parse_field_decl()?);
                 self.consume(TokenKind::Semicolon, ";")?;
             }
-            
+
             // Parse variant part if present
             if self.check(&TokenKind::KwCase) {
                 variant = Some(self.parse_variant_part()?);
             }
-            
+
             let end_token = self.consume(TokenKind::KwEnd, "END")?;
             let span = start_span.merge(end_token.span);
             Ok(Node::RecordType(ast::RecordType {
@@ -158,7 +152,10 @@ impl super::Parser {
             self.parse_enum_type()
         } else {
             // Accept either identifier or primitive type keywords
-            let name_token = if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+            let name_token = if matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::Identifier(_))
+            ) {
                 self.consume(TokenKind::Identifier(String::new()), "type identifier")?
             } else if self.check(&TokenKind::KwInteger) {
                 let token = self.current().unwrap().clone();
@@ -208,18 +205,23 @@ impl super::Parser {
                         "Expected type identifier, found: {:?}",
                         self.current().map(|t| &t.kind)
                     ),
-                    span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                    span: self
+                        .current()
+                        .map(|t| t.span)
+                        .unwrap_or_else(|| Span::at(0, 1, 1)),
                 });
             };
-            
+
             let name = match &name_token.kind {
                 TokenKind::Identifier(name) => name.clone(),
-                _ => return Err(ParserError::InvalidSyntax {
-                    message: "Expected type identifier".to_string(),
-                    span: name_token.span,
-                }),
+                _ => {
+                    return Err(ParserError::InvalidSyntax {
+                        message: "Expected type identifier".to_string(),
+                        span: name_token.span,
+                    });
+                }
             };
-            
+
             // Check for generic type arguments: <T1, T2, ...>
             let generic_args = if self.check(&TokenKind::Less) {
                 self.advance()?; // consume <
@@ -230,11 +232,12 @@ impl super::Parser {
             } else {
                 vec![]
             };
-            
+
             // Calculate span: from name to end of generic args (if any)
             let span = if !generic_args.is_empty() {
                 // Find the maximum end position from all generic args
-                let max_end = generic_args.iter()
+                let max_end = generic_args
+                    .iter()
                     .map(|arg| arg.span().end)
                     .max()
                     .unwrap_or(name_token.span.end);
@@ -247,7 +250,7 @@ impl super::Parser {
             } else {
                 name_token.span
             };
-            
+
             Ok(Node::NamedType(ast::NamedType {
                 name,
                 generic_args,
@@ -265,7 +268,7 @@ impl super::Parser {
             // Parse a type argument
             let arg_type = self.parse_type()?;
             args.push(Box::new(arg_type));
-            
+
             // Check for comma (more arguments) or closing >
             if self.check(&TokenKind::Comma) {
                 self.advance()?;
@@ -275,11 +278,14 @@ impl super::Parser {
             } else {
                 return Err(ParserError::InvalidSyntax {
                     message: "Expected ',' or '>' in generic type arguments".to_string(),
-                    span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                    span: self
+                        .current()
+                        .map(|t| t.span)
+                        .unwrap_or_else(|| Span::at(0, 1, 1)),
                 });
             }
         }
-        
+
         Ok(args)
     }
 
@@ -287,45 +293,55 @@ impl super::Parser {
     /// Used in type declarations like `TList<T> = class ... end;`
     pub(crate) fn parse_generic_type_parameters(&mut self) -> ParserResult<Vec<ast::GenericParam>> {
         self.consume(TokenKind::Less, "<")?;
-        
+
         let mut params = vec![];
         loop {
             // Parse parameter name(s) - can be comma-separated: <T, U> or <T; U: constraint>
             let mut param_names = vec![];
-            
+
             // First parameter name
-            let name_token = self.current().ok_or_else(|| ParserError::UnexpectedEof {
-                expected: "identifier".to_string(),
-                span: Span::at(0, 1, 1),
-            })?.clone();
+            let name_token = self
+                .current()
+                .ok_or_else(|| ParserError::UnexpectedEof {
+                    expected: "identifier".to_string(),
+                    span: Span::at(0, 1, 1),
+                })?
+                .clone();
             self.advance()?;
             let param_name = match &name_token.kind {
                 TokenKind::Identifier(name) => name.clone(),
-                _ => return Err(ParserError::InvalidSyntax {
-                    message: "Expected identifier in generic type parameter".to_string(),
-                    span: name_token.span,
-                }),
+                _ => {
+                    return Err(ParserError::InvalidSyntax {
+                        message: "Expected identifier in generic type parameter".to_string(),
+                        span: name_token.span,
+                    });
+                }
             };
             param_names.push(param_name);
-            
+
             // Check for more names (comma-separated): <T, U>
             while self.check(&TokenKind::Comma) {
                 self.advance()?; // consume comma
-                let next_name_token = self.current().ok_or_else(|| ParserError::UnexpectedEof {
-                    expected: "identifier".to_string(),
-                    span: Span::at(0, 1, 1),
-                })?.clone();
+                let next_name_token = self
+                    .current()
+                    .ok_or_else(|| ParserError::UnexpectedEof {
+                        expected: "identifier".to_string(),
+                        span: Span::at(0, 1, 1),
+                    })?
+                    .clone();
                 self.advance()?;
                 let next_name = match &next_name_token.kind {
                     TokenKind::Identifier(name) => name.clone(),
-                    _ => return Err(ParserError::InvalidSyntax {
-                        message: "Expected identifier in generic type parameter".to_string(),
-                        span: next_name_token.span,
-                    }),
+                    _ => {
+                        return Err(ParserError::InvalidSyntax {
+                            message: "Expected identifier in generic type parameter".to_string(),
+                            span: next_name_token.span,
+                        });
+                    }
                 };
                 param_names.push(next_name);
             }
-            
+
             // Check for constraint: <T: constraint> or <T; U: constraint>
             let constraint = if self.check(&TokenKind::Colon) {
                 self.advance()?; // consume :
@@ -333,7 +349,7 @@ impl super::Parser {
             } else {
                 None
             };
-            
+
             // Create GenericParam for each name (they share the same constraint if present)
             for name in param_names {
                 params.push(ast::GenericParam {
@@ -342,12 +358,12 @@ impl super::Parser {
                     span: name_token.span, // Use first name's span
                 });
             }
-            
+
             // Check for semicolon (separates parameter groups with different constraints)
             // or closing >
             if self.check(&TokenKind::Semicolon) {
                 self.advance()?; // consume ;
-                // Continue to next parameter group
+            // Continue to next parameter group
             } else if self.check(&TokenKind::Greater) {
                 self.advance()?; // consume >
                 break;
@@ -357,11 +373,14 @@ impl super::Parser {
             } else {
                 return Err(ParserError::InvalidSyntax {
                     message: "Expected ',', ';', or '>' in generic type parameters".to_string(),
-                    span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                    span: self
+                        .current()
+                        .map(|t| t.span)
+                        .unwrap_or_else(|| Span::at(0, 1, 1)),
                 });
             }
         }
-        
+
         Ok(params)
     }
 
@@ -376,13 +395,18 @@ impl super::Parser {
 
         let mut values = vec![];
         loop {
-            let value_token = self.consume(TokenKind::Identifier(String::new()), "enum value identifier")?;
+            let value_token = self.consume(
+                TokenKind::Identifier(String::new()),
+                "enum value identifier",
+            )?;
             let value = match &value_token.kind {
                 TokenKind::Identifier(name) => name.clone(),
-                _ => return Err(ParserError::InvalidSyntax {
-                    message: "Expected enum value identifier".to_string(),
-                    span: value_token.span,
-                }),
+                _ => {
+                    return Err(ParserError::InvalidSyntax {
+                        message: "Expected enum value identifier".to_string(),
+                        span: value_token.span,
+                    });
+                }
             };
             values.push(value);
 
@@ -395,10 +419,7 @@ impl super::Parser {
         let end_token = self.consume(TokenKind::RightParen, ")")?;
         let span = start_span.merge(end_token.span);
 
-        Ok(Node::EnumType(ast::EnumType {
-            values,
-            span,
-        }))
+        Ok(Node::EnumType(ast::EnumType { values, span }))
     }
 
     /// Parse procedural type: PROCEDURE [params] [OF OBJECT] or FUNCTION [params]: return_type [OF OBJECT]
@@ -434,9 +455,10 @@ impl super::Parser {
                     } else {
                         ast::ParamType::Value
                     };
-                    
+
                     loop {
-                        let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
+                        let name_token =
+                            self.consume(TokenKind::Identifier(String::new()), "identifier")?;
                         let name = match &name_token.kind {
                             TokenKind::Identifier(name) => name.clone(),
                             _ => unreachable!(),
@@ -447,11 +469,11 @@ impl super::Parser {
                         }
                         self.advance()?; // consume comma
                     }
-                    
+
                     self.consume(TokenKind::Colon, ":")?;
                     let param_type = self.parse_type()?;
                     let param_span = start_span.merge(param_type.span());
-                    
+
                     params.push(ast::Param {
                         names: param_names,
                         param_type: param_mode,
@@ -488,7 +510,10 @@ impl super::Parser {
             } else {
                 return Err(ParserError::InvalidSyntax {
                     message: "Expected 'OBJECT' after 'OF'".to_string(),
-                    span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                    span: self
+                        .current()
+                        .map(|t| t.span)
+                        .unwrap_or_else(|| Span::at(0, 1, 1)),
                 });
             }
         } else {
@@ -524,7 +549,8 @@ impl super::Parser {
             self.advance()?; // consume (
             let mut bases = vec![];
             loop {
-                let name_token = self.consume(TokenKind::Identifier(String::new()), "interface name")?;
+                let name_token =
+                    self.consume(TokenKind::Identifier(String::new()), "interface name")?;
                 let name = match &name_token.kind {
                     TokenKind::Identifier(name) => name.clone(),
                     _ => unreachable!(),
@@ -556,7 +582,10 @@ impl super::Parser {
             } else {
                 return Err(ParserError::InvalidSyntax {
                     message: "Expected GUID string in brackets".to_string(),
-                    span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                    span: self
+                        .current()
+                        .map(|t| t.span)
+                        .unwrap_or_else(|| Span::at(0, 1, 1)),
                 });
             }
         } else {
@@ -583,7 +612,10 @@ impl super::Parser {
             } else {
                 return Err(ParserError::InvalidSyntax {
                     message: "Expected method or property declaration in interface".to_string(),
-                    span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                    span: self
+                        .current()
+                        .map(|t| t.span)
+                        .unwrap_or_else(|| Span::at(0, 1, 1)),
                 });
             }
         }
@@ -613,10 +645,12 @@ impl super::Parser {
             let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
             let name = match &name_token.kind {
                 TokenKind::Identifier(name) => name.clone(),
-                _ => return Err(ParserError::InvalidSyntax {
-                    message: "Expected identifier".to_string(),
-                    span: name_token.span,
-                }),
+                _ => {
+                    return Err(ParserError::InvalidSyntax {
+                        message: "Expected identifier".to_string(),
+                        span: name_token.span,
+                    });
+                }
             };
             names.push(name);
 
@@ -647,7 +681,10 @@ impl super::Parser {
         self.consume(TokenKind::KwCase, "CASE")?;
 
         // Optional tag field name: tag_field : tag_type
-        let tag_field = if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+        let tag_field = if matches!(
+            self.current().map(|t| &t.kind),
+            Some(TokenKind::Identifier(_))
+        ) {
             let name_token = self.current().unwrap().clone();
             let name = match &name_token.kind {
                 TokenKind::Identifier(name) => name.clone(),
@@ -791,13 +828,16 @@ impl super::Parser {
         if self.check(&TokenKind::LeftParen) {
             self.advance()?; // consume (
             loop {
-                let base_token = self.consume(TokenKind::Identifier(String::new()), "base helper name")?;
+                let base_token =
+                    self.consume(TokenKind::Identifier(String::new()), "base helper name")?;
                 let base_name = match &base_token.kind {
                     TokenKind::Identifier(name) => name.clone(),
-                    _ => return Err(ParserError::InvalidSyntax {
-                        message: "Expected identifier for base helper".to_string(),
-                        span: base_token.span,
-                    }),
+                    _ => {
+                        return Err(ParserError::InvalidSyntax {
+                            message: "Expected identifier for base helper".to_string(),
+                            span: base_token.span,
+                        });
+                    }
                 };
                 base_helpers.push(base_name);
 
@@ -904,13 +944,16 @@ impl super::Parser {
         if self.check(&TokenKind::LeftParen) {
             self.advance()?; // consume (
             loop {
-                let base_token = self.consume(TokenKind::Identifier(String::new()), "base object name")?;
+                let base_token =
+                    self.consume(TokenKind::Identifier(String::new()), "base object name")?;
                 let base_name = match &base_token.kind {
                     TokenKind::Identifier(name) => name.clone(),
-                    _ => return Err(ParserError::InvalidSyntax {
-                        message: "Expected identifier for base object".to_string(),
-                        span: base_token.span,
-                    }),
+                    _ => {
+                        return Err(ParserError::InvalidSyntax {
+                            message: "Expected identifier for base object".to_string(),
+                            span: base_token.span,
+                        });
+                    }
                 };
                 base_objects.push(base_name);
 
@@ -981,12 +1024,15 @@ impl super::Parser {
                 for decl in var_decls {
                     members.push((current_visibility, ast::ClassMember::Field(decl)));
                 }
-            } else if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+            } else if matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::Identifier(_))
+            ) {
                 // Field declaration without VAR keyword: identifier_list : type ;
                 // Check if it's a field by looking for colon after identifier(s)
                 let saved_current = self.current().cloned();
                 let saved_peek = self.peek.clone();
-                
+
                 // Try parsing as field declaration
                 match self.parse_field_decl() {
                     Ok(field_decl) => {
@@ -1056,7 +1102,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::VarDecl(var_decl) = &block.var_decls[0] {
@@ -1085,7 +1131,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::VarDecl(var_decl) = &block.var_decls[0] {
@@ -1119,7 +1165,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AssignStmt(assign) = &block.statements[0] {
@@ -1149,7 +1195,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AssignStmt(assign) = &block.statements[0] {
@@ -1183,7 +1229,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::CallStmt(call) = &block.statements[0] {
@@ -1214,7 +1260,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AssignStmt(assign) = &block.statements[0] {
@@ -1248,7 +1294,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -1277,7 +1323,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -1307,7 +1353,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[1] {
@@ -1338,7 +1384,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::VarDecl(var_decl) = &block.var_decls[0] {
@@ -1363,7 +1409,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::VarDecl(var_decl) = &block.var_decls[0] {
@@ -1400,7 +1446,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::VarDecl(var_decl) = &block.var_decls[0] {
@@ -1439,7 +1485,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -1476,7 +1522,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -1511,7 +1557,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -1546,7 +1592,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -1663,7 +1709,10 @@ mod tests {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
                     if let Node::InterfaceType(interface) = type_decl.type_expr.as_ref() {
                         assert!(interface.guid.is_some());
-                        assert_eq!(interface.guid.as_ref().unwrap(), "{12345678-1234-1234-1234-123456789ABC}");
+                        assert_eq!(
+                            interface.guid.as_ref().unwrap(),
+                            "{12345678-1234-1234-1234-123456789ABC}"
+                        );
                     } else {
                         panic!("Expected InterfaceType");
                     }
@@ -1727,7 +1776,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::VarDecl(var_decl) = &block.var_decls[0] {
@@ -1752,7 +1801,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::VarDecl(var_decl) = &block.var_decls[0] {
@@ -1789,7 +1838,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.type_decls.len(), 2);
@@ -1831,7 +1880,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::VarDecl(var_decl) = &block.var_decls[0] {
@@ -1864,7 +1913,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -1894,7 +1943,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -1921,7 +1970,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -1951,7 +2000,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -1982,7 +2031,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 // First type should be static array
@@ -1991,7 +2040,10 @@ mod tests {
                 }
                 // Second type should be dynamic array
                 if let Node::TypeDecl(type_decl) = &block.type_decls[1] {
-                    assert!(matches!(type_decl.type_expr.as_ref(), Node::DynamicArrayType(_)));
+                    assert!(matches!(
+                        type_decl.type_expr.as_ref(),
+                        Node::DynamicArrayType(_)
+                    ));
                 }
             }
         }
@@ -2009,7 +2061,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -2042,7 +2094,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -2070,7 +2122,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -2098,7 +2150,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -2132,7 +2184,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::VarDecl(var_decl) = &block.var_decls[0] {
@@ -2166,7 +2218,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::VarDecl(var_decl) = &block.var_decls[0] {
@@ -2182,7 +2234,10 @@ mod tests {
                                 assert_eq!(arg1.name, "string");
                             }
                             _ => {
-                                panic!("Expected StringType or NamedType as first generic argument, got: {:?}", named.generic_args[0]);
+                                panic!(
+                                    "Expected StringType or NamedType as first generic argument, got: {:?}",
+                                    named.generic_args[0]
+                                );
                             }
                         }
                         if let Node::NamedType(arg2) = named.generic_args[1].as_ref() {
@@ -2212,7 +2267,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::VarDecl(var_decl) = &block.var_decls[0] {
@@ -2254,7 +2309,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2283,7 +2338,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::FuncDecl(func) = &block.func_decls[0] {
@@ -2318,7 +2373,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::FuncDecl(func) = &block.func_decls[0] {
@@ -2355,7 +2410,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -2363,20 +2418,24 @@ mod tests {
                     assert_eq!(type_decl.generic_params.len(), 1);
                     if let Node::ClassType(class_type) = type_decl.type_expr.as_ref() {
                         // Check that Items field uses T
-                        if let Some((_, ast::ClassMember::Field(field_node))) = class_type.members.iter().find(|(_, m)| {
-                            if let ast::ClassMember::Field(f) = m {
-                                if let Node::VarDecl(var) = f {
-                                    var.names.contains(&"Items".to_string())
+                        if let Some((_, ast::ClassMember::Field(field_node))) =
+                            class_type.members.iter().find(|(_, m)| {
+                                if let ast::ClassMember::Field(f) = m {
+                                    if let Node::VarDecl(var) = f {
+                                        var.names.contains(&"Items".to_string())
+                                    } else {
+                                        false
+                                    }
                                 } else {
                                     false
                                 }
-                            } else {
-                                false
-                            }
-                        }) {
+                            })
+                        {
                             if let Node::VarDecl(var) = field_node {
                                 if let Node::DynamicArrayType(dyn_arr) = var.type_expr.as_ref() {
-                                    if let Node::NamedType(elem_type) = dyn_arr.element_type.as_ref() {
+                                    if let Node::NamedType(elem_type) =
+                                        dyn_arr.element_type.as_ref()
+                                    {
                                         assert_eq!(elem_type.name, "T");
                                     } else {
                                         panic!("Expected NamedType for array element");
@@ -2413,7 +2472,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -2443,7 +2502,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -2472,7 +2531,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.type_decls.len(), 2);
@@ -2503,7 +2562,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ProcDecl(proc) = &block.proc_decls[0] {
@@ -2535,7 +2594,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -2553,7 +2612,10 @@ mod tests {
                                 assert_eq!(named_type.name, "string");
                             }
                             _ => {
-                                panic!("Expected StringType or NamedType for target type, got: {:?}", helper.target_type);
+                                panic!(
+                                    "Expected StringType or NamedType for target type, got: {:?}",
+                                    helper.target_type
+                                );
                             }
                         }
                     } else {
@@ -2581,7 +2643,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[1] {
@@ -2614,7 +2676,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[1] {
@@ -2646,16 +2708,20 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
                     if let Node::HelperType(helper) = type_decl.type_expr.as_ref() {
                         assert_eq!(helper.members.len(), 2);
                         // Should have both property and method
-                        let has_property = helper.members.iter()
+                        let has_property = helper
+                            .members
+                            .iter()
                             .any(|(_, member)| matches!(member, ast::ClassMember::Property(_)));
-                        let has_method = helper.members.iter()
+                        let has_method = helper
+                            .members
+                            .iter()
                             .any(|(_, member)| matches!(member, ast::ClassMember::Method(_)));
                         assert!(has_property, "Expected property in helper");
                         assert!(has_method, "Expected method in helper");
@@ -2680,7 +2746,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -2714,7 +2780,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[1] {
@@ -2743,7 +2809,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -2779,16 +2845,24 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
                     if let Node::ObjectType(obj) = type_decl.type_expr.as_ref() {
                         // Should have field, property, and method (3 members)
-                        assert!(obj.members.len() >= 2, "Expected at least property and method, got {}", obj.members.len());
-                        let has_property = obj.members.iter()
+                        assert!(
+                            obj.members.len() >= 2,
+                            "Expected at least property and method, got {}",
+                            obj.members.len()
+                        );
+                        let has_property = obj
+                            .members
+                            .iter()
                             .any(|(_, member)| matches!(member, ast::ClassMember::Property(_)));
-                        let has_method = obj.members.iter()
+                        let has_method = obj
+                            .members
+                            .iter()
                             .any(|(_, member)| matches!(member, ast::ClassMember::Method(_)));
                         assert!(has_property, "Expected property in object");
                         assert!(has_method, "Expected method in object");
@@ -2812,7 +2886,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::VarDecl(var_decl) = &block.var_decls[0] {
@@ -2820,7 +2894,10 @@ mod tests {
                     if let Node::NamedType(named_type) = var_decl.type_expr.as_ref() {
                         assert_eq!(named_type.name, "Variant");
                     } else {
-                        panic!("Expected NamedType with name 'Variant', got: {:?}", var_decl.type_expr);
+                        panic!(
+                            "Expected NamedType with name 'Variant', got: {:?}",
+                            var_decl.type_expr
+                        );
                     }
                 }
             }
@@ -2841,7 +2918,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {

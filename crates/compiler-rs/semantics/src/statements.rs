@@ -1,10 +1,10 @@
 //! Statement analysis (if, while, for, repeat, case, assign, call, etc.)
 
-use ast::Node;
-use symbols::{ConstantValue, SymbolKind};
-use ::types::Type;
 use crate::SemanticAnalyzer;
 use crate::core;
+use ::types::Type;
+use ast::Node;
+use symbols::{ConstantValue, SymbolKind};
 
 impl SemanticAnalyzer {
     /// Analyze statement (dispatcher)
@@ -24,10 +24,8 @@ impl SemanticAnalyzer {
                 }
             }
             _ => {
-                self.core.add_error(
-                    "Unsupported statement type".to_string(),
-                    stmt.span(),
-                );
+                self.core
+                    .add_error("Unsupported statement type".to_string(), stmt.span());
             }
         }
     }
@@ -46,11 +44,14 @@ impl SemanticAnalyzer {
             if let Node::IdentExpr(ident) = assign.value.as_ref() {
                 if let Some(symbol) = self.core.symbol_table.lookup(&ident.name) {
                     match &symbol.kind {
-                        SymbolKind::Function { return_type, params, .. } => {
+                        SymbolKind::Function {
+                            return_type,
+                            params,
+                            ..
+                        } => {
                             // Convert function to procedural type
-                            let param_types: Vec<Type> = params.iter()
-                                .map(|p| p.param_type.clone())
-                                .collect();
+                            let param_types: Vec<Type> =
+                                params.iter().map(|p| p.param_type.clone()).collect();
                             value_type = Type::procedural(
                                 true, // is_function
                                 param_types,
@@ -60,13 +61,12 @@ impl SemanticAnalyzer {
                         }
                         SymbolKind::Procedure { params, .. } => {
                             // Convert procedure to procedural type
-                            let param_types: Vec<Type> = params.iter()
-                                .map(|p| p.param_type.clone())
-                                .collect();
+                            let param_types: Vec<Type> =
+                                params.iter().map(|p| p.param_type.clone()).collect();
                             value_type = Type::procedural(
                                 false, // is_function
                                 param_types,
-                                None, // no return type
+                                None,  // no return type
                                 false, // is_method_pointer (TODO: check if method)
                             );
                         }
@@ -94,13 +94,17 @@ impl SemanticAnalyzer {
     /// Analyze call statement (procedure call)
     pub(crate) fn analyze_call_stmt(&mut self, call: &ast::CallStmt) {
         // Look up procedure
-        let params_opt = self.core.symbol_table.lookup(&call.name).and_then(|symbol| {
-            if let SymbolKind::Procedure { params, .. } = &symbol.kind {
-                Some(params.clone())
-            } else {
-                None
-            }
-        });
+        let params_opt = self
+            .core
+            .symbol_table
+            .lookup(&call.name)
+            .and_then(|symbol| {
+                if let SymbolKind::Procedure { params, .. } = &symbol.kind {
+                    Some(params.clone())
+                } else {
+                    None
+                }
+            });
 
         if let Some(params) = params_opt {
             // Check argument count
@@ -132,15 +136,11 @@ impl SemanticAnalyzer {
                 }
             }
         } else if self.core.symbol_table.lookup(&call.name).is_some() {
-            self.core.add_error(
-                format!("'{}' is not a procedure", call.name),
-                call.span,
-            );
+            self.core
+                .add_error(format!("'{}' is not a procedure", call.name), call.span);
         } else {
-            self.core.add_error(
-                format!("Procedure '{}' not found", call.name),
-                call.span,
-            );
+            self.core
+                .add_error(format!("Procedure '{}' not found", call.name), call.span);
         }
     }
 
@@ -211,13 +211,17 @@ impl SemanticAnalyzer {
     /// Analyze for statement
     pub(crate) fn analyze_for_stmt(&mut self, for_stmt: &ast::ForStmt) {
         // Check loop variable exists and is assignable
-        let var_type_opt = self.core.symbol_table.lookup(&for_stmt.var_name).and_then(|symbol| {
-            if let SymbolKind::Variable { var_type, .. } = &symbol.kind {
-                Some(var_type.clone())
-            } else {
-                None
-            }
-        });
+        let var_type_opt = self
+            .core
+            .symbol_table
+            .lookup(&for_stmt.var_name)
+            .and_then(|symbol| {
+                if let SymbolKind::Variable { var_type, .. } = &symbol.kind {
+                    Some(var_type.clone())
+                } else {
+                    None
+                }
+            });
 
         if let Some(var_type) = var_type_opt {
             let start_type = self.analyze_expression(&for_stmt.start_expr);
@@ -277,10 +281,7 @@ impl SemanticAnalyzer {
     pub(crate) fn analyze_case_stmt(&mut self, case_stmt: &ast::CaseStmt) {
         let expr_type = self.analyze_expression(&case_stmt.expr);
         // Case expression must be ordinal type (integer, byte, word, char, boolean)
-        if !matches!(
-            expr_type,
-            Type::Primitive(_) | Type::Named { .. }
-        ) {
+        if !matches!(expr_type, Type::Primitive(_) | Type::Named { .. }) {
             self.core.add_error(
                 "Case expression must be an ordinal type".to_string(),
                 case_stmt.expr.span(),

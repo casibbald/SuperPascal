@@ -214,45 +214,38 @@ pub enum ParserError {
         span: Span,
     },
     /// Unexpected end of file
-    UnexpectedEof {
-        expected: String,
-        span: Span,
-    },
+    UnexpectedEof { expected: String, span: Span },
     /// Invalid syntax
-    InvalidSyntax {
-        message: String,
-        span: Span,
-    },
+    InvalidSyntax { message: String, span: Span },
 }
 
 impl ParserError {
     /// Convert to Diagnostic
     pub fn to_diagnostic(&self, file: Option<String>) -> Diagnostic {
         match self {
-            ParserError::UnexpectedToken { expected, found, span } => {
-                Diagnostic::new(
-                    ErrorSeverity::Error,
-                    format!("Syntax error, \"{}\" expected but \"{}\" found", expected, found),
-                    *span,
-                )
-                .with_file(file.unwrap_or_else(|| "unknown".to_string()))
-                .with_suggestion(format!("Replace \"{}\" with \"{}\"", found, expected))
-            }
-            ParserError::UnexpectedEof { expected, span } => {
-                Diagnostic::new(
-                    ErrorSeverity::Fatal,
-                    format!("Unexpected end of file, \"{}\" expected", expected),
-                    *span,
-                )
-                .with_file(file.unwrap_or_else(|| "unknown".to_string()))
-            }
+            ParserError::UnexpectedToken {
+                expected,
+                found,
+                span,
+            } => Diagnostic::new(
+                ErrorSeverity::Error,
+                format!(
+                    "Syntax error, \"{}\" expected but \"{}\" found",
+                    expected, found
+                ),
+                *span,
+            )
+            .with_file(file.unwrap_or_else(|| "unknown".to_string()))
+            .with_suggestion(format!("Replace \"{}\" with \"{}\"", found, expected)),
+            ParserError::UnexpectedEof { expected, span } => Diagnostic::new(
+                ErrorSeverity::Fatal,
+                format!("Unexpected end of file, \"{}\" expected", expected),
+                *span,
+            )
+            .with_file(file.unwrap_or_else(|| "unknown".to_string())),
             ParserError::InvalidSyntax { message, span } => {
-                Diagnostic::new(
-                    ErrorSeverity::Error,
-                    message.clone(),
-                    *span,
-                )
-                .with_file(file.unwrap_or_else(|| "unknown".to_string()))
+                Diagnostic::new(ErrorSeverity::Error, message.clone(), *span)
+                    .with_file(file.unwrap_or_else(|| "unknown".to_string()))
             }
         }
     }
@@ -313,7 +306,6 @@ impl ParseErrors {
             return String::new();
         }
 
-        let count = self.errors.len();
         let mut output = String::new();
 
         for (i, diag) in self.diagnostics(file).iter().enumerate() {
@@ -336,10 +328,7 @@ impl ParseErrors {
             .count();
 
         if error_count > 0 {
-            output.push_str(&format!(
-                "\n{} error(s) found",
-                error_count
-            ));
+            output.push_str(&format!("\n{} error(s) found", error_count));
         }
 
         output
@@ -380,11 +369,7 @@ mod tests {
     #[test]
     fn test_diagnostic_new() {
         let span = Span::new(0, 10, 10, 15);
-        let diag = Diagnostic::new(
-            ErrorSeverity::Error,
-            "Test message".to_string(),
-            span,
-        );
+        let diag = Diagnostic::new(ErrorSeverity::Error, "Test message".to_string(), span);
 
         assert_eq!(diag.severity, ErrorSeverity::Error);
         assert_eq!(diag.message, "Test message");
@@ -413,8 +398,14 @@ mod tests {
         assert_eq!(diag.severity, ErrorSeverity::Warning);
         assert_eq!(diag.file, Some("test.pas".to_string()));
         assert_eq!(diag.context, Some("In procedure 'Test'".to_string()));
-        assert_eq!(diag.suggestion, Some("Initialize 'x' before use".to_string()));
-        assert_eq!(diag.explanation, Some("Uninitialized variables can cause undefined behavior".to_string()));
+        assert_eq!(
+            diag.suggestion,
+            Some("Initialize 'x' before use".to_string())
+        );
+        assert_eq!(
+            diag.explanation,
+            Some("Uninitialized variables can cause undefined behavior".to_string())
+        );
     }
 
     // ===== FPC Format Tests =====
@@ -430,17 +421,16 @@ mod tests {
         .with_file("test.pas".to_string());
 
         let fpc_format = diag.format_fpc();
-        assert_eq!(fpc_format, "test.pas(10,15) Error: Identifier not found \"xyz\"");
+        assert_eq!(
+            fpc_format,
+            "test.pas(10,15) Error: Identifier not found \"xyz\""
+        );
     }
 
     #[test]
     fn test_diagnostic_fpc_format_no_file() {
         let span = Span::new(0, 10, 10, 15);
-        let diag = Diagnostic::new(
-            ErrorSeverity::Error,
-            "Test message".to_string(),
-            span,
-        );
+        let diag = Diagnostic::new(ErrorSeverity::Error, "Test message".to_string(), span);
 
         let fpc_format = diag.format_fpc();
         assert_eq!(fpc_format, "unknown(10,15) Error: Test message");
@@ -461,7 +451,12 @@ mod tests {
             let diag = Diagnostic::new(severity, "Test".to_string(), span)
                 .with_file("test.pas".to_string());
             let formatted = diag.format_fpc();
-            assert!(formatted.contains(expected_str), "Expected {} in {}", expected_str, formatted);
+            assert!(
+                formatted.contains(expected_str),
+                "Expected {} in {}",
+                expected_str,
+                formatted
+            );
         }
     }
 
@@ -521,14 +516,10 @@ mod tests {
             file: Some("test.pas".to_string()),
         };
 
-        let diag = Diagnostic::new(
-            ErrorSeverity::Error,
-            "Test message".to_string(),
-            span,
-        )
-        .with_file("test.pas".to_string())
-        .with_related_location(related1)
-        .with_related_location(related2);
+        let diag = Diagnostic::new(ErrorSeverity::Error, "Test message".to_string(), span)
+            .with_file("test.pas".to_string())
+            .with_related_location(related1)
+            .with_related_location(related2);
 
         let enhanced = diag.format_enhanced();
         assert!(enhanced.contains("First usage"));
@@ -548,13 +539,9 @@ mod tests {
             highlight_span: Span::new(0, 10, 10, 15),
         };
 
-        let diag = Diagnostic::new(
-            ErrorSeverity::Error,
-            "Test message".to_string(),
-            span,
-        )
-        .with_file("test.pas".to_string())
-        .with_code_snippet(snippet);
+        let diag = Diagnostic::new(ErrorSeverity::Error, "Test message".to_string(), span)
+            .with_file("test.pas".to_string())
+            .with_code_snippet(snippet);
 
         let enhanced = diag.format_enhanced();
         assert!(enhanced.contains("8 |"));
@@ -567,12 +554,8 @@ mod tests {
     fn test_diagnostic_enhanced_format_no_enhancements() {
         // Enhanced format should still work even without enhancements
         let span = Span::new(0, 10, 10, 15);
-        let diag = Diagnostic::new(
-            ErrorSeverity::Error,
-            "Simple error".to_string(),
-            span,
-        )
-        .with_file("test.pas".to_string());
+        let diag = Diagnostic::new(ErrorSeverity::Error, "Simple error".to_string(), span)
+            .with_file("test.pas".to_string());
 
         let enhanced = diag.format_enhanced();
         // Should be same as FPC format when no enhancements
@@ -584,13 +567,9 @@ mod tests {
     #[test]
     fn test_diagnostic_verbose_format() {
         let span = Span::new(0, 10, 10, 15);
-        let diag = Diagnostic::new(
-            ErrorSeverity::Error,
-            "Test message".to_string(),
-            span,
-        )
-        .with_file("test.pas".to_string())
-        .with_explanation("This is a detailed explanation".to_string());
+        let diag = Diagnostic::new(ErrorSeverity::Error, "Test message".to_string(), span)
+            .with_file("test.pas".to_string())
+            .with_explanation("This is a detailed explanation".to_string());
 
         let verbose = diag.format_verbose();
         assert!(verbose.contains("Test message"));
@@ -601,12 +580,8 @@ mod tests {
     fn test_diagnostic_verbose_format_no_explanation() {
         // Verbose should be same as enhanced if no explanation
         let span = Span::new(0, 10, 10, 15);
-        let diag = Diagnostic::new(
-            ErrorSeverity::Error,
-            "Test message".to_string(),
-            span,
-        )
-        .with_file("test.pas".to_string());
+        let diag = Diagnostic::new(ErrorSeverity::Error, "Test message".to_string(), span)
+            .with_file("test.pas".to_string());
 
         let verbose = diag.format_verbose();
         let enhanced = diag.format_enhanced();
@@ -708,10 +683,7 @@ mod tests {
     #[test]
     fn test_code_snippet_creation() {
         let snippet = CodeSnippet {
-            lines: vec![
-                (1, "line 1".to_string()),
-                (2, "line 2".to_string()),
-            ],
+            lines: vec![(1, "line 1".to_string()), (2, "line 2".to_string())],
             highlight_span: Span::new(0, 5, 2, 5),
         };
 
@@ -734,12 +706,8 @@ mod tests {
     #[test]
     fn test_diagnostic_empty_message() {
         let span = Span::new(0, 10, 10, 15);
-        let diag = Diagnostic::new(
-            ErrorSeverity::Error,
-            String::new(),
-            span,
-        )
-        .with_file("test.pas".to_string());
+        let diag = Diagnostic::new(ErrorSeverity::Error, String::new(), span)
+            .with_file("test.pas".to_string());
 
         let formatted = diag.format_fpc();
         assert!(formatted.contains("test.pas(10,15) Error:"));
@@ -748,12 +716,8 @@ mod tests {
     #[test]
     fn test_diagnostic_multiline_message() {
         let span = Span::new(0, 10, 10, 15);
-        let diag = Diagnostic::new(
-            ErrorSeverity::Error,
-            "Line 1\nLine 2".to_string(),
-            span,
-        )
-        .with_file("test.pas".to_string());
+        let diag = Diagnostic::new(ErrorSeverity::Error, "Line 1\nLine 2".to_string(), span)
+            .with_file("test.pas".to_string());
 
         let formatted = diag.format_fpc();
         assert!(formatted.contains("Line 1"));
@@ -772,17 +736,13 @@ mod tests {
             highlight_span: span,
         };
 
-        let diag = Diagnostic::new(
-            ErrorSeverity::Error,
-            "Message".to_string(),
-            span,
-        )
-        .with_file("test.pas".to_string())
-        .with_context("Context".to_string())
-        .with_suggestion("Suggestion".to_string())
-        .with_related_location(related)
-        .with_code_snippet(snippet)
-        .with_explanation("Explanation".to_string());
+        let diag = Diagnostic::new(ErrorSeverity::Error, "Message".to_string(), span)
+            .with_file("test.pas".to_string())
+            .with_context("Context".to_string())
+            .with_suggestion("Suggestion".to_string())
+            .with_related_location(related)
+            .with_code_snippet(snippet)
+            .with_explanation("Explanation".to_string());
 
         // All fields should be set
         assert!(diag.file.is_some());
@@ -802,12 +762,8 @@ mod tests {
     fn test_diagnostic_display_trait() {
         // Test that Diagnostic implements Display (uses enhanced format)
         let span = Span::new(0, 10, 10, 15);
-        let diag = Diagnostic::new(
-            ErrorSeverity::Error,
-            "Test".to_string(),
-            span,
-        )
-        .with_file("test.pas".to_string());
+        let diag = Diagnostic::new(ErrorSeverity::Error, "Test".to_string(), span)
+            .with_file("test.pas".to_string());
 
         let display_str = format!("{}", diag);
         // Display should use enhanced format by default

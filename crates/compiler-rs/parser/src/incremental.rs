@@ -67,18 +67,22 @@ impl IncrementalParser {
         use super::Parser;
 
         if self.needs_full_reparse {
-            let mut parser = Parser::new(&self.source)
+            let mut parser =
+                Parser::new(&self.source).map_err(|e| format!("Parse error: {:?}", e))?;
+            let ast = parser
+                .parse()
                 .map_err(|e| format!("Parse error: {:?}", e))?;
-            let ast = parser.parse().map_err(|e| format!("Parse error: {:?}", e))?;
             self.last_ast = Some(ast.clone());
             self.needs_full_reparse = false;
             Ok(ast)
         } else {
             // TODO: Implement incremental update
             // For now, fall back to full reparse
-            let mut parser = Parser::new(&self.source)
+            let mut parser =
+                Parser::new(&self.source).map_err(|e| format!("Parse error: {:?}", e))?;
+            let ast = parser
+                .parse()
                 .map_err(|e| format!("Parse error: {:?}", e))?;
-            let ast = parser.parse().map_err(|e| format!("Parse error: {:?}", e))?;
             self.last_ast = Some(ast.clone());
             Ok(ast)
         }
@@ -142,4 +146,3 @@ mod tests {
         assert!(matches!(ast, Node::Program(_)));
     }
 }
-

@@ -110,10 +110,10 @@ pub enum RelocationType {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Relocation {
     pub section: Section,
-    pub offset: u16,        // Offset within section where relocation applies
+    pub offset: u16, // Offset within section where relocation applies
     pub relocation_type: RelocationType,
     pub symbol_name: String, // Symbol to resolve
-    pub addend: i16,        // Addend value (for PC-relative, etc.)
+    pub addend: i16,         // Addend value (for PC-relative, etc.)
 }
 
 /// ZOF object file structure
@@ -335,7 +335,8 @@ impl ObjectFile {
 
         // Type, visibility, section (packed into 1 byte)
         let section_val: u8 = symbol.section as u8;
-        let flags = (symbol.symbol_type as u8) | ((symbol.visibility as u8) << 4) | (section_val << 5);
+        let flags =
+            (symbol.symbol_type as u8) | ((symbol.visibility as u8) << 4) | (section_val << 5);
         _writer.write_all(&[flags])?;
 
         // Offset, size
@@ -363,15 +364,21 @@ impl ObjectFile {
             2 => SymbolType::Constant,
             3 => SymbolType::Type,
             4 => SymbolType::External,
-            _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid symbol type")),
+            _ => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Invalid symbol type",
+                ));
+            }
         };
         let visibility = if (flags[0] & 0x10) != 0 {
             SymbolVisibility::Public
         } else {
             SymbolVisibility::Private
         };
-        let section = Section::from_u8((flags[0] >> 5) & 0x03)
-            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid section"))?;
+        let section = Section::from_u8((flags[0] >> 5) & 0x03).ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid section")
+        })?;
 
         // Offset, size
         let mut offset_bytes = [0u8; 2];
@@ -392,7 +399,11 @@ impl ObjectFile {
         })
     }
 
-    fn write_relocation<W: Write>(&self, _writer: &mut W, reloc: &Relocation) -> std::io::Result<()> {
+    fn write_relocation<W: Write>(
+        &self,
+        _writer: &mut W,
+        reloc: &Relocation,
+    ) -> std::io::Result<()> {
         // Section, type (packed)
         let section_val: u8 = reloc.section as u8;
         let flags = section_val | ((reloc.relocation_type as u8) << 2);
@@ -416,15 +427,21 @@ impl ObjectFile {
         // Flags
         let mut flags = [0u8; 1];
         reader.read_exact(&mut flags)?;
-        let section = Section::from_u8(flags[0] & 0x03)
-            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid section"))?;
+        let section = Section::from_u8(flags[0] & 0x03).ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid section")
+        })?;
         let relocation_type = match (flags[0] >> 2) & 0x07 {
             0 => RelocationType::Absolute16,
             1 => RelocationType::Relative8,
             2 => RelocationType::Relative16,
             3 => RelocationType::HighByte,
             4 => RelocationType::LowByte,
-            _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid relocation type")),
+            _ => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Invalid relocation type",
+                ));
+            }
         };
 
         // Offset

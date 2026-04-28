@@ -7,14 +7,14 @@
 //! - Constant folding
 //! - Control flow analysis (future)
 
+mod constants;
 mod core;
 mod declarations;
-mod statements;
 mod expressions;
-mod types;
-mod constants;
-mod lvalues;
 pub mod feature_checker;
+mod lvalues;
+mod statements;
+mod types;
 
 // Declaration analysis functions are in declarations.rs module
 // They extend SemanticAnalyzer via impl blocks
@@ -91,10 +91,10 @@ impl SemanticAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ast::*;
-    use tokens::Span;
-    use symbols::{ConstantValue, Symbol, SymbolKind};
     use ::types::Type;
+    use ast::*;
+    use symbols::{ConstantValue, Symbol, SymbolKind};
+    use tokens::Span;
 
     #[test]
     fn test_semantic_analyzer_new() {
@@ -139,13 +139,13 @@ mod tests {
     fn test_constant_folding_literal() {
         let analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let span = Span::new(0, 5, 1, 1);
-        
+
         // Test literal evaluation
         let lit = Node::LiteralExpr(LiteralExpr {
             value: LiteralValue::Integer(42),
             span,
         });
-        
+
         let result = analyzer.evaluate_constant_expression(&lit);
         assert_eq!(result, Some(ConstantValue::Integer(42)));
     }
@@ -154,7 +154,7 @@ mod tests {
     fn test_constant_folding_binary_add() {
         let analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let span = Span::new(0, 10, 1, 1);
-        
+
         // Test: 5 + 3 = 8
         let left = Node::LiteralExpr(LiteralExpr {
             value: LiteralValue::Integer(5),
@@ -170,7 +170,7 @@ mod tests {
             right: Box::new(right),
             span,
         });
-        
+
         let result = analyzer.evaluate_constant_expression(&expr);
         assert_eq!(result, Some(ConstantValue::Integer(8)));
     }
@@ -179,7 +179,7 @@ mod tests {
     fn test_constant_folding_binary_multiply() {
         let analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let span = Span::new(0, 10, 1, 1);
-        
+
         // Test: 6 * 7 = 42
         let expr = Node::BinaryExpr(BinaryExpr {
             op: BinaryOp::Multiply,
@@ -193,7 +193,7 @@ mod tests {
             })),
             span,
         });
-        
+
         let result = analyzer.evaluate_constant_expression(&expr);
         assert_eq!(result, Some(ConstantValue::Integer(42)));
     }
@@ -202,7 +202,7 @@ mod tests {
     fn test_constant_folding_binary_compare() {
         let analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let span = Span::new(0, 10, 1, 1);
-        
+
         // Test: 5 < 10 = true
         let expr = Node::BinaryExpr(BinaryExpr {
             op: BinaryOp::Less,
@@ -216,7 +216,7 @@ mod tests {
             })),
             span,
         });
-        
+
         let result = analyzer.evaluate_constant_expression(&expr);
         assert_eq!(result, Some(ConstantValue::Boolean(true)));
     }
@@ -225,7 +225,7 @@ mod tests {
     fn test_constant_folding_unary_not() {
         let analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let span = Span::new(0, 10, 1, 1);
-        
+
         // Test: not true = false
         let expr = Node::UnaryExpr(UnaryExpr {
             op: UnaryOp::Not,
@@ -235,7 +235,7 @@ mod tests {
             })),
             span,
         });
-        
+
         let result = analyzer.evaluate_constant_expression(&expr);
         assert_eq!(result, Some(ConstantValue::Boolean(false)));
     }
@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn test_constant_folding_if_true() {
         let span = Span::new(0, 10, 1, 1);
-        
+
         // Test IF with constant true condition
         // var x: integer;
         // if true then x := 1 else x := 2
@@ -258,7 +258,7 @@ mod tests {
             absolute_address: None,
             span,
         });
-        
+
         let if_stmt = IfStmt {
             condition: Box::new(Node::LiteralExpr(LiteralExpr {
                 value: LiteralValue::Boolean(true),
@@ -288,7 +288,7 @@ mod tests {
             }))),
             span,
         };
-        
+
         // Test via analyze() - should only analyze then branch (constant folding)
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let block = Node::Block(Block {
@@ -311,7 +311,7 @@ mod tests {
             span,
         });
         let diagnostics = analyzer.analyze(&program);
-        
+
         // Should have no errors (else branch is dead code, not analyzed)
         assert_eq!(diagnostics.len(), 0);
     }
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn test_constant_folding_while_false() {
         let span = Span::new(0, 10, 1, 1);
-        
+
         // Test WHILE with constant false condition
         // while false do x := 1
         let while_stmt = WhileStmt {
@@ -340,7 +340,7 @@ mod tests {
             })),
             span,
         };
-        
+
         // Test via analyze() - should skip body (constant folding)
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         // Add variable x to symbol table
@@ -353,7 +353,7 @@ mod tests {
             scope_level: 0,
         };
         analyzer.core.symbol_table.insert(var_symbol).unwrap();
-        
+
         let block = Node::Block(Block {
             directives: vec![],
             label_decls: vec![],
@@ -374,7 +374,7 @@ mod tests {
             span,
         });
         let diagnostics = analyzer.analyze(&program);
-        
+
         // Should have no errors (body is dead code, not analyzed)
         assert_eq!(diagnostics.len(), 0);
     }
@@ -411,7 +411,10 @@ mod tests {
 
         // Verify the generic type is stored in the symbol table
         if let Some(symbol) = analyzer.core.symbol_table.lookup("TList") {
-            if let SymbolKind::GenericType { name, param_names, .. } = &symbol.kind {
+            if let SymbolKind::GenericType {
+                name, param_names, ..
+            } = &symbol.kind
+            {
                 assert_eq!(name, "TList");
                 assert_eq!(param_names.len(), 1);
                 assert_eq!(param_names[0], "T");
@@ -461,7 +464,7 @@ mod tests {
 
         // Should have no errors - generic instantiation is now supported
         assert_eq!(diagnostics.len(), 0);
-        
+
         // Result should be a dynamic array of integer (substituted type)
         match result_type {
             Type::DynamicArray { element_type } => {
@@ -731,7 +734,11 @@ mod tests {
         // Should succeed (class type satisfies class constraint)
         // The constraint validation should pass (Named type satisfies class constraint)
         // Check that we don't have constraint violation errors
-        assert!(!diagnostics.iter().any(|d| d.message.contains("must be a class type")));
+        assert!(
+            !diagnostics
+                .iter()
+                .any(|d| d.message.contains("must be a class type"))
+        );
     }
 
     #[test]
@@ -818,7 +825,11 @@ mod tests {
 
         // Should fail (integer does not satisfy record constraint)
         assert!(diagnostics.len() > 0);
-        assert!(diagnostics.iter().any(|d| d.message.contains("must be a record type")));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.message.contains("must be a record type"))
+        );
         assert_eq!(result_type, Type::Error);
     }
 
@@ -876,7 +887,11 @@ mod tests {
         // Should succeed (IComparable satisfies IComparable constraint)
         // The constraint validation should pass (same name), even if type resolution has issues
         // Check that we don't have constraint violation errors
-        assert!(!diagnostics.iter().any(|d| d.message.contains("must implement") || d.message.contains("constraint")));
+        assert!(
+            !diagnostics
+                .iter()
+                .any(|d| d.message.contains("must implement") || d.message.contains("constraint"))
+        );
     }
 
     #[test]
@@ -1098,9 +1113,13 @@ mod tests {
         let ast = parser.parse().unwrap();
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let _diagnostics = analyzer.analyze(&ast);
-        
+
         // Should have no errors for valid slice expression
-        assert!(analyzer.core.diagnostics.is_empty(), "Unexpected errors: {:?}", analyzer.core.diagnostics);
+        assert!(
+            analyzer.core.diagnostics.is_empty(),
+            "Unexpected errors: {:?}",
+            analyzer.core.diagnostics
+        );
     }
 
     #[test]
@@ -1118,9 +1137,13 @@ mod tests {
         let ast = parser.parse().unwrap();
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let _diagnostics = analyzer.analyze(&ast);
-        
+
         // Should have no errors
-        assert!(analyzer.core.diagnostics.is_empty(), "Unexpected errors: {:?}", analyzer.core.diagnostics);
+        assert!(
+            analyzer.core.diagnostics.is_empty(),
+            "Unexpected errors: {:?}",
+            analyzer.core.diagnostics
+        );
     }
 
     #[test]
@@ -1138,9 +1161,13 @@ mod tests {
         let ast = parser.parse().unwrap();
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let _diagnostics = analyzer.analyze(&ast);
-        
+
         // Should have no errors
-        assert!(analyzer.core.diagnostics.is_empty(), "Unexpected errors: {:?}", analyzer.core.diagnostics);
+        assert!(
+            analyzer.core.diagnostics.is_empty(),
+            "Unexpected errors: {:?}",
+            analyzer.core.diagnostics
+        );
     }
 
     #[test]
@@ -1158,9 +1185,13 @@ mod tests {
         let ast = parser.parse().unwrap();
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let _diagnostics = analyzer.analyze(&ast);
-        
+
         // Should have no errors
-        assert!(analyzer.core.diagnostics.is_empty(), "Unexpected errors: {:?}", analyzer.core.diagnostics);
+        assert!(
+            analyzer.core.diagnostics.is_empty(),
+            "Unexpected errors: {:?}",
+            analyzer.core.diagnostics
+        );
     }
 
     #[test]
@@ -1177,9 +1208,12 @@ mod tests {
         let ast = parser.parse().unwrap();
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let _diagnostics = analyzer.analyze(&ast);
-        
+
         // Should have an error: slice expression must be applied to an array
-        assert!(!analyzer.core.diagnostics.is_empty(), "Expected error for slice on non-array");
+        assert!(
+            !analyzer.core.diagnostics.is_empty(),
+            "Expected error for slice on non-array"
+        );
     }
 
     #[test]
@@ -1197,9 +1231,13 @@ mod tests {
         let ast = parser.parse().unwrap();
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let _diagnostics = analyzer.analyze(&ast);
-        
+
         // Should have no errors for negative index
-        assert!(analyzer.core.diagnostics.is_empty(), "Unexpected errors: {:?}", analyzer.core.diagnostics);
+        assert!(
+            analyzer.core.diagnostics.is_empty(),
+            "Unexpected errors: {:?}",
+            analyzer.core.diagnostics
+        );
     }
 
     #[test]
@@ -1217,9 +1255,13 @@ mod tests {
         let ast = parser.parse().unwrap();
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let _diagnostics = analyzer.analyze(&ast);
-        
+
         // Should have no errors for negative index
-        assert!(analyzer.core.diagnostics.is_empty(), "Unexpected errors: {:?}", analyzer.core.diagnostics);
+        assert!(
+            analyzer.core.diagnostics.is_empty(),
+            "Unexpected errors: {:?}",
+            analyzer.core.diagnostics
+        );
     }
 
     #[test]
@@ -1237,8 +1279,12 @@ mod tests {
         let ast = parser.parse().unwrap();
         let mut analyzer = SemanticAnalyzer::new(Some("test.pas".to_string()));
         let _diagnostics = analyzer.analyze(&ast);
-        
+
         // Should have no errors for reverse slicing
-        assert!(analyzer.core.diagnostics.is_empty(), "Unexpected errors: {:?}", analyzer.core.diagnostics);
+        assert!(
+            analyzer.core.diagnostics.is_empty(),
+            "Unexpected errors: {:?}",
+            analyzer.core.diagnostics
+        );
     }
 }

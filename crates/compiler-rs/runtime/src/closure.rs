@@ -114,14 +114,14 @@ pub fn closure_set_captured(closure: &mut Closure, name: String, value: Vec<u8>)
 /// 2. Push parameters onto the stack (or into registers)
 /// 3. Call the function code
 /// 4. Return the result (if any)
-/// 
+///
 /// For now, this is a placeholder that returns success/failure
 pub fn closure_call(_closure: &Closure, _params: Vec<Vec<u8>>) -> Result<Option<Vec<u8>>, String> {
     // TODO: Actual implementation would:
     // 1. Set up captured variables in the closure's environment
     // 2. Call the function with parameters
     // 3. Return the result
-    
+
     // Placeholder: return success
     Ok(None)
 }
@@ -151,7 +151,7 @@ mod tests {
         let names = vec!["x".to_string(), "y".to_string()];
         let values = vec![vec![42, 0], vec![100, 0]]; // 16-bit integers as bytes
         let closure = closure_new("func_456".to_string(), names, values, 1, false);
-        
+
         assert_eq!(closure.function_id(), "func_456");
         assert_eq!(closure.param_count(), 1);
         assert!(!closure.returns_value());
@@ -165,7 +165,7 @@ mod tests {
         let names = vec!["value".to_string()];
         let values = vec![vec![10, 0]]; // integer 10
         let closure = closure_new("func_789".to_string(), names, values, 0, true);
-        
+
         let captured = closure_get_captured(&closure, "value");
         assert!(captured.is_some());
         assert_eq!(captured.unwrap(), vec![10, 0]);
@@ -174,9 +174,9 @@ mod tests {
     #[test]
     fn test_closure_set_captured() {
         let mut closure = closure_new_simple("func_abc".to_string(), 0, false);
-        
+
         closure_set_captured(&mut closure, "counter".to_string(), vec![5, 0]);
-        
+
         let captured = closure_get_captured(&closure, "counter");
         assert!(captured.is_some());
         assert_eq!(captured.unwrap(), vec![5, 0]);
@@ -186,7 +186,7 @@ mod tests {
     fn test_closure_call() {
         let closure = closure_new_simple("func_test".to_string(), 1, true);
         let params = vec![vec![42, 0]]; // Single integer parameter
-        
+
         let result = closure_call(&closure, params);
         assert!(result.is_ok());
     }
@@ -195,16 +195,15 @@ mod tests {
     fn test_closure_multiple_captures() {
         let names = vec!["a".to_string(), "b".to_string(), "c".to_string()];
         let values = vec![
-            vec![1, 0],   // a = 1
-            vec![2, 0],   // b = 2
-            vec![3, 0],   // c = 3
+            vec![1, 0], // a = 1
+            vec![2, 0], // b = 2
+            vec![3, 0], // c = 3
         ];
         let closure = closure_new("func_multi".to_string(), names, values, 0, true);
-        
+
         assert_eq!(closure.captured_names().len(), 3);
         assert_eq!(closure_get_captured(&closure, "a").unwrap(), vec![1, 0]);
         assert_eq!(closure_get_captured(&closure, "b").unwrap(), vec![2, 0]);
         assert_eq!(closure_get_captured(&closure, "c").unwrap(), vec![3, 0]);
     }
 }
-

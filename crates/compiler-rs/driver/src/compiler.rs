@@ -114,8 +114,9 @@ impl Compiler {
         match format {
             OutputFormat::Binary => {
                 // Write raw binary machine code
-                let mut file = fs::File::create(&output_path)
-                    .map_err(|e| format!("Failed to create output file '{}': {}", output_path, e))?;
+                let mut file = fs::File::create(&output_path).map_err(|e| {
+                    format!("Failed to create output file '{}': {}", output_path, e)
+                })?;
                 std::io::Write::write_all(&mut file, &code_bytes)
                     .map_err(|e| format!("Failed to write binary file: {}", e))?;
                 println!("Generated: {} ({} bytes)", output_path, code_bytes.len());
@@ -168,8 +169,9 @@ impl Compiler {
                 obj_file.add_data(&[]);
 
                 // Write object file
-                let mut file = fs::File::create(&output_path)
-                    .map_err(|e| format!("Failed to create output file '{}': {}", output_path, e))?;
+                let mut file = fs::File::create(&output_path).map_err(|e| {
+                    format!("Failed to create output file '{}': {}", output_path, e)
+                })?;
                 obj_file
                     .write(&mut file)
                     .map_err(|e| format!("Failed to write object file: {}", e))?;
@@ -215,8 +217,8 @@ impl Compiler {
     /// Type check an AST, returning errors
     #[allow(dead_code)] // Public API method
     pub fn type_check(&self, source: &str) -> Result<(), String> {
-        let mut parser = Parser::new_with_file(source, None)
-            .map_err(|e| format!("Parse error: {}", e))?;
+        let mut parser =
+            Parser::new_with_file(source, None).map_err(|e| format!("Parse error: {}", e))?;
         let ast = parser.parse().map_err(|e| {
             let diag = parser.error_to_diagnostic(&e);
             format!("Parse error: {}", diag)
@@ -224,7 +226,7 @@ impl Compiler {
 
         // Semantic Analysis
         let mut analyzer = SemanticAnalyzer::new(None);
-        let mut diagnostics = analyzer.analyze(&ast);
+        let diagnostics = analyzer.analyze(&ast);
 
         // Type checking
         let errors: Vec<_> = diagnostics
@@ -234,7 +236,11 @@ impl Compiler {
 
         if !errors.is_empty() {
             let msg: Vec<_> = errors.iter().map(|d| d.message.clone()).collect();
-            return Err(format!("Type checking failed with {} error(s): {}", errors.len(), msg.join("; ")));
+            return Err(format!(
+                "Type checking failed with {} error(s): {}",
+                errors.len(),
+                msg.join("; ")
+            ));
         }
 
         Ok(())
@@ -243,8 +249,8 @@ impl Compiler {
     /// Emit assembly listing for a source file (debugging aid)
     #[allow(dead_code)] // Public API method
     pub fn emit_asm(&self, source: &str) -> Result<String, String> {
-        let mut parser = Parser::new_with_file(source, None)
-            .map_err(|e| format!("Parse error: {}", e))?;
+        let mut parser =
+            Parser::new_with_file(source, None).map_err(|e| format!("Parse error: {}", e))?;
         let ast = parser.parse().map_err(|e| {
             let diag = parser.error_to_diagnostic(&e);
             format!("Parse error: {}", diag)
@@ -378,8 +384,8 @@ mod tests {
     /// Helper to run the full pipeline: source -> parse -> sem -> IR -> code gen -> bytes
     fn compile_to_bytes(source: &str) -> Result<(Vec<u8>, Vec<Z80Instruction>), String> {
         // 1. Parse
-        let mut parser = Parser::new_with_file(source, None)
-            .map_err(|e| format!("Parse error: {}", e))?;
+        let mut parser =
+            Parser::new_with_file(source, None).map_err(|e| format!("Parse error: {}", e))?;
         let ast = parser.parse().map_err(|e| {
             let diag = parser.error_to_diagnostic(&e);
             format!("Parse error: {}", diag)
@@ -492,10 +498,20 @@ END.
     #[test]
     fn test_instruction_encoding_real_opcodes() {
         let instructions = vec![
-            Z80Instruction::Label { name: "_main".to_string() },
-            Z80Instruction::Push { reg: Z80Register::IX },
-            Z80Instruction::LoadRegister { dst: Z80Register::IX, src: Z80Register::SP },
-            Z80Instruction::LoadImmediate { reg: Z80Register::HL, value: 10 },
+            Z80Instruction::Label {
+                name: "_main".to_string(),
+            },
+            Z80Instruction::Push {
+                reg: Z80Register::IX,
+            },
+            Z80Instruction::LoadRegister {
+                dst: Z80Register::IX,
+                src: Z80Register::SP,
+            },
+            Z80Instruction::LoadImmediate {
+                reg: Z80Register::HL,
+                value: 10,
+            },
             Z80Instruction::Return,
         ];
 
@@ -547,7 +563,9 @@ END.
         let bin_path = temp_dir.join("spc_test_out.bin");
         let bin_path_str = bin_path.to_str().unwrap().to_string();
         let mut compiler = Compiler::new_without_feature_check(TargetPlatform::ZealZ80);
-        compiler.compile_file(src_path.to_str().unwrap(), Some(&bin_path_str)).unwrap();
+        compiler
+            .compile_file(src_path.to_str().unwrap(), Some(&bin_path_str))
+            .unwrap();
 
         let mut file = fs::File::open(&bin_path).unwrap();
         let mut bytes = Vec::new();
@@ -560,8 +578,8 @@ END.
 
     #[test]
     fn test_compile_file_produces_zof_output() {
-        use std::io::{Write, Read};
         use object_zealz80::ZOF_MAGIC;
+        use std::io::{Read, Write};
 
         let source = "\
 PROGRAM TestZOF;
@@ -579,7 +597,9 @@ END.
         let zof_path = temp_dir.join("spc_test_zof_out.zof");
         let zof_path_str = zof_path.to_str().unwrap().to_string();
         let mut compiler = Compiler::new_without_feature_check(TargetPlatform::ZealZ80);
-        compiler.compile_file(src_path.to_str().unwrap(), Some(&zof_path_str)).unwrap();
+        compiler
+            .compile_file(src_path.to_str().unwrap(), Some(&zof_path_str))
+            .unwrap();
 
         let mut file = fs::File::open(&zof_path).unwrap();
         let mut bytes = Vec::new();
@@ -614,7 +634,9 @@ END.
         fs::write(&src_path, source).unwrap();
 
         let mut compiler = Compiler::new_without_feature_check(TargetPlatform::ZealZ80);
-        compiler.compile_file(src_path.to_str().unwrap(), None).unwrap();
+        compiler
+            .compile_file(src_path.to_str().unwrap(), None)
+            .unwrap();
 
         let default_path = temp_dir.join("spc_test_default.zof");
         assert!(
@@ -647,8 +669,8 @@ END.
 
     #[test]
     fn test_bin_and_zof_produce_same_code() {
-        use std::io::{Read, Write};
         use object_zealz80::ZOF_MAGIC;
+        use std::io::{Read, Write};
 
         let source = "\
 PROGRAM SameCode;
@@ -667,7 +689,9 @@ END.
         let bin_path = temp_dir.join("spc_test_compare.bin");
         let bin_path_str = bin_path.to_str().unwrap().to_string();
         let mut compiler = Compiler::new_without_feature_check(TargetPlatform::ZealZ80);
-        compiler.compile_file(src_path.to_str().unwrap(), Some(&bin_path_str)).unwrap();
+        compiler
+            .compile_file(src_path.to_str().unwrap(), Some(&bin_path_str))
+            .unwrap();
 
         let mut bin_file = fs::File::open(&bin_path).unwrap();
         let mut bin_bytes = Vec::new();
@@ -677,7 +701,9 @@ END.
         let zof_path = temp_dir.join("spc_test_compare.zof");
         let zof_path_str = zof_path.to_str().unwrap().to_string();
         let mut compiler2 = Compiler::new_without_feature_check(TargetPlatform::ZealZ80);
-        compiler2.compile_file(src_path.to_str().unwrap(), Some(&zof_path_str)).unwrap();
+        compiler2
+            .compile_file(src_path.to_str().unwrap(), Some(&zof_path_str))
+            .unwrap();
 
         let mut zof_file = fs::File::open(&zof_path).unwrap();
         let mut zof_bytes = Vec::new();

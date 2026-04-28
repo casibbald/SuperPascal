@@ -18,9 +18,7 @@ pub enum Type {
         size: Option<usize>,
     },
     /// Dynamic array type: array of element_type (no fixed size)
-    DynamicArray {
-        element_type: Box<Type>,
-    },
+    DynamicArray { element_type: Box<Type> },
     /// Record type: record fields... end
     Record {
         fields: Vec<Field>,
@@ -28,13 +26,9 @@ pub enum Type {
         size: Option<usize>,
     },
     /// Pointer type: ^type
-    Pointer {
-        base_type: Box<Type>,
-    },
+    Pointer { base_type: Box<Type> },
     /// Named type (type alias)
-    Named {
-        name: String,
-    },
+    Named { name: String },
     /// Generic type template (e.g., TList<T>)
     Generic {
         name: String,
@@ -66,11 +60,11 @@ pub enum Type {
 /// Primitive types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PrimitiveType {
-    Integer,  // 16-bit signed integer
-    Byte,     // 8-bit unsigned integer
-    Word,     // 16-bit unsigned integer
-    Boolean,  // Boolean (1 byte)
-    Char,     // Character (1 byte)
+    Integer, // 16-bit signed integer
+    Byte,    // 8-bit unsigned integer
+    Word,    // 16-bit unsigned integer
+    Boolean, // Boolean (1 byte)
+    Char,    // Character (1 byte)
 }
 
 impl PrimitiveType {
@@ -177,10 +171,7 @@ impl Type {
 
     /// Create a record type
     pub fn record(fields: Vec<Field>) -> Self {
-        Type::Record {
-            fields,
-            size: None,
-        }
+        Type::Record { fields, size: None }
     }
 
     /// Create a pointer type
@@ -223,21 +214,27 @@ impl Type {
                 if f1.len() != f2.len() {
                     return false;
                 }
-                f1.iter()
-                    .zip(f2.iter())
-                    .all(|(field1, field2)| {
-                        field1.name == field2.name && field1.field_type.equals(&field2.field_type)
-                    })
+                f1.iter().zip(f2.iter()).all(|(field1, field2)| {
+                    field1.name == field2.name && field1.field_type.equals(&field2.field_type)
+                })
             }
-            (
-                Type::Pointer { base_type: b1 },
-                Type::Pointer { base_type: b2 },
-            ) => b1.equals(b2),
+            (Type::Pointer { base_type: b1 }, Type::Pointer { base_type: b2 }) => b1.equals(b2),
             (Type::Named { name: n1 }, Type::Named { name: n2 }) => n1 == n2,
             (Type::Generic { name: n1, .. }, Type::Generic { name: n2, .. }) => n1 == n2,
-            (Type::Instantiated { generic_name: n1, args: a1 }, Type::Instantiated { generic_name: n2, args: a2 }) => {
-                n1 == n2 && a1.len() == a2.len() && a1.iter().zip(a2.iter()).all(|(t1, t2)| t1.equals(t2))
-            },
+            (
+                Type::Instantiated {
+                    generic_name: n1,
+                    args: a1,
+                },
+                Type::Instantiated {
+                    generic_name: n2,
+                    args: a2,
+                },
+            ) => {
+                n1 == n2
+                    && a1.len() == a2.len()
+                    && a1.iter().zip(a2.iter()).all(|(t1, t2)| t1.equals(t2))
+            }
             (
                 Type::Procedural {
                     is_function: f1,
@@ -297,15 +294,9 @@ impl Type {
                 Type::Primitive(PrimitiveType::Integer) | Type::Primitive(PrimitiveType::Word),
             ) => true,
             // Word can be assigned to Integer (with potential overflow warning)
-            (
-                Type::Primitive(PrimitiveType::Word),
-                Type::Primitive(PrimitiveType::Integer),
-            ) => true,
+            (Type::Primitive(PrimitiveType::Word), Type::Primitive(PrimitiveType::Integer)) => true,
             // Char can be assigned to Byte
-            (
-                Type::Primitive(PrimitiveType::Char),
-                Type::Primitive(PrimitiveType::Byte),
-            ) => true,
+            (Type::Primitive(PrimitiveType::Char), Type::Primitive(PrimitiveType::Byte)) => true,
             // Boolean is only compatible with Boolean
             (Type::Primitive(PrimitiveType::Boolean), Type::Primitive(PrimitiveType::Boolean)) => {
                 true
@@ -315,9 +306,7 @@ impl Type {
             // Variant can be assigned to any type (runtime type checking required)
             (Type::Variant, _) => true,
             // Procedural types are assignable if they match exactly
-            (Type::Procedural { .. }, Type::Procedural { .. }) => {
-                self.equals(target)
-            }
+            (Type::Procedural { .. }, Type::Procedural { .. }) => self.equals(target),
             // Error type is compatible with everything (error recovery)
             (Type::Error, _) | (_, Type::Error) => true,
             _ => false,
@@ -333,10 +322,10 @@ impl Type {
             Type::DynamicArray { .. } => None, // Dynamic arrays have no fixed size
             Type::Record { size, .. } => *size,
             Type::Pointer { .. } => Some(2), // Pointers are 16-bit (2 bytes) on 8-bit/16-bit targets
-            Type::Named { .. } => None, // Need to resolve named type first
-            Type::Generic { .. } => None, // Generic templates have no size until instantiated
+            Type::Named { .. } => None,      // Need to resolve named type first
+            Type::Generic { .. } => None,    // Generic templates have no size until instantiated
             Type::Instantiated { .. } => None, // Need to resolve instantiated type first
-            Type::Variant => None, // Variant size depends on runtime value
+            Type::Variant => None,           // Variant size depends on runtime value
             Type::Procedural { .. } => Some(2), // Procedural types are function pointers (2 bytes on 8-bit/16-bit)
             Type::Error => None,
         }
@@ -356,11 +345,11 @@ impl Type {
                     .max()
                     .unwrap_or(1)
             }
-            Type::Pointer { .. } => 2, // Pointers are 16-bit aligned
-            Type::Named { .. } => 1, // Unknown, use minimum
-            Type::Generic { .. } => 1, // Unknown until instantiated
+            Type::Pointer { .. } => 2,      // Pointers are 16-bit aligned
+            Type::Named { .. } => 1,        // Unknown, use minimum
+            Type::Generic { .. } => 1,      // Unknown until instantiated
             Type::Instantiated { .. } => 1, // Unknown until resolved
-            Type::Variant => 1, // Variant alignment (runtime-dependent)
+            Type::Variant => 1,             // Variant alignment (runtime-dependent)
             Type::Procedural { .. } => 2, // Procedural types are function pointers (2-byte aligned)
             Type::Error => 1,
         }
@@ -658,20 +647,16 @@ mod tests {
 
     #[test]
     fn test_assignment_compatibility_record() {
-        let rec1 = Type::record(vec![
-            Field {
-                name: "x".to_string(),
-                field_type: Box::new(Type::integer()),
-                offset: None,
-            },
-        ]);
-        let rec2 = Type::record(vec![
-            Field {
-                name: "x".to_string(),
-                field_type: Box::new(Type::integer()),
-                offset: None,
-            },
-        ]);
+        let rec1 = Type::record(vec![Field {
+            name: "x".to_string(),
+            field_type: Box::new(Type::integer()),
+            offset: None,
+        }]);
+        let rec2 = Type::record(vec![Field {
+            name: "x".to_string(),
+            field_type: Box::new(Type::integer()),
+            offset: None,
+        }]);
 
         // Records must match exactly
         assert!(rec1.equals(&rec2));

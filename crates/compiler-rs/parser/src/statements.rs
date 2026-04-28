@@ -20,7 +20,10 @@ impl super::Parser {
             // Pattern: FOR identifier [IN|:=]
             // Advance and check the token after the identifier
             self.advance()?; // consume FOR
-            if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+            if matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::Identifier(_))
+            ) {
                 // Check what comes after the identifier
                 if self.check_peek(&TokenKind::KwIn) {
                     // It's a for..in loop - we've already consumed FOR, so parse from here
@@ -30,16 +33,21 @@ impl super::Parser {
                     let collection_expr = self.parse_expression()?;
                     self.consume(TokenKind::KwDo, "DO")?;
                     let body = self.parse_statement()?;
-                    
-                    let start_span = self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1));
+
+                    let start_span = self
+                        .current()
+                        .map(|t| t.span)
+                        .unwrap_or_else(|| Span::at(0, 1, 1));
                     let span = start_span.merge(body.span());
                     return Ok(Node::ForInStmt(ast::ForInStmt {
                         var_name: match &var_token.kind {
                             TokenKind::Identifier(name) => name.clone(),
-                            _ => return Err(ParserError::InvalidSyntax {
-                                message: "Expected identifier".to_string(),
-                                span: var_token.span,
-                            }),
+                            _ => {
+                                return Err(ParserError::InvalidSyntax {
+                                    message: "Expected identifier".to_string(),
+                                    span: var_token.span,
+                                });
+                            }
                         },
                         collection_expr: Box::new(collection_expr),
                         body: Box::new(body),
@@ -63,48 +71,48 @@ impl super::Parser {
             // 1. Not consume FOR in the check (but we need to see what's after identifier)
             // 2. Have parse_for_statement handle the case where FOR is already consumed
             // 3. Use a different approach
-            
+
             // Let's use approach 1: check without consuming FOR
             // But we already consumed it, so we need to restore
             // Actually, we can't easily restore the lexer state
             // So let's use a simpler approach: parse_for_statement will handle FOR, but we've already consumed it
             // So we need to adjust parse_for_statement or create a helper
-            
+
             // Simplest: inline the check logic here without consuming FOR first
             // But we already did... Let me revert this approach
-            
+
             // New approach: Don't consume FOR, use peek to check
             // But peek only shows one token ahead, and we need two
             // So we need to advance to check, then somehow restore
-            
+
             // Actually, the cleanest is to have parse_for_statement not consume FOR if it's already consumed
             // But that's complex
-            
+
             // Let's try: parse the identifier and check, if IN then parse for..in inline, otherwise parse traditional for
             // But we need FOR to still be available for traditional for
-            
+
             // I think the issue is my approach is too complex. Let me simplify:
             // Just try to parse as for..in first (it will fail fast if not), then fall back to traditional for
             // But that's not great for error messages
-            
+
             // Actually, let me just fix the current code: we've consumed FOR, so we need to handle that
             // For traditional for, it expects FOR to be current, so we're in a bad state
             // Let me check if we can reconstruct the state or use a different method
-            
+
             // Simplest fix: Don't consume FOR in the check. Instead, check peek tokens.
             // But we only have one peek token...
-            
+
             // OK, new plan: Check if peek (after FOR) is identifier, and peek of that (manually get next token from lexer)
             // But that's complex too
-            
+
             // Let me try the simplest: parse_for_statement should handle the case where we've already seen FOR
             // Actually, let me just make parse_for_statement work whether FOR is consumed or not
             // But that requires changing parse_for_statement signature
-            
+
             // Final approach: Just check the pattern without consuming, using what we have
             // If peek is identifier and we can somehow check what's after that...
             // Actually, we can advance, check, then if it's not IN, we've already messed up the state
-            
+
             // I think the real solution is to not consume FOR until we know which type it is
             // So let's check peek tokens without consuming FOR
             if self.check_peek(&TokenKind::Identifier(String::new())) {
@@ -112,7 +120,7 @@ impl super::Parser {
                 // We need to check what's after identifier (peek2)
                 // But we only have one peek. So we need to advance to see peek2
                 // But then we can't easily go back
-                
+
                 // Let me try: advance to identifier, check peek for IN
                 self.advance()?; // Now current is identifier, peek is what comes after
                 if self.check_peek(&TokenKind::KwIn) {
@@ -121,18 +129,26 @@ impl super::Parser {
                     let _var_token = self.advance_and_get_token()?; // Actually identifier is already current
                     let var_name = match self.current().map(|t| &t.kind) {
                         Some(TokenKind::Identifier(name)) => name.clone(),
-                        _ => return Err(ParserError::InvalidSyntax {
-                            message: "Expected identifier".to_string(),
-                            span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
-                        }),
+                        _ => {
+                            return Err(ParserError::InvalidSyntax {
+                                message: "Expected identifier".to_string(),
+                                span: self
+                                    .current()
+                                    .map(|t| t.span)
+                                    .unwrap_or_else(|| Span::at(0, 1, 1)),
+                            });
+                        }
                     };
                     self.advance()?; // consume identifier
                     self.consume(TokenKind::KwIn, "IN")?;
                     let collection_expr = self.parse_expression()?;
                     self.consume(TokenKind::KwDo, "DO")?;
                     let body = self.parse_statement()?;
-                    
-                    let start_span = self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1));
+
+                    let start_span = self
+                        .current()
+                        .map(|t| t.span)
+                        .unwrap_or_else(|| Span::at(0, 1, 1));
                     let span = start_span.merge(body.span());
                     return Ok(Node::ForInStmt(ast::ForInStmt {
                         var_name,
@@ -148,16 +164,18 @@ impl super::Parser {
                 // So we need to adjust: parse the rest as traditional for
                 // Actually, we can call a helper that parses the rest after FOR identifier :=
                 // But that's complex
-                
+
                 // Let me try: since we've consumed FOR and identifier is current,
                 // we can parse the rest: := expr TO/DOWNTO expr DO statement
                 let var_token = self.current().unwrap().clone();
                 let var_name = match &var_token.kind {
                     TokenKind::Identifier(name) => name.clone(),
-                    _ => return Err(ParserError::InvalidSyntax {
-                        message: "Expected identifier".to_string(),
-                        span: var_token.span,
-                    }),
+                    _ => {
+                        return Err(ParserError::InvalidSyntax {
+                            message: "Expected identifier".to_string(),
+                            span: var_token.span,
+                        });
+                    }
                 };
                 self.advance()?; // consume identifier
                 self.consume(TokenKind::Assign, ":=")?;
@@ -172,13 +190,16 @@ impl super::Parser {
                     return Err(ParserError::UnexpectedToken {
                         expected: "TO or DOWNTO".to_string(),
                         found: format!("{:?}", self.current().map(|t| &t.kind)),
-                        span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                        span: self
+                            .current()
+                            .map(|t| t.span)
+                            .unwrap_or_else(|| Span::at(0, 1, 1)),
                     });
                 };
                 let end_expr = self.parse_expression()?;
                 self.consume(TokenKind::KwDo, "DO")?;
                 let body = self.parse_statement()?;
-                
+
                 let start_span = var_token.span;
                 let span = start_span.merge(body.span());
                 return Ok(Node::ForStmt(ast::ForStmt {
@@ -195,12 +216,12 @@ impl super::Parser {
             // Actually, if there's no identifier, parse_for_statement will error anyway
             // But it expects FOR to be current
             // So we have a problem
-            
+
             // Let me just call parse_for_statement and see what happens
             // Actually, we've consumed FOR, so current is the next token
             // parse_for_statement expects FOR to be current
             // So we can't call it directly
-            
+
             // I think the cleanest solution is to not consume FOR in the check
             // Let me rewrite this more carefully
             self.parse_for_statement()
@@ -228,63 +249,74 @@ impl super::Parser {
             self.parse_asm_statement()
         } else {
             // Check if this is a label: identifier or integer literal followed by colon
-            let is_label = (matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) ||
-                matches!(self.current().map(|t| &t.kind), Some(TokenKind::IntegerLiteral { .. }))) &&
-                self.peek_token().map(|t| t.kind == TokenKind::Colon).unwrap_or(false);
-            
+            let is_label = (matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::Identifier(_))
+            ) || matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::IntegerLiteral { .. })
+            )) && self
+                .peek_token()
+                .map(|t| t.kind == TokenKind::Colon)
+                .unwrap_or(false);
+
             if is_label {
                 // This is a labeled statement: label: statement
                 return self.parse_labeled_statement();
             }
-            
+
             // Could be assignment or procedure call (only for identifiers)
-            if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+            if matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::Identifier(_))
+            ) {
                 // Check if it's an assignment by looking ahead for :=
-            // Handle simple case: identifier :=
-            // Handle pointer dereference: identifier ^ := (check two tokens ahead)
-            // Handle array/field access: identifier [ or identifier .
-            let is_assignment = self.check_peek(&TokenKind::Assign) ||
-                (self.check_peek(&TokenKind::Caret) && {
-                    // After ^, check if next is := (skip postfix ops)
-                    // For simplicity, if we see ^, LeftBracket, or Dot, try parsing as lvalue
-                    true
-                }) ||
-                self.check_peek(&TokenKind::LeftBracket) ||
-                self.check_peek(&TokenKind::Dot);
-            
-            if is_assignment {
-                // Try parsing as assignment
-                if self.check_peek(&TokenKind::Assign) || 
-                   (self.check_peek(&TokenKind::Caret) && {
-                       // After ^, check if next is :=
-                       // We'll parse as lvalue and check for :=
-                       true
-                   }) ||
-                   self.check_peek(&TokenKind::LeftBracket) ||
-                   self.check_peek(&TokenKind::Dot) {
-                    // Parse lvalue first to see if it's really an assignment
-                    let target = self.parse_lvalue()?;
-                    if self.check(&TokenKind::Assign) {
-                        // It's an assignment - consume := and parse the value
-                        self.consume(TokenKind::Assign, ":=")?;
-                        let value = self.parse_expression()?;
-                        let span = target.span().merge(value.span());
-                        Ok(Node::AssignStmt(ast::AssignStmt {
-                            target: Box::new(target),
-                            value: Box::new(value),
-                            span,
-                        }))
+                // Handle simple case: identifier :=
+                // Handle pointer dereference: identifier ^ := (check two tokens ahead)
+                // Handle array/field access: identifier [ or identifier .
+                let is_assignment = self.check_peek(&TokenKind::Assign)
+                    || (self.check_peek(&TokenKind::Caret) && {
+                        // After ^, check if next is := (skip postfix ops)
+                        // For simplicity, if we see ^, LeftBracket, or Dot, try parsing as lvalue
+                        true
+                    })
+                    || self.check_peek(&TokenKind::LeftBracket)
+                    || self.check_peek(&TokenKind::Dot);
+
+                if is_assignment {
+                    // Try parsing as assignment
+                    if self.check_peek(&TokenKind::Assign)
+                        || (self.check_peek(&TokenKind::Caret) && {
+                            // After ^, check if next is :=
+                            // We'll parse as lvalue and check for :=
+                            true
+                        })
+                        || self.check_peek(&TokenKind::LeftBracket)
+                        || self.check_peek(&TokenKind::Dot)
+                    {
+                        // Parse lvalue first to see if it's really an assignment
+                        let target = self.parse_lvalue()?;
+                        if self.check(&TokenKind::Assign) {
+                            // It's an assignment - consume := and parse the value
+                            self.consume(TokenKind::Assign, ":=")?;
+                            let value = self.parse_expression()?;
+                            let span = target.span().merge(value.span());
+                            Ok(Node::AssignStmt(ast::AssignStmt {
+                                target: Box::new(target),
+                                value: Box::new(value),
+                                span,
+                            }))
+                        } else {
+                            // Not an assignment after all - parse as call
+                            // This shouldn't happen if our check is correct, but handle gracefully
+                            self.parse_call_statement()
+                        }
                     } else {
-                        // Not an assignment after all - parse as call
-                        // This shouldn't happen if our check is correct, but handle gracefully
                         self.parse_call_statement()
                     }
                 } else {
                     self.parse_call_statement()
                 }
-            } else {
-                self.parse_call_statement()
-            }
             } else {
                 let span = self
                     .current()
@@ -362,10 +394,12 @@ impl super::Parser {
         let var_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
         let var_name = match &var_token.kind {
             TokenKind::Identifier(name) => name.clone(),
-            _ => return Err(ParserError::InvalidSyntax {
-                message: "Expected identifier".to_string(),
-                span: var_token.span,
-            }),
+            _ => {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected identifier".to_string(),
+                    span: var_token.span,
+                });
+            }
         };
 
         self.consume(TokenKind::Assign, ":=")?;
@@ -381,7 +415,10 @@ impl super::Parser {
             return Err(ParserError::UnexpectedToken {
                 expected: "TO or DOWNTO".to_string(),
                 found: format!("{:?}", self.current().map(|t| &t.kind)),
-                span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                span: self
+                    .current()
+                    .map(|t| t.span)
+                    .unwrap_or_else(|| Span::at(0, 1, 1)),
             });
         };
 
@@ -413,10 +450,12 @@ impl super::Parser {
         let var_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
         let var_name = match &var_token.kind {
             TokenKind::Identifier(name) => name.clone(),
-            _ => return Err(ParserError::InvalidSyntax {
-                message: "Expected identifier".to_string(),
-                span: var_token.span,
-            }),
+            _ => {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected identifier".to_string(),
+                    span: var_token.span,
+                });
+            }
         };
 
         self.consume(TokenKind::KwIn, "IN")?;
@@ -533,10 +572,12 @@ impl super::Parser {
         let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
         let name = match &name_token.kind {
             TokenKind::Identifier(name) => name.clone(),
-            _ => return Err(ParserError::InvalidSyntax {
-                message: "Expected identifier".to_string(),
-                span: name_token.span,
-            }),
+            _ => {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected identifier".to_string(),
+                    span: name_token.span,
+                });
+            }
         };
 
         let args = if self.check(&TokenKind::LeftParen) {
@@ -551,11 +592,7 @@ impl super::Parser {
             name_token.span
         };
 
-        Ok(Node::CallStmt(ast::CallStmt {
-            name,
-            args,
-            span,
-        }))
+        Ok(Node::CallStmt(ast::CallStmt { name, args, span }))
     }
 
     /// Parse lvalue: identifier [ [ expression ] ] [ . identifier ] [ ^ ]
@@ -563,10 +600,12 @@ impl super::Parser {
         let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
         let name = match &name_token.kind {
             TokenKind::Identifier(name) => name.clone(),
-            _ => return Err(ParserError::InvalidSyntax {
-                message: "Expected identifier".to_string(),
-                span: name_token.span,
-            }),
+            _ => {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected identifier".to_string(),
+                    span: name_token.span,
+                });
+            }
         };
 
         let mut expr: Node = Node::IdentExpr(ast::IdentExpr {
@@ -588,13 +627,16 @@ impl super::Parser {
                 });
             } else if self.check(&TokenKind::Dot) {
                 self.advance()?;
-                let field_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
+                let field_token =
+                    self.consume(TokenKind::Identifier(String::new()), "identifier")?;
                 let field = match &field_token.kind {
                     TokenKind::Identifier(name) => name.clone(),
-                    _ => return Err(ParserError::InvalidSyntax {
-                        message: "Expected identifier".to_string(),
-                        span: field_token.span,
-                    }),
+                    _ => {
+                        return Err(ParserError::InvalidSyntax {
+                            message: "Expected identifier".to_string(),
+                            span: field_token.span,
+                        });
+                    }
                 };
                 let span = expr.span().merge(field_token.span);
                 expr = Node::FieldExpr(ast::FieldExpr {
@@ -633,7 +675,10 @@ impl super::Parser {
 
         // Parse try block statements
         let mut try_statements = vec![];
-        while !self.check(&TokenKind::KwExcept) && !self.check(&TokenKind::KwFinally) && !self.check(&TokenKind::KwEnd) {
+        while !self.check(&TokenKind::KwExcept)
+            && !self.check(&TokenKind::KwFinally)
+            && !self.check(&TokenKind::KwEnd)
+        {
             try_statements.push(self.parse_statement()?);
             // Optional semicolon between statements
             if self.check(&TokenKind::Semicolon) {
@@ -717,15 +762,20 @@ impl super::Parser {
         self.consume(TokenKind::KwOn, "ON")?;
 
         // Optional variable name
-        let variable = if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+        let variable = if matches!(
+            self.current().map(|t| &t.kind),
+            Some(TokenKind::Identifier(_))
+        ) {
             if self.check_peek(&TokenKind::Colon) {
                 let var_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
                 let var_name = match &var_token.kind {
                     TokenKind::Identifier(name) => name.clone(),
-                    _ => return Err(ParserError::InvalidSyntax {
-                        message: "Expected identifier".to_string(),
-                        span: var_token.span,
-                    }),
+                    _ => {
+                        return Err(ParserError::InvalidSyntax {
+                            message: "Expected identifier".to_string(),
+                            span: var_token.span,
+                        });
+                    }
                 };
                 self.advance()?; // consume colon
                 Some(var_name)
@@ -775,10 +825,7 @@ impl super::Parser {
             start_span
         };
 
-        Ok(Node::RaiseStmt(ast::RaiseStmt {
-            exception,
-            span,
-        }))
+        Ok(Node::RaiseStmt(ast::RaiseStmt { exception, span }))
     }
 
     /// Parse inherited statement: INHERITED [method_name] [args]
@@ -791,7 +838,10 @@ impl super::Parser {
         self.consume(TokenKind::KwInherited, "INHERITED")?;
 
         // Optional method name
-        let name = if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+        let name = if matches!(
+            self.current().map(|t| &t.kind),
+            Some(TokenKind::Identifier(_))
+        ) {
             let name_token = self.current().unwrap().clone();
             let name = match &name_token.kind {
                 TokenKind::Identifier(name) => name.clone(),
@@ -830,11 +880,7 @@ impl super::Parser {
             start_span
         };
 
-        Ok(Node::CallStmt(ast::CallStmt {
-            name,
-            args,
-            span,
-        }))
+        Ok(Node::CallStmt(ast::CallStmt { name, args, span }))
     }
 
     /// Parse with statement: WITH record_expr { , record_expr } DO statement
@@ -914,8 +960,12 @@ impl super::Parser {
         self.consume(TokenKind::KwGoto, "GOTO")?;
 
         // Label can be identifier or integer literal
-        let label_name = if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
-            let name_token = self.consume(TokenKind::Identifier(String::new()), "label identifier")?;
+        let label_name = if matches!(
+            self.current().map(|t| &t.kind),
+            Some(TokenKind::Identifier(_))
+        ) {
+            let name_token =
+                self.consume(TokenKind::Identifier(String::new()), "label identifier")?;
             match name_token.kind {
                 TokenKind::Identifier(name) => name,
                 _ => unreachable!(),
@@ -961,8 +1011,12 @@ impl super::Parser {
             .unwrap_or_else(|| Span::at(0, 1, 1));
 
         // Parse label (identifier or integer)
-        let label_name = if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
-            let name_token = self.consume(TokenKind::Identifier(String::new()), "label identifier")?;
+        let label_name = if matches!(
+            self.current().map(|t| &t.kind),
+            Some(TokenKind::Identifier(_))
+        ) {
+            let name_token =
+                self.consume(TokenKind::Identifier(String::new()), "label identifier")?;
             match name_token.kind {
                 TokenKind::Identifier(name) => name,
                 _ => unreachable!(),
@@ -1044,7 +1098,8 @@ impl super::Parser {
         } else {
             // Simple reconstruction: join tokens with spaces
             // This is a simplified approach - a real implementation might preserve original formatting
-            body_tokens.iter()
+            body_tokens
+                .iter()
                 .map(|t| match &t.kind {
                     TokenKind::Identifier(s) => s.clone(),
                     TokenKind::IntegerLiteral { value, .. } => value.to_string(),
@@ -1056,10 +1111,7 @@ impl super::Parser {
                 .join(" ")
         };
 
-        Ok(Node::AsmStmt(ast::AsmStmt {
-            body,
-            span,
-        }))
+        Ok(Node::AsmStmt(ast::AsmStmt { body, span }))
     }
 }
 
@@ -1085,7 +1137,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.statements.len(), 1);
@@ -1117,7 +1169,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.statements.len(), 1);
@@ -1150,7 +1202,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.statements.len(), 1);
@@ -1158,7 +1210,10 @@ mod tests {
                     assert_eq!(try_stmt.try_block.len(), 1);
                     assert_eq!(try_stmt.exception_handlers.len(), 1);
                     assert!(try_stmt.exception_handlers[0].variable.is_some());
-                    assert_eq!(try_stmt.exception_handlers[0].variable.as_ref().unwrap(), "e");
+                    assert_eq!(
+                        try_stmt.exception_handlers[0].variable.as_ref().unwrap(),
+                        "e"
+                    );
                     assert!(try_stmt.except_block.is_none());
                     assert!(try_stmt.finally_block.is_none());
                 } else {
@@ -1184,7 +1239,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.statements.len(), 1);
@@ -1216,7 +1271,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TryStmt(try_stmt) = &block.statements[0] {
@@ -1244,7 +1299,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TryStmt(try_stmt) = &block.statements[0] {
@@ -1273,7 +1328,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TryStmt(try_stmt) = &block.statements[0] {
@@ -1295,7 +1350,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.statements.len(), 1);
@@ -1319,7 +1374,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::RaiseStmt(raise_stmt) = &block.statements[0] {
@@ -1340,7 +1395,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::RaiseStmt(raise_stmt) = &block.statements[0] {
@@ -1375,7 +1430,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TryStmt(outer_try) = &block.statements[0] {
@@ -1404,7 +1459,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TryStmt(try_stmt) = &block.statements[0] {
@@ -1428,7 +1483,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TryStmt(try_stmt) = &block.statements[0] {
@@ -1479,7 +1534,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TryStmt(try_stmt) = &block.statements[0] {
@@ -1509,7 +1564,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TryStmt(try_stmt) = &block.statements[0] {
@@ -1546,15 +1601,21 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TryStmt(try_stmt) = &block.statements[0] {
                     assert_eq!(try_stmt.exception_handlers.len(), 2);
                     assert!(try_stmt.exception_else.is_some());
                     // Check first handler has variable
-                    assert_eq!(try_stmt.exception_handlers[0].variable.as_ref().unwrap(), "e");
-                    assert_eq!(try_stmt.exception_handlers[1].variable.as_ref().unwrap(), "e");
+                    assert_eq!(
+                        try_stmt.exception_handlers[0].variable.as_ref().unwrap(),
+                        "e"
+                    );
+                    assert_eq!(
+                        try_stmt.exception_handlers[1].variable.as_ref().unwrap(),
+                        "e"
+                    );
                 }
             }
         }
@@ -1579,7 +1640,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::WithStmt(with_stmt) = &block.statements[0] {
@@ -1625,7 +1686,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::WithStmt(with_stmt) = &block.statements[0] {
@@ -1665,7 +1726,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::WithStmt(with_stmt) = &block.statements[0] {
@@ -1697,7 +1758,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::WithStmt(with_stmt) = &block.statements[0] {
@@ -1733,7 +1794,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.label_decls.len(), 1);
@@ -1761,7 +1822,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::LabelDecl(label_decl) = &block.label_decls[0] {
@@ -1787,7 +1848,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::LabeledStmt(labeled) = &block.statements[0] {
@@ -1822,7 +1883,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 assert_eq!(block.label_decls.len(), 1);
@@ -1848,7 +1909,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::LabelDecl(label_decl) = &block.label_decls[0] {
@@ -1877,7 +1938,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AsmStmt(asm_stmt) = &block.statements[0] {
@@ -1903,7 +1964,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AsmStmt(asm_stmt) = &block.statements[0] {
@@ -1931,7 +1992,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AsmStmt(asm_stmt) = &block.statements[0] {
@@ -1956,12 +2017,15 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ForInStmt(for_in) = &block.statements[0] {
                     assert_eq!(for_in.var_name, "i");
-                    assert!(matches!(for_in.collection_expr.as_ref(), Node::IdentExpr(_)));
+                    assert!(matches!(
+                        for_in.collection_expr.as_ref(),
+                        Node::IdentExpr(_)
+                    ));
                 } else {
                     panic!("Expected ForInStmt, got: {:?}", block.statements[0]);
                 }
@@ -1983,7 +2047,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::ForInStmt(for_in) = &block.statements[0] {

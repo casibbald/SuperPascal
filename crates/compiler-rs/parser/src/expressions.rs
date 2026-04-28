@@ -70,7 +70,7 @@ impl super::Parser {
                 let token = self.current().unwrap().clone();
                 let value_clone = value.clone();
                 self.advance()?;
-                
+
                 // Check if the next token is LeftBrace (indicates interpolation)
                 if self.check(&TokenKind::LeftBrace) {
                     // Parse as interpolated string
@@ -135,7 +135,10 @@ impl super::Parser {
             Some(TokenKind::KwInherited) => {
                 // INHERITED [method_name] [args]
                 self.advance()?; // consume INHERITED
-                let method_name = if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+                let method_name = if matches!(
+                    self.current().map(|t| &t.kind),
+                    Some(TokenKind::Identifier(_))
+                ) {
                     let name_token = self.current().unwrap().clone();
                     let name = match &name_token.kind {
                         TokenKind::Identifier(name) => name.clone(),
@@ -146,19 +149,19 @@ impl super::Parser {
                 } else {
                     None
                 };
-                
+
                 let args = if self.check(&TokenKind::LeftParen) {
                     self.parse_args()?
                 } else {
                     vec![]
                 };
-                
+
                 let span = if let Some(ref last_arg) = args.last() {
                     start_span.merge(last_arg.span())
                 } else {
                     start_span
                 };
-                
+
                 Ok(Node::InheritedExpr(ast::InheritedExpr {
                     method_name,
                     args,
@@ -175,11 +178,11 @@ impl super::Parser {
                 // Set literal: [element1, element2, ...] or [element1..element2]
                 self.advance()?; // consume [
                 let mut elements = vec![];
-                
+
                 if !self.check(&TokenKind::RightBracket) {
                     loop {
                         let start_expr = self.parse_expression()?;
-                        
+
                         // Check for range: element1..element2
                         if self.check(&TokenKind::DotDot) {
                             self.advance()?; // consume ..
@@ -192,40 +195,37 @@ impl super::Parser {
                             // Single value
                             elements.push(ast::SetElement::Value(Box::new(start_expr)));
                         }
-                        
+
                         if !self.check(&TokenKind::Comma) {
                             break;
                         }
                         self.advance()?; // consume ,
                     }
                 }
-                
+
                 let end_token = self.consume(TokenKind::RightBracket, "]")?;
                 let span = start_span.merge(end_token.span);
-                Ok(Node::SetLiteral(ast::SetLiteral {
-                    elements,
-                    span,
-                }))
+                Ok(Node::SetLiteral(ast::SetLiteral { elements, span }))
             }
             Some(TokenKind::KwFunction) => {
                 // Anonymous function: function(params): return_type begin ... end
                 let start_token = self.current().unwrap().clone();
                 self.advance()?; // consume 'function'
-                
+
                 // Parse parameters (optional)
                 let params = if self.check(&TokenKind::LeftParen) {
                     self.parse_params()?
                 } else {
                     vec![]
                 };
-                
+
                 // Parse return type (required for functions)
                 self.consume(TokenKind::Colon, ":")?;
                 let return_type = Box::new(self.parse_type()?);
-                
+
                 // Parse body (block)
                 let block = Box::new(self.parse_block()?);
-                
+
                 let span = start_token.span.merge(block.span());
                 Ok(Node::AnonymousFunction(ast::AnonymousFunction {
                     params,
@@ -238,17 +238,17 @@ impl super::Parser {
                 // Anonymous procedure: procedure(params) begin ... end
                 let start_token = self.current().unwrap().clone();
                 self.advance()?; // consume 'procedure'
-                
+
                 // Parse parameters (optional)
                 let params = if self.check(&TokenKind::LeftParen) {
                     self.parse_params()?
                 } else {
                     vec![]
                 };
-                
+
                 // Parse body (block)
                 let block = Box::new(self.parse_block()?);
-                
+
                 let span = start_token.span.merge(block.span());
                 Ok(Node::AnonymousProcedure(ast::AnonymousProcedure {
                     params,
@@ -273,11 +273,7 @@ impl super::Parser {
                     } else {
                         name_token.span
                     };
-                    Ok(Node::CallExpr(ast::CallExpr {
-                        name,
-                        args,
-                        span,
-                    }))
+                    Ok(Node::CallExpr(ast::CallExpr { name, args, span }))
                 } else {
                     // Start with identifier, then parse postfix (indexing, field access)
                     let mut expr: Node = Node::IdentExpr(ast::IdentExpr {
@@ -307,12 +303,12 @@ impl super::Parser {
             if self.check(&TokenKind::LeftBracket) {
                 self.advance()?; // consume [
                 let bracket_start_span = expr.span();
-                
+
                 // Check if this starts with colon (slice from beginning) or has an expression
                 if self.check(&TokenKind::Colon) {
                     // Slice starting from beginning: arr[:end] or arr[:end:step] or arr[:] or arr[::step]
                     self.advance()?; // consume :
-                    
+
                     // Parse end (optional)
                     let end = if self.check(&TokenKind::RightBracket) {
                         None // arr[:]
@@ -322,7 +318,7 @@ impl super::Parser {
                         // Has an end expression
                         Some(Box::new(self.parse_expression()?))
                     };
-                    
+
                     // Parse step (optional)
                     let step = if self.check(&TokenKind::Colon) {
                         self.advance()?; // consume :
@@ -334,10 +330,10 @@ impl super::Parser {
                     } else {
                         None
                     };
-                    
+
                     let end_token = self.consume(TokenKind::RightBracket, "]")?;
                     let span = bracket_start_span.merge(end_token.span);
-                    
+
                     expr = Node::SliceExpr(ast::SliceExpr {
                         array: Box::new(expr),
                         start: None, // From beginning
@@ -348,69 +344,72 @@ impl super::Parser {
                 } else {
                     // Has an expression - could be index or start of slice
                     let first_expr = self.parse_expression()?;
-                    
+
                     if self.check(&TokenKind::Colon) {
-                    // This is a slice: arr[start:end:step]
-                    self.advance()?; // consume :
-                    
-                    // Parse end (optional)
-                    let end = if self.check(&TokenKind::RightBracket) {
-                        None
-                    } else if self.check(&TokenKind::Colon) {
-                        // arr[start::step] - no end, has step
-                        None
-                    } else {
-                        Some(Box::new(self.parse_expression()?))
-                    };
-                    
-                    // Parse step (optional)
-                    let step = if self.check(&TokenKind::Colon) {
+                        // This is a slice: arr[start:end:step]
                         self.advance()?; // consume :
-                        if self.check(&TokenKind::RightBracket) {
+
+                        // Parse end (optional)
+                        let end = if self.check(&TokenKind::RightBracket) {
+                            None
+                        } else if self.check(&TokenKind::Colon) {
+                            // arr[start::step] - no end, has step
                             None
                         } else {
                             Some(Box::new(self.parse_expression()?))
-                        }
+                        };
+
+                        // Parse step (optional)
+                        let step = if self.check(&TokenKind::Colon) {
+                            self.advance()?; // consume :
+                            if self.check(&TokenKind::RightBracket) {
+                                None
+                            } else {
+                                Some(Box::new(self.parse_expression()?))
+                            }
+                        } else {
+                            None
+                        };
+
+                        let end_token = self.consume(TokenKind::RightBracket, "]")?;
+                        let span = bracket_start_span.merge(end_token.span);
+
+                        expr = Node::SliceExpr(ast::SliceExpr {
+                            array: Box::new(expr),
+                            start: Some(Box::new(first_expr)),
+                            end,
+                            step,
+                            span,
+                        });
+                    } else if self.check(&TokenKind::RightBracket) {
+                        // Regular index: arr[index]
+                        self.consume(TokenKind::RightBracket, "]")?;
+                        let span = expr.span().merge(first_expr.span());
+                        expr = Node::IndexExpr(ast::IndexExpr {
+                            array: Box::new(expr),
+                            index: Box::new(first_expr),
+                            span,
+                        });
                     } else {
-                        None
-                    };
-                    
-                    let end_token = self.consume(TokenKind::RightBracket, "]")?;
-                    let span = bracket_start_span.merge(end_token.span);
-                    
-                    expr = Node::SliceExpr(ast::SliceExpr {
-                        array: Box::new(expr),
-                        start: Some(Box::new(first_expr)),
-                        end,
-                        step,
-                        span,
-                    });
-                } else if self.check(&TokenKind::RightBracket) {
-                    // Regular index: arr[index]
-                    self.consume(TokenKind::RightBracket, "]")?;
-                    let span = expr.span().merge(first_expr.span());
-                    expr = Node::IndexExpr(ast::IndexExpr {
-                        array: Box::new(expr),
-                        index: Box::new(first_expr),
-                        span,
-                    });
-                } else {
-                    // Error: expected ] or :
-                    return Err(ParserError::InvalidSyntax {
-                        message: "Expected ']' or ':' in array access".to_string(),
-                        span: first_expr.span(),
-                    });
-                }
+                        // Error: expected ] or :
+                        return Err(ParserError::InvalidSyntax {
+                            message: "Expected ']' or ':' in array access".to_string(),
+                            span: first_expr.span(),
+                        });
+                    }
                 }
             } else if self.check(&TokenKind::Dot) {
                 self.advance()?;
-                let field_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
+                let field_token =
+                    self.consume(TokenKind::Identifier(String::new()), "identifier")?;
                 let field = match &field_token.kind {
                     TokenKind::Identifier(name) => name.clone(),
-                    _ => return Err(ParserError::InvalidSyntax {
-                        message: "Expected identifier".to_string(),
-                        span: field_token.span,
-                    }),
+                    _ => {
+                        return Err(ParserError::InvalidSyntax {
+                            message: "Expected identifier".to_string(),
+                            span: field_token.span,
+                        });
+                    }
                 };
                 let span = expr.span().merge(field_token.span);
                 expr = Node::FieldExpr(ast::FieldExpr {
@@ -468,28 +467,41 @@ impl super::Parser {
             ast::BinaryOp::Or => 1,
             ast::BinaryOp::And => 2,
             // Relational operators (including set membership and type operations)
-            ast::BinaryOp::Equal | ast::BinaryOp::NotEqual | ast::BinaryOp::Less
-            | ast::BinaryOp::LessEqual | ast::BinaryOp::Greater | ast::BinaryOp::GreaterEqual
-            | ast::BinaryOp::In | ast::BinaryOp::Is | ast::BinaryOp::As => 3,
+            ast::BinaryOp::Equal
+            | ast::BinaryOp::NotEqual
+            | ast::BinaryOp::Less
+            | ast::BinaryOp::LessEqual
+            | ast::BinaryOp::Greater
+            | ast::BinaryOp::GreaterEqual
+            | ast::BinaryOp::In
+            | ast::BinaryOp::Is
+            | ast::BinaryOp::As => 3,
             // Additive operators
             ast::BinaryOp::Add | ast::BinaryOp::Subtract => 4,
             // Multiplicative operators (highest precedence)
-            ast::BinaryOp::Multiply | ast::BinaryOp::Divide | ast::BinaryOp::Div | ast::BinaryOp::Mod => 5,
+            ast::BinaryOp::Multiply
+            | ast::BinaryOp::Divide
+            | ast::BinaryOp::Div
+            | ast::BinaryOp::Mod => 5,
         }
     }
 
     /// Parse interpolated string: 'Text {expr} more text'
     /// The lexer has already split the string into parts separated by { and }
     /// We need to parse: StringLiteral { Expression } StringLiteral { Expression } ... StringLiteral
-    fn parse_interpolated_string(&mut self, first_part: &str, start_span: Span) -> ParserResult<Node> {
+    fn parse_interpolated_string(
+        &mut self,
+        first_part: &str,
+        start_span: Span,
+    ) -> ParserResult<Node> {
         let mut parts = Vec::new();
         let mut current_span = start_span;
-        
+
         // Add the first string part
         if !first_part.is_empty() {
             parts.push(ast::InterpolatedPart::String(first_part.to_string()));
         }
-        
+
         // Parse the pattern: { Expression } StringLiteral { Expression } ... StringLiteral
         // Continue while we have LeftBrace (either in current or peek, since lexer uses lookahead)
         loop {
@@ -498,18 +510,18 @@ impl super::Parser {
                 // No more interpolations - we're done
                 break;
             }
-            
+
             // Consume {
             self.advance()?;
-            
+
             // Parse the expression
             let expr = self.parse_expression()?;
             parts.push(ast::InterpolatedPart::Expression(Box::new(expr)));
-            
+
             // After parsing the expression, we expect RightBrace
             // The lexer will continue the string on the NEXT token call after RightBrace
             self.consume(TokenKind::RightBrace, "}")?;
-            
+
             // Now the lexer should have continued the string and returned the next string part
             // (which may be empty if string ends after })
             // Check what token we have next
@@ -521,7 +533,7 @@ impl super::Parser {
                         parts.push(ast::InterpolatedPart::String(next_part.clone()));
                     }
                     self.advance()?;
-                    
+
                     // After advancing, the next token should be LeftBrace (if there's another interpolation)
                     // or the string closing quote (if we're done)
                     // The loop will check for LeftBrace and continue if found
@@ -536,7 +548,7 @@ impl super::Parser {
                 }
             }
         }
-        
+
         // If we only have one string part and no expressions, return as regular string literal
         if parts.len() == 1 {
             if let ast::InterpolatedPart::String(s) = &parts[0] {
@@ -546,12 +558,12 @@ impl super::Parser {
                 }));
             }
         }
-        
+
         // Update span to cover the entire interpolated string
         if let Some(last_token) = self.current() {
             current_span = start_span.merge(last_token.span);
         }
-        
+
         Ok(Node::InterpolatedString(ast::InterpolatedString {
             parts,
             span: current_span,
@@ -596,7 +608,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AssignStmt(assign) = &block.statements[0] {
@@ -633,7 +645,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AssignStmt(assign) = &block.statements[0] {
@@ -683,7 +695,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AssignStmt(assign) = &block.statements[0] {
@@ -709,7 +721,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::IfStmt(if_stmt) = &block.statements[0] {
@@ -746,7 +758,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::IfStmt(if_stmt) = &block.statements[0] {
@@ -785,7 +797,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::CallStmt(call) = &block.statements[0] {
@@ -810,7 +822,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::CallStmt(call) = &block.statements[0] {
@@ -834,7 +846,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::CallStmt(call) = &block.statements[0] {
@@ -859,7 +871,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::CallStmt(call) = &block.statements[0] {
@@ -891,7 +903,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::IfStmt(if_stmt) = &block.statements[0] {
@@ -924,7 +936,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AssignStmt(assign) = &block.statements[0] {
@@ -960,7 +972,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AssignStmt(assign) = &block.statements[0] {
@@ -991,12 +1003,17 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AssignStmt(assign) = &block.statements[0] {
                     if let Node::AnonymousFunction(anon_func) = assign.value.as_ref() {
-                        assert_eq!(anon_func.params.len(), 2, "Expected 2 parameters, got {}", anon_func.params.len());
+                        assert_eq!(
+                            anon_func.params.len(),
+                            2,
+                            "Expected 2 parameters, got {}",
+                            anon_func.params.len()
+                        );
                         // Check return type
                         if let Node::NamedType(named_type) = anon_func.return_type.as_ref() {
                             assert_eq!(named_type.name, "integer");
@@ -1049,7 +1066,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::AssignStmt(assign) = &block.statements[0] {
@@ -1069,7 +1086,7 @@ mod tests {
         let source = "arr[1:5]";
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         if let Node::SliceExpr(slice) = expr {
             assert!(slice.start.is_some());
             assert!(slice.end.is_some());
@@ -1084,7 +1101,7 @@ mod tests {
         let source = "arr[:5]";
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         if let Node::SliceExpr(slice) = expr {
             assert!(slice.start.is_none());
             assert!(slice.end.is_some());
@@ -1099,7 +1116,7 @@ mod tests {
         let source = "arr[3:]";
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         if let Node::SliceExpr(slice) = expr {
             assert!(slice.start.is_some());
             assert!(slice.end.is_none());
@@ -1114,7 +1131,7 @@ mod tests {
         let source = "arr[:]";
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         if let Node::SliceExpr(slice) = expr {
             assert!(slice.start.is_none());
             assert!(slice.end.is_none());
@@ -1129,7 +1146,7 @@ mod tests {
         let source = "arr[0:10:2]";
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         if let Node::SliceExpr(slice) = expr {
             assert!(slice.start.is_some());
             assert!(slice.end.is_some());
@@ -1144,7 +1161,7 @@ mod tests {
         let source = "arr[::-1]";
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         if let Node::SliceExpr(slice) = expr {
             assert!(slice.start.is_none());
             assert!(slice.end.is_none());
@@ -1159,7 +1176,7 @@ mod tests {
         let source = "arr[5]";
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         if let Node::IndexExpr(index) = expr {
             assert!(matches!(*index.index, Node::LiteralExpr(_)));
         } else {
@@ -1172,7 +1189,7 @@ mod tests {
         let source = r#""Hello {name}""#;
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         if let Node::InterpolatedString(interp) = expr {
             assert_eq!(interp.parts.len(), 2);
             if let ast::InterpolatedPart::String(s) = &interp.parts[0] {
@@ -1200,14 +1217,20 @@ mod tests {
         let source = r#""Hello {name}, you are {age} years old""#;
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         if let Node::InterpolatedString(interp) = expr {
             assert_eq!(interp.parts.len(), 5); // "Hello ", name, ", you are ", age, " years old"
             // Verify structure
             assert!(matches!(interp.parts[0], ast::InterpolatedPart::String(_)));
-            assert!(matches!(interp.parts[1], ast::InterpolatedPart::Expression(_)));
+            assert!(matches!(
+                interp.parts[1],
+                ast::InterpolatedPart::Expression(_)
+            ));
             assert!(matches!(interp.parts[2], ast::InterpolatedPart::String(_)));
-            assert!(matches!(interp.parts[3], ast::InterpolatedPart::Expression(_)));
+            assert!(matches!(
+                interp.parts[3],
+                ast::InterpolatedPart::Expression(_)
+            ));
             assert!(matches!(interp.parts[4], ast::InterpolatedPart::String(_)));
         } else {
             panic!("Expected InterpolatedString, got {:?}", expr);
@@ -1219,10 +1242,13 @@ mod tests {
         let source = r#""{value}""#;
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         if let Node::InterpolatedString(interp) = expr {
             assert_eq!(interp.parts.len(), 1);
-            assert!(matches!(interp.parts[0], ast::InterpolatedPart::Expression(_)));
+            assert!(matches!(
+                interp.parts[0],
+                ast::InterpolatedPart::Expression(_)
+            ));
         } else {
             panic!("Expected InterpolatedString, got {:?}", expr);
         }
@@ -1234,7 +1260,7 @@ mod tests {
         let source = r#"{ This is a comment } "Hello {name}""#;
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         // Should parse as interpolated string (comment is skipped by lexer)
         assert!(matches!(expr, Node::InterpolatedString(_)));
     }
@@ -1245,7 +1271,7 @@ mod tests {
         let source = r#""Hello {name}" { This is a comment }"#;
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         // Should parse as interpolated string
         assert!(matches!(expr, Node::InterpolatedString(_)));
     }
@@ -1256,7 +1282,7 @@ mod tests {
         let source = r#"(* comment *) "Hello {name}""#;
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         // Should parse as interpolated string
         assert!(matches!(expr, Node::InterpolatedString(_)));
     }
@@ -1267,10 +1293,13 @@ mod tests {
         let source = r#""Hello world""#;
         let mut parser = Parser::new(source).unwrap();
         let expr = parser.parse_expression().unwrap();
-        
+
         // Should be a regular string literal, not interpolated
         if let Node::LiteralExpr(lit) = expr {
-            assert_eq!(lit.value, ast::LiteralValue::String("Hello world".to_string()));
+            assert_eq!(
+                lit.value,
+                ast::LiteralValue::String("Hello world".to_string())
+            );
         } else {
             panic!("Expected LiteralExpr, got {:?}", expr);
         }
@@ -1283,7 +1312,7 @@ mod tests {
         // This test documents current behavior - braces in strings are interpolation markers
         let source = r#""Text with { brace""#;
         let mut parser = Parser::new(source).unwrap();
-        
+
         // This should parse as interpolation (current behavior)
         // If we want to support escaped braces, we'd need to add that feature
         let expr = parser.parse_expression();

@@ -1,8 +1,8 @@
 //! Declaration analysis (const, type, var, proc, func)
 
+use crate::SemanticAnalyzer;
 use ast::Node;
 use symbols::{Parameter, ParameterMode, Symbol, SymbolKind};
-use crate::SemanticAnalyzer;
 
 impl SemanticAnalyzer {
     /// Analyze constant declaration
@@ -10,10 +10,8 @@ impl SemanticAnalyzer {
         if let Node::ConstDecl(c) = decl {
             // Check if constant already exists
             if self.core.symbol_table.exists_in_current_scope(&c.name) {
-                self.core.add_error(
-                    format!("Constant '{}' already declared", c.name),
-                    c.span,
-                );
+                self.core
+                    .add_error(format!("Constant '{}' already declared", c.name), c.span);
                 return;
             }
 
@@ -45,20 +43,16 @@ impl SemanticAnalyzer {
         if let Node::TypeDecl(t) = decl {
             // Check if type already exists
             if self.core.symbol_table.exists_in_current_scope(&t.name) {
-                self.core.add_error(
-                    format!("Type '{}' already declared", t.name),
-                    t.span,
-                );
+                self.core
+                    .add_error(format!("Type '{}' already declared", t.name), t.span);
                 return;
             }
 
             // Check for generic type parameters
             if !t.generic_params.is_empty() {
                 // Generic type declaration: TList<T>
-                let param_names: Vec<String> = t.generic_params
-                    .iter()
-                    .map(|p| p.name.clone())
-                    .collect();
+                let param_names: Vec<String> =
+                    t.generic_params.iter().map(|p| p.name.clone()).collect();
 
                 // Analyze constraints for each parameter
                 let mut param_constraints = Vec::new();
@@ -75,7 +69,8 @@ impl SemanticAnalyzer {
                 // Analyze the type expression (may contain generic parameters as NamedType nodes)
                 // Generic parameters should be represented as Type::Named nodes in the template
                 // We need to allow generic parameter names during analysis
-                let template_type = self.analyze_type_with_generic_params(&t.type_expr, &param_names);
+                let template_type =
+                    self.analyze_type_with_generic_params(&t.type_expr, &param_names);
 
                 // Create and insert generic type symbol
                 let symbol = Symbol {
@@ -125,10 +120,8 @@ impl SemanticAnalyzer {
             for name in &v.names {
                 // Check if variable already exists
                 if self.core.symbol_table.exists_in_current_scope(name) {
-                    self.core.add_error(
-                        format!("Variable '{}' already declared", name),
-                        v.span,
-                    );
+                    self.core
+                        .add_error(format!("Variable '{}' already declared", name), v.span);
                     continue;
                 }
 
@@ -153,10 +146,8 @@ impl SemanticAnalyzer {
         if let Node::ProcDecl(p) = decl {
             // Check if procedure already exists
             if self.core.symbol_table.exists_in_current_scope(&p.name) {
-                self.core.add_error(
-                    format!("Procedure '{}' already declared", p.name),
-                    p.span,
-                );
+                self.core
+                    .add_error(format!("Procedure '{}' already declared", p.name), p.span);
                 return;
             }
 
@@ -181,7 +172,12 @@ impl SemanticAnalyzer {
             self.core.symbol_table.enter_scope();
             // Add parameters to scope
             for param in &params {
-                for name in &param.name.split(',').map(|s| s.trim().to_string()).collect::<Vec<_>>() {
+                for name in &param
+                    .name
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .collect::<Vec<_>>()
+                {
                     if !name.is_empty() {
                         let param_symbol = Symbol {
                             kind: SymbolKind::Variable {
@@ -205,10 +201,8 @@ impl SemanticAnalyzer {
         if let Node::FuncDecl(f) = decl {
             // Check if function already exists
             if self.core.symbol_table.exists_in_current_scope(&f.name) {
-                self.core.add_error(
-                    format!("Function '{}' already declared", f.name),
-                    f.span,
-                );
+                self.core
+                    .add_error(format!("Function '{}' already declared", f.name), f.span);
                 return;
             }
 
@@ -239,7 +233,12 @@ impl SemanticAnalyzer {
             self.core.symbol_table.enter_scope();
             // Add parameters to scope
             for param in &params_clone {
-                for name in &param.name.split(',').map(|s| s.trim().to_string()).collect::<Vec<_>>() {
+                for name in &param
+                    .name
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .collect::<Vec<_>>()
+                {
                     if !name.is_empty() {
                         let param_symbol = Symbol {
                             kind: SymbolKind::Variable {
@@ -269,7 +268,7 @@ impl SemanticAnalyzer {
                     ast::ParamType::Var => ParameterMode::Var,
                     ast::ParamType::Const => ParameterMode::Const,
                     ast::ParamType::ConstRef => ParameterMode::Const, // ConstRef is similar to Const
-                    ast::ParamType::Out => ParameterMode::Var,        // Out is similar to Var (reference)
+                    ast::ParamType::Out => ParameterMode::Var, // Out is similar to Var (reference)
                 };
                 Parameter {
                     name: p.names.join(", "), // Join multiple names

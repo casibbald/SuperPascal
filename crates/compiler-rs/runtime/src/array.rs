@@ -17,7 +17,7 @@ pub struct ArraySlice {
 }
 
 /// Create a slice from an array
-/// 
+///
 /// # Parameters
 /// - `array_ptr`: Pointer to the source array
 /// - `array_length`: Length of the source array
@@ -25,10 +25,10 @@ pub struct ArraySlice {
 /// - `start`: Start index (signed, negative means from end), None means from beginning
 /// - `end`: End index (signed, negative means from end), None means to end
 /// - `step`: Step size (signed, negative means reverse), None means step of 1
-/// 
+///
 /// # Returns
 /// A new ArraySlice containing the sliced data
-/// 
+///
 /// # Safety
 /// This function is unsafe because it performs raw pointer operations.
 /// The caller must ensure:
@@ -58,35 +58,42 @@ pub unsafe fn array_slice(
             idx as usize
         }
     };
-    
+
     let step_size = step.unwrap_or(1);
-    
+
     // Handle default start/end for reverse slicing
     let (start_idx, end_idx) = if step_size < 0 {
         // Reverse slicing: defaults are different
-        let default_start = start.map(normalize_index).unwrap_or(array_length.saturating_sub(1));
+        let default_start = start
+            .map(normalize_index)
+            .unwrap_or(array_length.saturating_sub(1));
         // For reverse, None end means "before index 0", which we represent as 0
         // But we need to allow going past 0, so we use a special value
         // Actually, for reverse slicing, end should be -1 (before first element)
         // But since we normalize -1 to length-1, we need special handling
-        let default_end = end.map(|e| {
-            if e == -1 {
-                // Special case: -1 means "before first element" for reverse slicing
-                0
-            } else {
-                normalize_index(e)
-            }
-        }).unwrap_or(0);
+        let default_end = end
+            .map(|e| {
+                if e == -1 {
+                    // Special case: -1 means "before first element" for reverse slicing
+                    0
+                } else {
+                    normalize_index(e)
+                }
+            })
+            .unwrap_or(0);
         (default_start, default_end)
     } else {
         // Forward slicing: normal defaults
-        (start.map(normalize_index).unwrap_or(0), end.map(normalize_index).unwrap_or(array_length))
+        (
+            start.map(normalize_index).unwrap_or(0),
+            end.map(normalize_index).unwrap_or(array_length),
+        )
     };
-    
+
     // Clamp indices to valid range
     let start_idx = start_idx.min(array_length);
     let end_idx = end_idx.min(array_length);
-    
+
     // Calculate slice length based on step direction
     let slice_length = if step_size > 0 {
         // Forward slicing: start to end
@@ -126,7 +133,7 @@ pub unsafe fn array_slice(
         // Step of 0 is invalid
         0
     };
-    
+
     // Allocate memory for the slice
     let slice_size = slice_length * element_size;
     let slice_data = if slice_size > 0 {
@@ -145,7 +152,7 @@ pub unsafe fn array_slice(
     } else {
         core::ptr::null_mut()
     };
-    
+
     ArraySlice {
         data: slice_data,
         length: slice_length,
@@ -154,7 +161,7 @@ pub unsafe fn array_slice(
 }
 
 /// Copy array slice data to a new array
-/// 
+///
 /// # Safety
 /// This function is unsafe because it performs raw pointer operations.
 pub unsafe fn array_slice_copy(slice: &ArraySlice) -> *mut u8 {
@@ -172,7 +179,7 @@ mod tests {
         // Create a test array: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let array_ptr = array.as_ptr() as *const u8;
-        
+
         unsafe {
             // Slice [1:5] should give [1, 2, 3, 4]
             let slice = array_slice(array_ptr, 10, 4, Some(1), Some(5), None);
@@ -185,7 +192,7 @@ mod tests {
     fn test_array_slice_negative_start() {
         let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let array_ptr = array.as_ptr() as *const u8;
-        
+
         unsafe {
             // Slice [-3:] should give [7, 8, 9] (last 3 elements)
             let slice = array_slice(array_ptr, 10, 4, Some(-3), None, None);
@@ -197,7 +204,7 @@ mod tests {
     fn test_array_slice_negative_end() {
         let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let array_ptr = array.as_ptr() as *const u8;
-        
+
         unsafe {
             // Slice [:-3] should give [0, 1, 2, 3, 4, 5, 6] (all but last 3)
             let slice = array_slice(array_ptr, 10, 4, None, Some(-3), None);
@@ -209,7 +216,7 @@ mod tests {
     fn test_array_slice_negative_both() {
         let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let array_ptr = array.as_ptr() as *const u8;
-        
+
         unsafe {
             // Slice [-5:-2] should give [5, 6, 7] (from -5 to -2)
             let slice = array_slice(array_ptr, 10, 4, Some(-5), Some(-2), None);
@@ -221,7 +228,7 @@ mod tests {
     fn test_array_slice_reverse_step() {
         let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let array_ptr = array.as_ptr() as *const u8;
-        
+
         unsafe {
             // Slice [::-1] should reverse the entire array
             let slice = array_slice(array_ptr, 10, 4, None, None, Some(-1));
@@ -233,7 +240,7 @@ mod tests {
     fn test_array_slice_reverse_with_bounds() {
         let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let array_ptr = array.as_ptr() as *const u8;
-        
+
         unsafe {
             // Slice [8:2:-1] should give [8, 7, 6, 5, 4, 3] (reverse from 8 to 2, exclusive of 2)
             let slice = array_slice(array_ptr, 10, 4, Some(8), Some(2), Some(-1));
@@ -245,7 +252,7 @@ mod tests {
     fn test_array_slice_negative_index_out_of_bounds() {
         let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let array_ptr = array.as_ptr() as *const u8;
-        
+
         unsafe {
             // Slice [-20:] should clamp to start (negative index too large)
             let slice = array_slice(array_ptr, 10, 4, Some(-20), None, None);
@@ -257,7 +264,7 @@ mod tests {
     fn test_array_slice_from_beginning() {
         let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let array_ptr = array.as_ptr() as *const u8;
-        
+
         unsafe {
             // Slice [:5] should give [0, 1, 2, 3, 4]
             let slice = array_slice(array_ptr, 10, 4, None, Some(5), None);
@@ -269,7 +276,7 @@ mod tests {
     fn test_array_slice_to_end() {
         let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let array_ptr = array.as_ptr() as *const u8;
-        
+
         unsafe {
             // Slice [3:] should give [3, 4, 5, 6, 7, 8, 9]
             let slice = array_slice(array_ptr, 10, 4, Some(3), None, None);
@@ -281,7 +288,7 @@ mod tests {
     fn test_array_slice_with_step() {
         let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let array_ptr = array.as_ptr() as *const u8;
-        
+
         unsafe {
             // Slice [0:10:2] should give [0, 2, 4, 6, 8]
             let slice = array_slice(array_ptr, 10, 4, Some(0), Some(10), Some(2));
@@ -293,7 +300,7 @@ mod tests {
     fn test_array_slice_full() {
         let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let array_ptr = array.as_ptr() as *const u8;
-        
+
         unsafe {
             // Slice [:] should give the entire array
             let slice = array_slice(array_ptr, 10, 4, None, None, None);
@@ -305,7 +312,7 @@ mod tests {
     fn test_array_slice_empty() {
         let array: [i32; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let array_ptr = array.as_ptr() as *const u8;
-        
+
         unsafe {
             // Slice [5:5] should give empty array
             let slice = array_slice(array_ptr, 10, 4, Some(5), Some(5), None);
@@ -313,4 +320,3 @@ mod tests {
         }
     }
 }
-

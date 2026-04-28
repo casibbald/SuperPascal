@@ -50,15 +50,15 @@ pub enum Node {
     IdentExpr(IdentExpr),
     CallExpr(CallExpr),
     IndexExpr(IndexExpr),
-    SliceExpr(SliceExpr),  // Array slicing: arr[start:end:step]
-    InterpolatedString(InterpolatedString),  // String interpolation: 'Text {expr} more text'
+    SliceExpr(SliceExpr),                   // Array slicing: arr[start:end:step]
+    InterpolatedString(InterpolatedString), // String interpolation: 'Text {expr} more text'
     FieldExpr(FieldExpr),
     DerefExpr(DerefExpr),
     InheritedExpr(InheritedExpr),
     AddressOfExpr(AddressOfExpr),
-    EnumLiteralExpr(EnumLiteralExpr),  // Enum value reference (e.g., Color.Red)
-    AnonymousFunction(AnonymousFunction),  // Anonymous function: function(params): return_type begin ... end
-    AnonymousProcedure(AnonymousProcedure),  // Anonymous procedure: procedure(params) begin ... end
+    EnumLiteralExpr(EnumLiteralExpr), // Enum value reference (e.g., Color.Red)
+    AnonymousFunction(AnonymousFunction), // Anonymous function: function(params): return_type begin ... end
+    AnonymousProcedure(AnonymousProcedure), // Anonymous procedure: procedure(params) begin ... end
 
     // ===== Types =====
     RecordType(RecordType),
@@ -73,12 +73,12 @@ pub enum Node {
     ProceduralType(ProceduralType),
     InterfaceType(InterfaceType),
     EnumType(EnumType),
-    HelperType(HelperType),  // Class/Record helper: class helper for Type
-    ObjectType(ObjectType),  // Old-style object (Turbo Pascal): object ... end
-    
+    HelperType(HelperType), // Class/Record helper: class helper for Type
+    ObjectType(ObjectType), // Old-style object (Turbo Pascal): object ... end
+
     // ===== Set Literals =====
     SetLiteral(SetLiteral),
-    
+
     // ===== Directives =====
     Directive(Directive),
 }
@@ -87,88 +87,88 @@ pub enum Node {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub name: String,
-    pub directives: Vec<Node>,  // Directive nodes (compiler directives)
-    pub block: Box<Node>, // Block node
+    pub directives: Vec<Node>, // Directive nodes (compiler directives)
+    pub block: Box<Node>,      // Block node
     pub span: Span,
 }
 
 /// Block node - contains declarations and statements
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
-    pub directives: Vec<Node>,  // Directive nodes (compiler directives)
-    pub label_decls: Vec<Node>,  // LabelDecl nodes
-    pub const_decls: Vec<Node>,  // ConstDecl nodes
-    pub type_decls: Vec<Node>,   // TypeDecl nodes
-    pub var_decls: Vec<Node>,    // VarDecl nodes
+    pub directives: Vec<Node>,      // Directive nodes (compiler directives)
+    pub label_decls: Vec<Node>,     // LabelDecl nodes
+    pub const_decls: Vec<Node>,     // ConstDecl nodes
+    pub type_decls: Vec<Node>,      // TypeDecl nodes
+    pub var_decls: Vec<Node>,       // VarDecl nodes
     pub threadvar_decls: Vec<Node>, // ThreadVarDecl nodes (thread-local variables)
-    pub proc_decls: Vec<Node>,   // ProcDecl nodes
-    pub func_decls: Vec<Node>,    // FuncDecl nodes
+    pub proc_decls: Vec<Node>,      // ProcDecl nodes
+    pub func_decls: Vec<Node>,      // FuncDecl nodes
     pub operator_decls: Vec<Node>,  // OperatorDecl nodes
-    pub statements: Vec<Node>,    // Statement nodes
+    pub statements: Vec<Node>,      // Statement nodes
     pub span: Span,
 }
 
 /// Unit node - Pascal unit/module
 #[derive(Debug, Clone, PartialEq)]
 pub struct Unit {
-    pub name: String,                    // Unit name (can be qualified like "a.b.c")
+    pub name: String,                        // Unit name (can be qualified like "a.b.c")
     pub interface: Option<InterfaceSection>, // Interface section
     pub implementation: Option<ImplementationSection>, // Implementation section
-    pub initialization: Option<Box<Node>>,  // Optional initialization block
-    pub finalization: Option<Box<Node>>,    // Optional finalization block
+    pub initialization: Option<Box<Node>>,   // Optional initialization block
+    pub finalization: Option<Box<Node>>,     // Optional finalization block
     pub span: Span,
 }
 
 /// Library node - Pascal library
 #[derive(Debug, Clone, PartialEq)]
 pub struct Library {
-    pub name: String,                    // Library name
-    pub block: Option<Box<Node>>,        // Optional block
+    pub name: String,             // Library name
+    pub block: Option<Box<Node>>, // Optional block
     pub span: Span,
 }
 
 /// Uses clause - imports other units/libraries
 #[derive(Debug, Clone, PartialEq)]
 pub struct UsesClause {
-    pub units: Vec<String>,              // List of unit names (can be qualified)
+    pub units: Vec<String>, // List of unit names (can be qualified)
     pub span: Span,
 }
 
 /// Interface section - public declarations
 #[derive(Debug, Clone, PartialEq)]
 pub struct InterfaceSection {
-    pub uses: Option<UsesClause>,        // Optional uses clause
-    pub const_decls: Vec<Node>,          // ConstDecl nodes
-    pub type_decls: Vec<Node>,           // TypeDecl nodes
-    pub var_decls: Vec<Node>,            // VarDecl nodes
-    pub proc_decls: Vec<Node>,           // ProcDecl nodes (forward declarations)
-    pub func_decls: Vec<Node>,           // FuncDecl nodes (forward declarations)
-    pub operator_decls: Vec<Node>,       // OperatorDecl nodes (forward declarations)
-    pub property_decls: Vec<Node>,       // PropertyDecl nodes
+    pub uses: Option<UsesClause>,  // Optional uses clause
+    pub const_decls: Vec<Node>,    // ConstDecl nodes
+    pub type_decls: Vec<Node>,     // TypeDecl nodes
+    pub var_decls: Vec<Node>,      // VarDecl nodes
+    pub proc_decls: Vec<Node>,     // ProcDecl nodes (forward declarations)
+    pub func_decls: Vec<Node>,     // FuncDecl nodes (forward declarations)
+    pub operator_decls: Vec<Node>, // OperatorDecl nodes (forward declarations)
+    pub property_decls: Vec<Node>, // PropertyDecl nodes
     pub span: Span,
 }
 
 /// Implementation section - private implementations
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImplementationSection {
-    pub uses: Option<UsesClause>,        // Optional uses clause
-    pub const_decls: Vec<Node>,          // ConstDecl nodes
-    pub type_decls: Vec<Node>,           // TypeDecl nodes
-    pub var_decls: Vec<Node>,            // VarDecl nodes
-    pub proc_decls: Vec<Node>,           // ProcDecl nodes
-    pub func_decls: Vec<Node>,           // FuncDecl nodes
-    pub operator_decls: Vec<Node>,        // OperatorDecl nodes
-    pub property_decls: Vec<Node>,       // PropertyDecl nodes
+    pub uses: Option<UsesClause>,  // Optional uses clause
+    pub const_decls: Vec<Node>,    // ConstDecl nodes
+    pub type_decls: Vec<Node>,     // TypeDecl nodes
+    pub var_decls: Vec<Node>,      // VarDecl nodes
+    pub proc_decls: Vec<Node>,     // ProcDecl nodes
+    pub func_decls: Vec<Node>,     // FuncDecl nodes
+    pub operator_decls: Vec<Node>, // OperatorDecl nodes
+    pub property_decls: Vec<Node>, // PropertyDecl nodes
     pub span: Span,
 }
 
 /// Variable declaration
 #[derive(Debug, Clone, PartialEq)]
 pub struct VarDecl {
-    pub names: Vec<String>,      // Variable names
-    pub type_expr: Box<Node>,     // Type node
+    pub names: Vec<String>,                  // Variable names
+    pub type_expr: Box<Node>,                // Type node
     pub absolute_address: Option<Box<Node>>, // Optional absolute address (ABSOLUTE expression)
-    pub is_class_var: bool,      // true if declared with CLASS VAR
+    pub is_class_var: bool,                  // true if declared with CLASS VAR
     pub span: Span,
 }
 
@@ -176,15 +176,15 @@ pub struct VarDecl {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ConstDecl {
     pub name: String,
-    pub value: Box<Node>,         // Expression node
-    pub is_resourcestring: bool,  // true if declared with RESOURCESTRING
+    pub value: Box<Node>,        // Expression node
+    pub is_resourcestring: bool, // true if declared with RESOURCESTRING
     pub span: Span,
 }
 
 /// Generic type parameter (e.g., `T` or `T: constraint`)
 #[derive(Debug, Clone, PartialEq)]
 pub struct GenericParam {
-    pub name: String,              // Parameter name (e.g., "T")
+    pub name: String,                  // Parameter name (e.g., "T")
     pub constraint: Option<Box<Node>>, // Optional constraint type (e.g., `T: class`)
     pub span: Span,
 }
@@ -194,7 +194,7 @@ pub struct GenericParam {
 pub struct TypeDecl {
     pub name: String,
     pub generic_params: Vec<GenericParam>, // Generic type parameters (e.g., `<T, U>`)
-    pub type_expr: Box<Node>,     // Type node
+    pub type_expr: Box<Node>,              // Type node
     pub span: Span,
 }
 
@@ -204,12 +204,12 @@ pub struct ProcDecl {
     pub name: String,
     pub class_name: Option<String>, // Optional class name for methods (ClassName.MethodName)
     pub generic_params: Vec<GenericParam>, // Generic type parameters (e.g., `<T>`)
-    pub params: Vec<Param>,        // Parameters
-    pub block: Box<Node>,          // Block node
-    pub is_forward: bool,          // true if FORWARD keyword is present
-    pub is_external: bool,         // true if EXTERNAL keyword is present
+    pub params: Vec<Param>,         // Parameters
+    pub block: Box<Node>,           // Block node
+    pub is_forward: bool,           // true if FORWARD keyword is present
+    pub is_external: bool,          // true if EXTERNAL keyword is present
     pub external_name: Option<String>, // Optional external name for EXTERNAL declarations
-    pub is_class_method: bool,     // true if CLASS keyword is present (class procedure)
+    pub is_class_method: bool,      // true if CLASS keyword is present (class procedure)
     pub span: Span,
 }
 
@@ -219,13 +219,13 @@ pub struct FuncDecl {
     pub name: String,
     pub class_name: Option<String>, // Optional class name for methods (ClassName.MethodName)
     pub generic_params: Vec<GenericParam>, // Generic type parameters (e.g., `<T>`)
-    pub params: Vec<Param>,        // Parameters
-    pub return_type: Box<Node>,    // Type node
+    pub params: Vec<Param>,         // Parameters
+    pub return_type: Box<Node>,     // Type node
     pub block: Box<Node>,           // Block node
-    pub is_forward: bool,          // true if FORWARD keyword is present
-    pub is_external: bool,         // true if EXTERNAL keyword is present
+    pub is_forward: bool,           // true if FORWARD keyword is present
+    pub is_external: bool,          // true if EXTERNAL keyword is present
     pub external_name: Option<String>, // Optional external name for EXTERNAL declarations
-    pub is_class_method: bool,     // true if CLASS keyword is present (class function)
+    pub is_class_method: bool,      // true if CLASS keyword is present (class function)
     pub span: Span,
 }
 
@@ -233,15 +233,15 @@ pub struct FuncDecl {
 #[derive(Debug, Clone, PartialEq)]
 pub struct PropertyDecl {
     pub name: String,
-    pub index_params: Vec<Param>,   // Optional index parameters (for indexed properties)
-    pub property_type: Box<Node>,   // Type node
+    pub index_params: Vec<Param>, // Optional index parameters (for indexed properties)
+    pub property_type: Box<Node>, // Type node
     pub read_accessor: Option<String>, // Optional READ accessor
     pub write_accessor: Option<String>, // Optional WRITE accessor
-    pub index_expr: Option<Box<Node>>,  // Optional INDEX expression
+    pub index_expr: Option<Box<Node>>, // Optional INDEX expression
     pub default_expr: Option<Box<Node>>, // Optional DEFAULT expression
-    pub stored_expr: Option<Box<Node>>,  // Optional STORED expression
-    pub is_default: bool,           // Whether this is a default property
-    pub is_class_property: bool,   // true if declared with CLASS PROPERTY
+    pub stored_expr: Option<Box<Node>>, // Optional STORED expression
+    pub is_default: bool,         // Whether this is a default property
+    pub is_class_property: bool,  // true if declared with CLASS PROPERTY
     pub span: Span,
 }
 
@@ -250,13 +250,13 @@ pub struct PropertyDecl {
 /// The operator_name can be a symbol (+, -, *, etc.) or an identifier (sub, add, etc.)
 #[derive(Debug, Clone, PartialEq)]
 pub struct OperatorDecl {
-    pub operator_name: String,      // Operator name (e.g., "+", "sub", "-")
-    pub class_name: Option<String>, // Optional class name for class operators (ClassName.+)
-    pub params: Vec<Param>,        // Parameters
-    pub return_type: Box<Node>,    // Return type (operators always return a type)
-    pub block: Box<Node>,           // Block node
-    pub is_forward: bool,          // true if FORWARD keyword is present
-    pub is_external: bool,         // true if EXTERNAL keyword is present
+    pub operator_name: String,         // Operator name (e.g., "+", "sub", "-")
+    pub class_name: Option<String>,    // Optional class name for class operators (ClassName.+)
+    pub params: Vec<Param>,            // Parameters
+    pub return_type: Box<Node>,        // Return type (operators always return a type)
+    pub block: Box<Node>,              // Block node
+    pub is_forward: bool,              // true if FORWARD keyword is present
+    pub is_external: bool,             // true if EXTERNAL keyword is present
     pub external_name: Option<String>, // Optional external name for EXTERNAL declarations
     pub span: Span,
 }
@@ -264,9 +264,9 @@ pub struct OperatorDecl {
 /// Function/procedure parameter
 #[derive(Debug, Clone, PartialEq)]
 pub struct Param {
-    pub names: Vec<String>,        // Parameter names
-    pub param_type: ParamType,     // Parameter passing mode
-    pub type_expr: Box<Node>,      // Type node
+    pub names: Vec<String>,               // Parameter names
+    pub param_type: ParamType,            // Parameter passing mode
+    pub type_expr: Box<Node>,             // Type node
     pub default_value: Option<Box<Node>>, // Optional default value
     pub span: Span,
 }
@@ -274,18 +274,18 @@ pub struct Param {
 /// Parameter passing mode
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ParamType {
-    Value,     // Pass by value (default)
-    Var,       // Pass by reference (var)
-    Const,     // Pass by constant reference (const)
-    ConstRef,  // Pass by constant reference (constref) - FPC extension
-    Out,       // Pass by reference, output only (out) - FPC/Delphi extension
+    Value,    // Pass by value (default)
+    Var,      // Pass by reference (var)
+    Const,    // Pass by constant reference (const)
+    ConstRef, // Pass by constant reference (constref) - FPC extension
+    Out,      // Pass by reference, output only (out) - FPC/Delphi extension
 }
 
 /// If statement
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfStmt {
-    pub condition: Box<Node>,      // Expression node
-    pub then_block: Box<Node>,     // Statement or Block node
+    pub condition: Box<Node>,          // Expression node
+    pub then_block: Box<Node>,         // Statement or Block node
     pub else_block: Option<Box<Node>>, // Optional else block
     pub span: Span,
 }
@@ -293,51 +293,51 @@ pub struct IfStmt {
 /// While statement
 #[derive(Debug, Clone, PartialEq)]
 pub struct WhileStmt {
-    pub condition: Box<Node>,      // Expression node
-    pub body: Box<Node>,            // Statement or Block node
+    pub condition: Box<Node>, // Expression node
+    pub body: Box<Node>,      // Statement or Block node
     pub span: Span,
 }
 
 /// For statement
 #[derive(Debug, Clone, PartialEq)]
 pub struct ForStmt {
-    pub var_name: String,           // Loop variable
-    pub start_expr: Box<Node>,      // Expression node (initial value)
-    pub direction: ForDirection,    // To or Downto
-    pub end_expr: Box<Node>,         // Expression node (final value)
-    pub body: Box<Node>,             // Statement or Block node
+    pub var_name: String,        // Loop variable
+    pub start_expr: Box<Node>,   // Expression node (initial value)
+    pub direction: ForDirection, // To or Downto
+    pub end_expr: Box<Node>,     // Expression node (final value)
+    pub body: Box<Node>,         // Statement or Block node
     pub span: Span,
 }
 
 /// For..in statement: FOR identifier IN expression DO statement
 #[derive(Debug, Clone, PartialEq)]
 pub struct ForInStmt {
-    pub var_name: String,            // Loop variable name
-    pub collection_expr: Box<Node>,   // Collection expression (array, set, etc.)
-    pub body: Box<Node>,             // Loop body (statement)
+    pub var_name: String,           // Loop variable name
+    pub collection_expr: Box<Node>, // Collection expression (array, set, etc.)
+    pub body: Box<Node>,            // Loop body (statement)
     pub span: Span,
 }
 
 /// For loop direction
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ForDirection {
-    To,      // for i := 1 to 10
-    Downto,  // for i := 10 downto 1
+    To,     // for i := 1 to 10
+    Downto, // for i := 10 downto 1
 }
 
 /// Repeat statement
 #[derive(Debug, Clone, PartialEq)]
 pub struct RepeatStmt {
-    pub statements: Vec<Node>,     // Statement nodes
-    pub condition: Box<Node>,       // Expression node
+    pub statements: Vec<Node>, // Statement nodes
+    pub condition: Box<Node>,  // Expression node
     pub span: Span,
 }
 
 /// Case statement
 #[derive(Debug, Clone, PartialEq)]
 pub struct CaseStmt {
-    pub expr: Box<Node>,            // Expression node
-    pub cases: Vec<CaseBranch>,     // Case branches
+    pub expr: Box<Node>,                // Expression node
+    pub cases: Vec<CaseBranch>,         // Case branches
     pub else_branch: Option<Box<Node>>, // Optional else branch
     pub span: Span,
 }
@@ -345,16 +345,16 @@ pub struct CaseStmt {
 /// Case branch
 #[derive(Debug, Clone, PartialEq)]
 pub struct CaseBranch {
-    pub values: Vec<Node>,           // Expression nodes (case values)
-    pub statement: Box<Node>,       // Statement or Block node
+    pub values: Vec<Node>,    // Expression nodes (case values)
+    pub statement: Box<Node>, // Statement or Block node
     pub span: Span,
 }
 
 /// Assignment statement
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssignStmt {
-    pub target: Box<Node>,          // LValue node (IdentExpr, IndexExpr, FieldExpr)
-    pub value: Box<Node>,           // Expression node
+    pub target: Box<Node>, // LValue node (IdentExpr, IndexExpr, FieldExpr)
+    pub value: Box<Node>,  // Expression node
     pub span: Span,
 }
 
@@ -362,27 +362,27 @@ pub struct AssignStmt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallStmt {
     pub name: String,
-    pub args: Vec<Node>,            // Expression nodes
+    pub args: Vec<Node>, // Expression nodes
     pub span: Span,
 }
 
 /// Try statement: TRY ... EXCEPT/FINALLY ... END
 #[derive(Debug, Clone, PartialEq)]
 pub struct TryStmt {
-    pub try_block: Vec<Node>,        // Statements in try block
-    pub except_block: Option<Vec<Node>>, // Statements in except block (if EXCEPT)
-    pub finally_block: Option<Vec<Node>>, // Statements in finally block (if FINALLY)
+    pub try_block: Vec<Node>,                      // Statements in try block
+    pub except_block: Option<Vec<Node>>,           // Statements in except block (if EXCEPT)
+    pub finally_block: Option<Vec<Node>>,          // Statements in finally block (if FINALLY)
     pub exception_handlers: Vec<ExceptionHandler>, // Exception handlers (ON ... DO)
-    pub exception_else: Option<Box<Node>>, // Else clause in exception handlers
+    pub exception_else: Option<Box<Node>>,         // Else clause in exception handlers
     pub span: Span,
 }
 
 /// Exception handler: ON exception_type DO statement
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExceptionHandler {
-    pub variable: Option<String>,    // Optional variable name
-    pub exception_type: Box<Node>,    // Exception type (type reference)
-    pub handler: Box<Node>,           // Handler statement
+    pub variable: Option<String>,  // Optional variable name
+    pub exception_type: Box<Node>, // Exception type (type reference)
+    pub handler: Box<Node>,        // Handler statement
     pub span: Span,
 }
 
@@ -396,7 +396,7 @@ pub struct RaiseStmt {
 /// With statement: WITH record_expr { , record_expr } DO statement
 #[derive(Debug, Clone, PartialEq)]
 pub struct WithStmt {
-    pub records: Vec<Node>,  // Record expressions (can be multiple)
+    pub records: Vec<Node>,   // Record expressions (can be multiple)
     pub statement: Box<Node>, // Statement to execute
     pub span: Span,
 }
@@ -404,28 +404,28 @@ pub struct WithStmt {
 /// Label declaration: LABEL label1, label2, ...;
 #[derive(Debug, Clone, PartialEq)]
 pub struct LabelDecl {
-    pub labels: Vec<String>,  // Label names (can be identifiers or integer literals as strings)
+    pub labels: Vec<String>, // Label names (can be identifiers or integer literals as strings)
     pub span: Span,
 }
 
 /// Goto statement: GOTO label
 #[derive(Debug, Clone, PartialEq)]
 pub struct GotoStmt {
-    pub label: String,  // Label name to jump to
+    pub label: String, // Label name to jump to
     pub span: Span,
 }
 
 /// Inline assembly statement: ASM [body] END
 #[derive(Debug, Clone, PartialEq)]
 pub struct AsmStmt {
-    pub body: String,  // Assembly code body (raw text between ASM and END)
+    pub body: String, // Assembly code body (raw text between ASM and END)
     pub span: Span,
 }
 
 /// Labeled statement: label: statement
 #[derive(Debug, Clone, PartialEq)]
 pub struct LabeledStmt {
-    pub label: String,  // Label name
+    pub label: String,        // Label name
     pub statement: Box<Node>, // Statement following the label
     pub span: Span,
 }
@@ -434,8 +434,8 @@ pub struct LabeledStmt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct BinaryExpr {
     pub op: BinaryOp,
-    pub left: Box<Node>,            // Expression node
-    pub right: Box<Node>,           // Expression node
+    pub left: Box<Node>,  // Expression node
+    pub right: Box<Node>, // Expression node
     pub span: Span,
 }
 
@@ -451,39 +451,39 @@ pub enum BinaryOp {
     Mod,      // mod
 
     // Comparison
-    Equal,    // =
-    NotEqual, // <>
-    Less,     // <
-    LessEqual, // <=
-    Greater,  // >
+    Equal,        // =
+    NotEqual,     // <>
+    Less,         // <
+    LessEqual,    // <=
+    Greater,      // >
     GreaterEqual, // >=
 
     // Logical
-    And,      // and
-    Or,       // or
-    
+    And, // and
+    Or,  // or
+
     // Set membership
-    In,       // in (set membership)
-    
+    In, // in (set membership)
+
     // Type operations
-    Is,       // is (type checking)
-    As,       // as (type casting)
+    Is, // is (type checking)
+    As, // as (type casting)
 }
 
 /// Unary expression
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
-    pub expr: Box<Node>,            // Expression node
+    pub expr: Box<Node>, // Expression node
     pub span: Span,
 }
 
 /// Unary operator
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
-    Plus,     // + (unary plus)
-    Minus,    // - (unary minus)
-    Not,      // not
+    Plus,      // + (unary plus)
+    Minus,     // - (unary minus)
+    Not,       // not
     AddressOf, // @ (address-of operator)
 }
 
@@ -514,25 +514,25 @@ pub struct IdentExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpr {
     pub name: String,
-    pub args: Vec<Node>,            // Expression nodes
+    pub args: Vec<Node>, // Expression nodes
     pub span: Span,
 }
 
 /// Index expression (array access)
 #[derive(Debug, Clone, PartialEq)]
 pub struct IndexExpr {
-    pub array: Box<Node>,           // Expression node (array)
-    pub index: Box<Node>,           // Expression node (index)
+    pub array: Box<Node>, // Expression node (array)
+    pub index: Box<Node>, // Expression node (index)
     pub span: Span,
 }
 
 /// Slice expression (array slicing: arr[start:end:step])
 #[derive(Debug, Clone, PartialEq)]
 pub struct SliceExpr {
-    pub array: Box<Node>,           // Expression node (array)
-    pub start: Option<Box<Node>>,  // Start index (None = from beginning)
-    pub end: Option<Box<Node>>,    // End index (None = to end)
-    pub step: Option<Box<Node>>,   // Step size (None = step 1)
+    pub array: Box<Node>,         // Expression node (array)
+    pub start: Option<Box<Node>>, // Start index (None = from beginning)
+    pub end: Option<Box<Node>>,   // End index (None = to end)
+    pub step: Option<Box<Node>>,  // Step size (None = step 1)
     pub span: Span,
 }
 
@@ -540,29 +540,29 @@ pub struct SliceExpr {
 /// Parts alternate between string literals and expressions
 #[derive(Debug, Clone, PartialEq)]
 pub struct InterpolatedString {
-    pub parts: Vec<InterpolatedPart>,  // Alternating string literals and expressions
+    pub parts: Vec<InterpolatedPart>, // Alternating string literals and expressions
     pub span: Span,
 }
 
 /// Part of an interpolated string (either a string literal or an expression)
 #[derive(Debug, Clone, PartialEq)]
 pub enum InterpolatedPart {
-    String(String),      // String literal part
+    String(String),        // String literal part
     Expression(Box<Node>), // Expression to interpolate
 }
 
 /// Field expression (record field access)
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldExpr {
-    pub record: Box<Node>,          // Expression node (record)
-    pub field: String,               // Field name
+    pub record: Box<Node>, // Expression node (record)
+    pub field: String,     // Field name
     pub span: Span,
 }
 
 /// Pointer dereference expression (^pointer)
 #[derive(Debug, Clone, PartialEq)]
 pub struct DerefExpr {
-    pub pointer: Box<Node>,         // Expression node (pointer)
+    pub pointer: Box<Node>, // Expression node (pointer)
     pub span: Span,
 }
 
@@ -570,39 +570,39 @@ pub struct DerefExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct InheritedExpr {
     pub method_name: Option<String>, // Optional method name (if not present, calls same method)
-    pub args: Vec<Node>,            // Optional arguments
+    pub args: Vec<Node>,             // Optional arguments
     pub span: Span,
 }
 
 /// Address-of expression (@variable)
 #[derive(Debug, Clone, PartialEq)]
 pub struct AddressOfExpr {
-    pub target: Box<Node>,          // Expression node (variable or field)
+    pub target: Box<Node>, // Expression node (variable or field)
     pub span: Span,
 }
 
 /// Anonymous function: function(params): return_type begin ... end
 #[derive(Debug, Clone, PartialEq)]
 pub struct AnonymousFunction {
-    pub params: Vec<Param>,        // Parameters
-    pub return_type: Box<Node>,    // Return type
-    pub block: Box<Node>,           // Block node (body)
+    pub params: Vec<Param>,     // Parameters
+    pub return_type: Box<Node>, // Return type
+    pub block: Box<Node>,       // Block node (body)
     pub span: Span,
 }
 
 /// Anonymous procedure: procedure(params) begin ... end
 #[derive(Debug, Clone, PartialEq)]
 pub struct AnonymousProcedure {
-    pub params: Vec<Param>,        // Parameters
-    pub block: Box<Node>,           // Block node (body)
+    pub params: Vec<Param>, // Parameters
+    pub block: Box<Node>,   // Block node (body)
     pub span: Span,
 }
 
 /// Record type
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordType {
-    pub is_packed: bool,            // true if PACKED keyword is present
-    pub fields: Vec<FieldDecl>,     // Field declarations
+    pub is_packed: bool,              // true if PACKED keyword is present
+    pub fields: Vec<FieldDecl>,       // Field declarations
     pub variant: Option<VariantPart>, // Optional variant part (CASE)
     pub span: Span,
 }
@@ -610,17 +610,17 @@ pub struct RecordType {
 /// Field declaration (in record type)
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldDecl {
-    pub names: Vec<String>,         // Field names
-    pub type_expr: Box<Node>,        // Type node
+    pub names: Vec<String>,   // Field names
+    pub type_expr: Box<Node>, // Type node
     pub span: Span,
 }
 
 /// Variant part (CASE section) in record
 #[derive(Debug, Clone, PartialEq)]
 pub struct VariantPart {
-    pub tag_field: Option<String>,   // Optional tag field name (e.g., "tag" in "case tag: TagType")
-    pub tag_type: Box<Node>,         // Tag type (discriminator type)
-    pub variants: Vec<Variant>,      // Variant cases
+    pub tag_field: Option<String>, // Optional tag field name (e.g., "tag" in "case tag: TagType")
+    pub tag_type: Box<Node>,       // Tag type (discriminator type)
+    pub variants: Vec<Variant>,    // Variant cases
     pub else_variant: Option<Vec<FieldDecl>>, // Optional ELSE variant fields
     pub span: Span,
 }
@@ -628,24 +628,24 @@ pub struct VariantPart {
 /// Variant case (one branch in CASE)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Variant {
-    pub values: Vec<Node>,           // Case values (expressions or ranges)
-    pub fields: Vec<FieldDecl>,      // Fields for this variant
+    pub values: Vec<Node>,      // Case values (expressions or ranges)
+    pub fields: Vec<FieldDecl>, // Fields for this variant
     pub span: Span,
 }
 
 /// Array type (static array: ARRAY [ index_type ] OF element_type)
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArrayType {
-    pub is_packed: bool,            // true if PACKED keyword is present
-    pub index_type: Box<Node>,      // Type node (index type)
-    pub element_type: Box<Node>,    // Type node (element type)
+    pub is_packed: bool,         // true if PACKED keyword is present
+    pub index_type: Box<Node>,   // Type node (index type)
+    pub element_type: Box<Node>, // Type node (element type)
     pub span: Span,
 }
 
 /// Dynamic array type (ARRAY OF element_type - no index type)
 #[derive(Debug, Clone, PartialEq)]
 pub struct DynamicArrayType {
-    pub element_type: Box<Node>,    // Type node (element type)
+    pub element_type: Box<Node>, // Type node (element type)
     pub span: Span,
 }
 
@@ -660,86 +660,87 @@ pub struct NamedType {
 /// Pointer type (^type)
 #[derive(Debug, Clone, PartialEq)]
 pub struct PointerType {
-    pub base_type: Box<Node>,  // The type being pointed to
+    pub base_type: Box<Node>, // The type being pointed to
     pub span: Span,
 }
 
 /// Set type (SET OF type)
 #[derive(Debug, Clone, PartialEq)]
 pub struct SetType {
-    pub element_type: Box<Node>,  // The element type (e.g., integer, char, enum)
+    pub element_type: Box<Node>, // The element type (e.g., integer, char, enum)
     pub span: Span,
 }
 
 /// String type (STRING or STRING[n])
 #[derive(Debug, Clone, PartialEq)]
 pub struct StringType {
-    pub length: Option<Box<Node>>,  // Optional length expression (for STRING[n])
+    pub length: Option<Box<Node>>, // Optional length expression (for STRING[n])
     pub span: Span,
 }
 
 /// File type (FILE or FILE OF type)
 #[derive(Debug, Clone, PartialEq)]
 pub struct FileType {
-    pub element_type: Option<Box<Node>>,  // Optional element type (for FILE OF type)
+    pub element_type: Option<Box<Node>>, // Optional element type (for FILE OF type)
     pub span: Span,
 }
 
 /// Procedural type (procedure or function type)
 #[derive(Debug, Clone, PartialEq)]
 pub struct ProceduralType {
-    pub is_function: bool,          // true for FUNCTION, false for PROCEDURE
-    pub params: Vec<Param>,         // Parameter list (can be empty)
+    pub is_function: bool,              // true for FUNCTION, false for PROCEDURE
+    pub params: Vec<Param>,             // Parameter list (can be empty)
     pub return_type: Option<Box<Node>>, // Return type (only for functions)
-    pub is_method_pointer: bool,    // true if "OF OBJECT" is present
+    pub is_method_pointer: bool,        // true if "OF OBJECT" is present
     pub span: Span,
 }
 
 /// Interface type (Object Pascal interface)
 #[derive(Debug, Clone, PartialEq)]
 pub struct InterfaceType {
-    pub name: Option<String>,       // Optional interface name
-    pub guid: Option<String>,       // Optional GUID
+    pub name: Option<String>,         // Optional interface name
+    pub guid: Option<String>,         // Optional GUID
     pub base_interfaces: Vec<String>, // List of base interfaces
-    pub methods: Vec<Node>,         // Method declarations (ProcDecl, FuncDecl)
-    pub properties: Vec<Node>,       // Property declarations
+    pub methods: Vec<Node>,           // Method declarations (ProcDecl, FuncDecl)
+    pub properties: Vec<Node>,        // Property declarations
     pub span: Span,
 }
 
 /// Enum type (enumerated type: (Red, Green, Blue))
 #[derive(Debug, Clone, PartialEq)]
 pub struct EnumType {
-    pub values: Vec<String>,        // Enum value names (e.g., ["Red", "Green", "Blue"])
+    pub values: Vec<String>, // Enum value names (e.g., ["Red", "Green", "Blue"])
     pub span: Span,
 }
 
 /// Enum literal expression (enum value reference: Color.Red or just Red)
 #[derive(Debug, Clone, PartialEq)]
 pub struct EnumLiteralExpr {
-    pub enum_type: Option<String>,   // Optional enum type name (for qualified: Color.Red)
-    pub value: String,               // Enum value name (e.g., "Red")
+    pub enum_type: Option<String>, // Optional enum type name (for qualified: Color.Red)
+    pub value: String,             // Enum value name (e.g., "Red")
     pub span: Span,
 }
 
 /// Set literal ([element1, element2, ...] or [element1..element2])
 #[derive(Debug, Clone, PartialEq)]
 pub struct SetLiteral {
-    pub elements: Vec<SetElement>,  // Set elements (can be single values or ranges)
+    pub elements: Vec<SetElement>, // Set elements (can be single values or ranges)
     pub span: Span,
 }
 
 /// Compiler directive: {$...} or (*$...*)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Directive {
-    pub content: String,  // Directive content (e.g., "IFDEF DEBUG", "DEFINE FOO")
+    pub content: String, // Directive content (e.g., "IFDEF DEBUG", "DEFINE FOO")
     pub span: Span,
 }
 
 /// Set element (single value or range)
 #[derive(Debug, Clone, PartialEq)]
 pub enum SetElement {
-    Value(Box<Node>),           // Single value expression
-    Range {                      // Range: value1..value2
+    Value(Box<Node>), // Single value expression
+    Range {
+        // Range: value1..value2
         start: Box<Node>,
         end: Box<Node>,
     },
@@ -748,7 +749,7 @@ pub enum SetElement {
 /// Visibility modifier for class members
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Visibility {
-    Default,    // Default visibility (usually public in interface, private in implementation)
+    Default, // Default visibility (usually public in interface, private in implementation)
     Private,
     StrictPrivate,
     Protected,
@@ -760,21 +761,21 @@ pub enum Visibility {
 /// Class member (field, method, property, etc.)
 #[derive(Debug, Clone, PartialEq)]
 pub enum ClassMember {
-    Field(Node),           // VarDecl node
-    Method(Node),         // ProcDecl or FuncDecl node
-    Property(Node),       // PropertyDecl node
-    Constructor(Node),    // ProcDecl node (constructor)
-    Destructor(Node),     // ProcDecl node (destructor)
-    Type(Node),           // TypeDecl node (nested type)
-    Const(Node),          // ConstDecl node (nested constant)
+    Field(Node),       // VarDecl node
+    Method(Node),      // ProcDecl or FuncDecl node
+    Property(Node),    // PropertyDecl node
+    Constructor(Node), // ProcDecl node (constructor)
+    Destructor(Node),  // ProcDecl node (destructor)
+    Type(Node),        // TypeDecl node (nested type)
+    Const(Node),       // ConstDecl node (nested constant)
 }
 
 /// Class type declaration
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClassType {
-    pub base_classes: Vec<String>,  // Parent classes/interfaces (inheritance)
-    pub is_forward_decl: bool,      // Forward declaration (class;)
-    pub is_meta_class: bool,        // Meta-class (class of Type)
+    pub base_classes: Vec<String>, // Parent classes/interfaces (inheritance)
+    pub is_forward_decl: bool,     // Forward declaration (class;)
+    pub is_meta_class: bool,       // Meta-class (class of Type)
     pub meta_class_type: Option<Box<Node>>, // Type for meta-class
     pub members: Vec<(Visibility, ClassMember)>, // Class members with visibility
     pub span: Span,
@@ -783,9 +784,9 @@ pub struct ClassType {
 /// Helper type declaration (class/record helper for type)
 #[derive(Debug, Clone, PartialEq)]
 pub struct HelperType {
-    pub helper_kind: HelperKind,  // Class, Record, or Type helper
+    pub helper_kind: HelperKind,   // Class, Record, or Type helper
     pub base_helpers: Vec<String>, // Optional parent helpers (inheritance)
-    pub target_type: Box<Node>,   // The type being extended (after FOR)
+    pub target_type: Box<Node>,    // The type being extended (after FOR)
     pub members: Vec<(Visibility, ClassMember)>, // Helper members (methods, properties)
     pub span: Span,
 }
@@ -793,16 +794,16 @@ pub struct HelperType {
 /// Kind of helper (class, record, or type)
 #[derive(Debug, Clone, PartialEq)]
 pub enum HelperKind {
-    Class,   // class helper
-    Record,  // record helper
-    Type,    // type helper
+    Class,  // class helper
+    Record, // record helper
+    Type,   // type helper
 }
 
 /// Old-style object type (Turbo Pascal-style: value type with methods)
 #[derive(Debug, Clone, PartialEq)]
 pub struct ObjectType {
-    pub base_objects: Vec<String>,  // Parent objects (inheritance)
-    pub is_forward_decl: bool,      // Forward declaration (object;)
+    pub base_objects: Vec<String>, // Parent objects (inheritance)
+    pub is_forward_decl: bool,     // Forward declaration (object;)
     pub members: Vec<(Visibility, ClassMember)>, // Object members with visibility
     pub span: Span,
 }
@@ -1297,27 +1298,25 @@ mod tests {
     #[test]
     fn test_repeat_stmt() {
         let span = Span::new(0, 35, 1, 1);
-        let statements = vec![
-            Node::AssignStmt(AssignStmt {
-                target: Box::new(Node::IdentExpr(IdentExpr {
+        let statements = vec![Node::AssignStmt(AssignStmt {
+            target: Box::new(Node::IdentExpr(IdentExpr {
+                name: "i".to_string(),
+                span,
+            })),
+            value: Box::new(Node::BinaryExpr(BinaryExpr {
+                op: BinaryOp::Add,
+                left: Box::new(Node::IdentExpr(IdentExpr {
                     name: "i".to_string(),
                     span,
                 })),
-                value: Box::new(Node::BinaryExpr(BinaryExpr {
-                    op: BinaryOp::Add,
-                    left: Box::new(Node::IdentExpr(IdentExpr {
-                        name: "i".to_string(),
-                        span,
-                    })),
-                    right: Box::new(Node::LiteralExpr(LiteralExpr {
-                        value: LiteralValue::Integer(1),
-                        span,
-                    })),
+                right: Box::new(Node::LiteralExpr(LiteralExpr {
+                    value: LiteralValue::Integer(1),
                     span,
                 })),
                 span,
-            }),
-        ];
+            })),
+            span,
+        })];
         let condition = Node::BinaryExpr(BinaryExpr {
             op: BinaryOp::GreaterEqual,
             left: Box::new(Node::IdentExpr(IdentExpr {
@@ -1740,7 +1739,7 @@ mod tests {
     #[test]
     fn test_complex_program_structure() {
         let span = Span::new(0, 100, 1, 1);
-        
+
         // var x: integer;
         let var_decl = Node::VarDecl(VarDecl {
             names: vec!["x".to_string()],
@@ -1820,7 +1819,7 @@ mod tests {
     #[test]
     fn test_function_with_return() {
         let span = Span::new(0, 50, 1, 1);
-        
+
         // function Add(a, b: integer): integer;
         let param = Param {
             names: vec!["a".to_string(), "b".to_string()],

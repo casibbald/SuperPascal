@@ -97,10 +97,12 @@ impl super::Parser {
         let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
         let name = match &name_token.kind {
             TokenKind::Identifier(name) => name.clone(),
-            _ => return Err(ParserError::InvalidSyntax {
-                message: "Expected identifier after LIBRARY".to_string(),
-                span: name_token.span,
-            }),
+            _ => {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected identifier after LIBRARY".to_string(),
+                    span: name_token.span,
+                });
+            }
         };
 
         self.consume(TokenKind::Semicolon, ";")?;
@@ -129,25 +131,23 @@ impl super::Parser {
             .unwrap_or_else(|| Span::at(0, 1, 1));
         let span = start_span.merge(end_span);
 
-        Ok(Node::Library(ast::Library {
-            name,
-            block,
-            span,
-        }))
+        Ok(Node::Library(ast::Library { name, block, span }))
     }
 
     /// Parse qualified unit name: identifier { . identifier }
     fn parse_qualified_unit_name(&mut self) -> ParserResult<String> {
         let mut parts = vec![];
-        
+
         loop {
             let token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
             let part = match &token.kind {
                 TokenKind::Identifier(name) => name.clone(),
-                _ => return Err(ParserError::InvalidSyntax {
-                    message: "Expected identifier".to_string(),
-                    span: token.span,
-                }),
+                _ => {
+                    return Err(ParserError::InvalidSyntax {
+                        message: "Expected identifier".to_string(),
+                        span: token.span,
+                    });
+                }
             };
             parts.push(part);
 
@@ -256,7 +256,9 @@ impl super::Parser {
     }
 
     /// Parse implementation section: IMPLEMENTATION [uses] [declarations]
-    pub(crate) fn parse_implementation_section(&mut self) -> ParserResult<ast::ImplementationSection> {
+    pub(crate) fn parse_implementation_section(
+        &mut self,
+    ) -> ParserResult<ast::ImplementationSection> {
         let start_span = self
             .current()
             .map(|t| t.span)
@@ -338,7 +340,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Unit(unit)) = result {
             assert_eq!(unit.name, "TestUnit");
             assert!(unit.interface.is_some());
@@ -363,7 +365,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Unit(unit)) = result {
             if let Some(interface) = &unit.interface {
                 assert!(interface.uses.is_some());
@@ -394,7 +396,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Unit(unit)) = result {
             assert_eq!(unit.name, "MyNamespace.MyModule");
         }
@@ -422,7 +424,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Unit(unit)) = result {
             if let Some(interface) = &unit.interface {
                 assert_eq!(interface.const_decls.len(), 1);
@@ -456,7 +458,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Unit(unit)) = result {
             assert!(unit.initialization.is_some());
             assert!(unit.finalization.is_some());
@@ -475,7 +477,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Library(lib)) = result {
             assert_eq!(lib.name, "TestLib");
             assert!(lib.block.is_some());
@@ -493,7 +495,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Library(lib)) = result {
             assert_eq!(lib.name, "TestLib");
             assert!(lib.block.is_none());
@@ -512,7 +514,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Unit(unit)) = result {
             if let Some(interface) = &unit.interface {
                 if let Some(uses) = &interface.uses {

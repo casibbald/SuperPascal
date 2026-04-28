@@ -3,8 +3,8 @@
 //! This module handles evaluation of compiler directives like {$IFDEF}, {$DEFINE}, etc.
 //! It maintains a symbol table of defined symbols and evaluates conditional compilation blocks.
 
-use std::collections::HashSet;
 use errors::{ParserError, ParserResult};
+use std::collections::HashSet;
 use tokens::Span;
 
 /// Directive type parsed from directive content
@@ -65,13 +65,13 @@ impl DirectiveEvaluator {
     pub fn parse_directive(content: &str) -> DirectiveType {
         let content = content.trim();
         let parts: Vec<&str> = content.split_whitespace().collect();
-        
+
         if parts.is_empty() {
             return DirectiveType::Other(content.to_string());
         }
 
         let directive_name = parts[0].to_uppercase();
-        
+
         match directive_name.as_str() {
             "IFDEF" => {
                 if parts.len() >= 2 {
@@ -89,7 +89,9 @@ impl DirectiveEvaluator {
             }
             "IF" => {
                 // Extract everything after "IF" as the expression
-                if let Some(expr_start) = content[2..].trim_start().find(|c: char| !c.is_whitespace()) {
+                if let Some(expr_start) =
+                    content[2..].trim_start().find(|c: char| !c.is_whitespace())
+                {
                     let expr = content[2 + expr_start..].trim().to_string();
                     DirectiveType::If(expr)
                 } else {
@@ -98,7 +100,9 @@ impl DirectiveEvaluator {
             }
             "ELSEIF" => {
                 // Extract everything after "ELSEIF" as the expression
-                if let Some(expr_start) = content[6..].trim_start().find(|c: char| !c.is_whitespace()) {
+                if let Some(expr_start) =
+                    content[6..].trim_start().find(|c: char| !c.is_whitespace())
+                {
                     let expr = content[6 + expr_start..].trim().to_string();
                     DirectiveType::ElseIf(expr)
                 } else {
@@ -124,10 +128,7 @@ impl DirectiveEvaluator {
             "INCLUDE" | "I" => {
                 // Extract filename from string literal or identifier
                 if parts.len() >= 2 {
-                    let filename = parts[1]
-                        .trim_matches('\'')
-                        .trim_matches('"')
-                        .to_string();
+                    let filename = parts[1].trim_matches('\'').trim_matches('"').to_string();
                     DirectiveType::Include(filename)
                 } else {
                     DirectiveType::Other(content.to_string())
@@ -139,7 +140,11 @@ impl DirectiveEvaluator {
 
     /// Evaluate a directive and update state
     /// Returns (should_include_code, should_skip_until_else_or_endif)
-    pub fn evaluate(&mut self, directive: &DirectiveType, span: Span) -> ParserResult<(bool, bool)> {
+    pub fn evaluate(
+        &mut self,
+        directive: &DirectiveType,
+        span: Span,
+    ) -> ParserResult<(bool, bool)> {
         match directive {
             DirectiveType::IfDef(symbol) => {
                 let is_defined = self.defined_symbols.contains(symbol);
@@ -162,7 +167,8 @@ impl DirectiveEvaluator {
             DirectiveType::ElseIf(expr) => {
                 if self.conditional_stack.is_empty() {
                     return Err(ParserError::InvalidSyntax {
-                        message: "{$ELSEIF} without matching {$IF}, {$IFDEF}, or {$IFNDEF}".to_string(),
+                        message: "{$ELSEIF} without matching {$IF}, {$IFDEF}, or {$IFNDEF}"
+                            .to_string(),
                         span,
                     });
                 }
@@ -266,27 +272,27 @@ impl DirectiveEvaluator {
     /// Supports: Defined(SYMBOL), integer comparisons, boolean operators
     fn evaluate_expression(&self, expr: &str) -> ParserResult<bool> {
         let expr = expr.trim();
-        
+
         // Try to parse as boolean expression with AND/OR first (they can contain other expressions)
         if let Some(boolean_result) = self.evaluate_boolean_expression(expr) {
             return Ok(boolean_result);
         }
-        
+
         // Handle Defined(SYMBOL) function
         if expr.starts_with("Defined(") && expr.ends_with(')') {
-            let symbol = expr[8..expr.len()-1].trim().to_uppercase();
+            let symbol = expr[8..expr.len() - 1].trim().to_uppercase();
             return Ok(self.defined_symbols.contains(&symbol));
         }
-        
+
         // Handle NOT Defined(SYMBOL)
         if expr.starts_with("NOT ") {
             let rest = expr[4..].trim();
             if rest.starts_with("Defined(") && rest.ends_with(')') {
-                let symbol = rest[8..rest.len()-1].trim().to_uppercase();
+                let symbol = rest[8..rest.len() - 1].trim().to_uppercase();
                 return Ok(!self.defined_symbols.contains(&symbol));
             }
         }
-        
+
         // Handle boolean literals
         if expr.eq_ignore_ascii_case("TRUE") {
             return Ok(true);
@@ -294,34 +300,34 @@ impl DirectiveEvaluator {
         if expr.eq_ignore_ascii_case("FALSE") {
             return Ok(false);
         }
-        
+
         // Handle integer comparisons (e.g., "VER >= 200")
         // For now, we'll support simple comparisons with predefined constants
         // In a full implementation, we'd parse and evaluate arithmetic expressions
-        
+
         // Try to parse as integer comparison
         if let Some(comparison_result) = self.evaluate_integer_comparison(expr) {
             return Ok(comparison_result);
         }
-        
+
         // Default: treat undefined symbols as false, defined as true
         // This allows simple symbol checks like "{$IF DEBUG}"
         let symbol = expr.to_uppercase();
         Ok(self.defined_symbols.contains(&symbol))
     }
-    
+
     /// Evaluate integer comparison expression (e.g., "VER >= 200")
     fn evaluate_integer_comparison(&self, expr: &str) -> Option<bool> {
         // Simple pattern matching for common cases
         // In a full implementation, we'd have a proper expression parser
-        
+
         // Check for comparison operators
         let operators = [">=", "<=", ">", "<", "=", "==", "<>", "!="];
         for op in &operators {
             if let Some(pos) = expr.find(op) {
                 let left = expr[..pos].trim();
                 let right = expr[pos + op.len()..].trim();
-                
+
                 // Try to parse as integers
                 if let (Ok(left_val), Ok(right_val)) = (left.parse::<i32>(), right.parse::<i32>()) {
                     return Some(match *op {
@@ -334,21 +340,21 @@ impl DirectiveEvaluator {
                         _ => return None,
                     });
                 }
-                
+
                 // Check if left is a predefined constant (like VER)
                 // For now, we'll just return None and let the caller handle it
                 // In a full implementation, we'd have a constants table
             }
         }
-        
+
         None
     }
-    
+
     /// Evaluate boolean expression with AND/OR operators
     /// This is called from evaluate_expression, so it should not call evaluate_expression recursively
     fn evaluate_boolean_expression(&self, expr: &str) -> Option<bool> {
         let expr_upper = expr.to_uppercase();
-        
+
         // Handle NOT first (before AND/OR)
         if expr_upper.starts_with("NOT ") {
             let rest = expr_upper[4..].trim();
@@ -358,7 +364,7 @@ impl DirectiveEvaluator {
             }
             // If not a boolean expression, try simple cases
             if rest.starts_with("Defined(") && rest.ends_with(')') {
-                let symbol = rest[8..rest.len()-1].trim().to_uppercase();
+                let symbol = rest[8..rest.len() - 1].trim().to_uppercase();
                 return Some(!self.defined_symbols.contains(&symbol));
             }
             if rest.eq_ignore_ascii_case("TRUE") {
@@ -373,7 +379,7 @@ impl DirectiveEvaluator {
             }
             return Some(true); // NOT undefined symbol = true
         }
-        
+
         // Split by OR first (lower precedence)
         if expr_upper.contains(" OR ") {
             let parts: Vec<&str> = expr_upper.split(" OR ").collect();
@@ -393,7 +399,7 @@ impl DirectiveEvaluator {
             }
             return Some(result);
         }
-        
+
         // Split by AND (higher precedence)
         if expr_upper.contains(" AND ") {
             let parts: Vec<&str> = expr_upper.split(" AND ").collect();
@@ -407,16 +413,16 @@ impl DirectiveEvaluator {
             }
             return Some(result);
         }
-        
+
         None
     }
-    
+
     /// Evaluate a simple expression (no AND/OR operators)
     /// This is a helper to avoid circular calls
     fn evaluate_simple_expression(&self, expr: &str) -> Option<bool> {
         let expr = expr.trim();
         let expr_upper = expr.to_uppercase();
-        
+
         // Handle Defined(SYMBOL) function (case-insensitive for "Defined")
         if expr_upper.starts_with("DEFINED(") && expr.ends_with(')') {
             // Find the opening parenthesis (case-insensitive)
@@ -425,7 +431,7 @@ impl DirectiveEvaluator {
             let symbol = expr[open_paren + 1..close_paren].trim().to_uppercase();
             return Some(self.defined_symbols.contains(&symbol));
         }
-        
+
         // Handle boolean literals
         if expr_upper == "TRUE" {
             return Some(true);
@@ -433,12 +439,12 @@ impl DirectiveEvaluator {
         if expr_upper == "FALSE" {
             return Some(false);
         }
-        
+
         // Handle integer comparisons
         if let Some(comparison_result) = self.evaluate_integer_comparison(expr) {
             return Some(comparison_result);
         }
-        
+
         // Default: treat as symbol check
         Some(self.defined_symbols.contains(&expr_upper))
     }
@@ -537,10 +543,12 @@ mod tests {
         let ifdef = DirectiveEvaluator::parse_directive("IFDEF DEBUG");
         evaluator.evaluate(&ifdef, Span::at(0, 1, 1)).unwrap();
         assert!(!evaluator.is_active());
-        
+
         // ELSE should make us active
         let else_directive = DirectiveEvaluator::parse_directive("ELSE");
-        let (include, skip) = evaluator.evaluate(&else_directive, Span::at(0, 1, 1)).unwrap();
+        let (include, skip) = evaluator
+            .evaluate(&else_directive, Span::at(0, 1, 1))
+            .unwrap();
         assert!(include);
         assert!(!skip);
         assert!(evaluator.is_active());
@@ -552,7 +560,7 @@ mod tests {
         let ifdef = DirectiveEvaluator::parse_directive("IFDEF DEBUG");
         evaluator.evaluate(&ifdef, Span::at(0, 1, 1)).unwrap();
         assert!(!evaluator.is_active());
-        
+
         let endif = DirectiveEvaluator::parse_directive("ENDIF");
         let (include, skip) = evaluator.evaluate(&endif, Span::at(0, 1, 1)).unwrap();
         assert!(include);
@@ -581,22 +589,22 @@ mod tests {
     #[test]
     fn test_nested_conditionals() {
         let mut evaluator = DirectiveEvaluator::with_symbols(vec!["OUTER".to_string()]);
-        
+
         // Outer IFDEF (true)
         let outer = DirectiveEvaluator::parse_directive("IFDEF OUTER");
         evaluator.evaluate(&outer, Span::at(0, 1, 1)).unwrap();
         assert!(evaluator.is_active());
-        
+
         // Inner IFDEF (false)
         let inner = DirectiveEvaluator::parse_directive("IFDEF INNER");
         evaluator.evaluate(&inner, Span::at(0, 1, 1)).unwrap();
         assert!(!evaluator.is_active());
-        
+
         // End inner
         let endif_inner = DirectiveEvaluator::parse_directive("ENDIF");
         evaluator.evaluate(&endif_inner, Span::at(0, 1, 1)).unwrap();
         assert!(evaluator.is_active()); // Back to outer active state
-        
+
         // End outer
         let endif_outer = DirectiveEvaluator::parse_directive("ENDIF");
         evaluator.evaluate(&endif_outer, Span::at(0, 1, 1)).unwrap();
@@ -697,12 +705,16 @@ mod tests {
         let mut evaluator = DirectiveEvaluator::new();
         // Start with IF that's false
         let if_directive = DirectiveEvaluator::parse_directive("IF Defined(DEBUG)");
-        evaluator.evaluate(&if_directive, Span::at(0, 1, 1)).unwrap();
+        evaluator
+            .evaluate(&if_directive, Span::at(0, 1, 1))
+            .unwrap();
         assert!(!evaluator.is_active());
-        
+
         // ELSEIF with true expression should make us active
         let elseif_directive = DirectiveEvaluator::parse_directive("ELSEIF TRUE");
-        let (include, skip) = evaluator.evaluate(&elseif_directive, Span::at(0, 1, 1)).unwrap();
+        let (include, skip) = evaluator
+            .evaluate(&elseif_directive, Span::at(0, 1, 1))
+            .unwrap();
         assert!(include);
         assert!(!skip);
         assert!(evaluator.is_active());
@@ -713,12 +725,16 @@ mod tests {
         let mut evaluator = DirectiveEvaluator::with_symbols(vec!["DEBUG".to_string()]);
         // Start with IF that's true
         let if_directive = DirectiveEvaluator::parse_directive("IF Defined(DEBUG)");
-        evaluator.evaluate(&if_directive, Span::at(0, 1, 1)).unwrap();
+        evaluator
+            .evaluate(&if_directive, Span::at(0, 1, 1))
+            .unwrap();
         assert!(evaluator.is_active());
-        
+
         // ELSEIF should be inactive since we're already active
         let elseif_directive = DirectiveEvaluator::parse_directive("ELSEIF TRUE");
-        let (include, skip) = evaluator.evaluate(&elseif_directive, Span::at(0, 1, 1)).unwrap();
+        let (include, skip) = evaluator
+            .evaluate(&elseif_directive, Span::at(0, 1, 1))
+            .unwrap();
         assert!(!include);
         assert!(skip);
         assert!(!evaluator.is_active());
@@ -726,7 +742,8 @@ mod tests {
 
     #[test]
     fn test_evaluate_if_and_expression() {
-        let mut evaluator = DirectiveEvaluator::with_symbols(vec!["DEBUG".to_string(), "TEST".to_string()]);
+        let mut evaluator =
+            DirectiveEvaluator::with_symbols(vec!["DEBUG".to_string(), "TEST".to_string()]);
         let directive = DirectiveEvaluator::parse_directive("IF Defined(DEBUG) AND Defined(TEST)");
         let (include, skip) = evaluator.evaluate(&directive, Span::at(0, 1, 1)).unwrap();
         assert!(include);
@@ -737,7 +754,8 @@ mod tests {
     #[test]
     fn test_evaluate_if_or_expression() {
         let mut evaluator = DirectiveEvaluator::with_symbols(vec!["DEBUG".to_string()]);
-        let directive = DirectiveEvaluator::parse_directive("IF Defined(DEBUG) OR Defined(RELEASE)");
+        let directive =
+            DirectiveEvaluator::parse_directive("IF Defined(DEBUG) OR Defined(RELEASE)");
         let (include, skip) = evaluator.evaluate(&directive, Span::at(0, 1, 1)).unwrap();
         assert!(include);
         assert!(!skip);
@@ -747,24 +765,30 @@ mod tests {
     #[test]
     fn test_if_elseif_endif_flow() {
         let mut evaluator = DirectiveEvaluator::new();
-        
+
         // IF FALSE - inactive
         let if_directive = DirectiveEvaluator::parse_directive("IF FALSE");
-        let (include, skip) = evaluator.evaluate(&if_directive, Span::at(0, 1, 1)).unwrap();
+        let (include, skip) = evaluator
+            .evaluate(&if_directive, Span::at(0, 1, 1))
+            .unwrap();
         assert!(!include);
         assert!(skip);
         assert!(!evaluator.is_active());
-        
+
         // ELSEIF TRUE - should become active
         let elseif_directive = DirectiveEvaluator::parse_directive("ELSEIF TRUE");
-        let (include, skip) = evaluator.evaluate(&elseif_directive, Span::at(0, 1, 1)).unwrap();
+        let (include, skip) = evaluator
+            .evaluate(&elseif_directive, Span::at(0, 1, 1))
+            .unwrap();
         assert!(include);
         assert!(!skip);
         assert!(evaluator.is_active());
-        
+
         // ENDIF - back to active
         let endif_directive = DirectiveEvaluator::parse_directive("ENDIF");
-        let (include, skip) = evaluator.evaluate(&endif_directive, Span::at(0, 1, 1)).unwrap();
+        let (include, skip) = evaluator
+            .evaluate(&endif_directive, Span::at(0, 1, 1))
+            .unwrap();
         assert!(include);
         assert!(!skip);
         assert!(evaluator.is_active());
@@ -774,19 +798,21 @@ mod tests {
     #[test]
     fn test_if_elseif_elseif_flow() {
         let mut evaluator = DirectiveEvaluator::new();
-        
+
         // IF FALSE - inactive
         let if_directive = DirectiveEvaluator::parse_directive("IF FALSE");
-        evaluator.evaluate(&if_directive, Span::at(0, 1, 1)).unwrap();
+        evaluator
+            .evaluate(&if_directive, Span::at(0, 1, 1))
+            .unwrap();
         assert!(!evaluator.is_active());
-        
+
         // ELSEIF FALSE - still inactive
         let elseif1 = DirectiveEvaluator::parse_directive("ELSEIF FALSE");
         let (include, skip) = evaluator.evaluate(&elseif1, Span::at(0, 1, 1)).unwrap();
         assert!(!include);
         assert!(skip);
         assert!(!evaluator.is_active());
-        
+
         // ELSEIF TRUE - should become active
         let elseif2 = DirectiveEvaluator::parse_directive("ELSEIF TRUE");
         let (include, skip) = evaluator.evaluate(&elseif2, Span::at(0, 1, 1)).unwrap();
@@ -795,4 +821,3 @@ mod tests {
         assert!(evaluator.is_active());
     }
 }
-

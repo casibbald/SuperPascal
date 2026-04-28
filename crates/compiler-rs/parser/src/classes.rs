@@ -36,14 +36,20 @@ impl super::Parser {
         let (is_meta_class, meta_class_type) = if self.check(&TokenKind::KwOf) {
             self.advance()?; // consume OF
             // For meta-class, the type can be an identifier (class name)
-            let meta_type = if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
-                let name_token = self.consume(TokenKind::Identifier(String::new()), "class name")?;
+            let meta_type = if matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::Identifier(_))
+            ) {
+                let name_token =
+                    self.consume(TokenKind::Identifier(String::new()), "class name")?;
                 let name = match &name_token.kind {
                     TokenKind::Identifier(name) => name.clone(),
-                    _ => return Err(ParserError::InvalidSyntax {
-                        message: "Expected class name".to_string(),
-                        span: name_token.span,
-                    }),
+                    _ => {
+                        return Err(ParserError::InvalidSyntax {
+                            message: "Expected class name".to_string(),
+                            span: name_token.span,
+                        });
+                    }
                 };
                 Node::NamedType(ast::NamedType {
                     name,
@@ -76,13 +82,16 @@ impl super::Parser {
         if self.check(&TokenKind::LeftParen) {
             self.advance()?; // consume (
             loop {
-                let base_token = self.consume(TokenKind::Identifier(String::new()), "base class name")?;
+                let base_token =
+                    self.consume(TokenKind::Identifier(String::new()), "base class name")?;
                 let base_name = match &base_token.kind {
                     TokenKind::Identifier(name) => name.clone(),
-                    _ => return Err(ParserError::InvalidSyntax {
-                        message: "Expected identifier for base class".to_string(),
-                        span: base_token.span,
-                    }),
+                    _ => {
+                        return Err(ParserError::InvalidSyntax {
+                            message: "Expected identifier for base class".to_string(),
+                            span: base_token.span,
+                        });
+                    }
                 };
                 base_classes.push(base_name);
 
@@ -125,7 +134,10 @@ impl super::Parser {
                 } else {
                     return Err(ParserError::InvalidSyntax {
                         message: "STRICT must be followed by PRIVATE or PROTECTED".to_string(),
-                        span: self.current().map(|t| t.span).unwrap_or_else(|| Span::at(0, 1, 1)),
+                        span: self
+                            .current()
+                            .map(|t| t.span)
+                            .unwrap_or_else(|| Span::at(0, 1, 1)),
                     });
                 }
             } else if self.check(&TokenKind::KwPrivate) {
@@ -165,12 +177,15 @@ impl super::Parser {
                 for decl in var_decls {
                     members.push((current_visibility, ast::ClassMember::Field(decl)));
                 }
-            } else if matches!(self.current().map(|t| &t.kind), Some(TokenKind::Identifier(_))) {
+            } else if matches!(
+                self.current().map(|t| &t.kind),
+                Some(TokenKind::Identifier(_))
+            ) {
                 // Field declaration without VAR keyword: identifier_list : type ;
                 // Check if it's a field by looking for colon after identifier(s)
                 let saved_current = self.current().cloned();
                 let saved_peek = self.peek.clone();
-                
+
                 // Try parsing as field declaration
                 match self.parse_field_decl() {
                     Ok(field_decl) => {
@@ -195,7 +210,10 @@ impl super::Parser {
             } else if self.check(&TokenKind::KwConstructor) {
                 // Constructor
                 let constructor = self.parse_constructor_decl()?;
-                members.push((current_visibility, ast::ClassMember::Constructor(constructor)));
+                members.push((
+                    current_visibility,
+                    ast::ClassMember::Constructor(constructor),
+                ));
             } else if self.check(&TokenKind::KwDestructor) {
                 // Destructor
                 let destructor = self.parse_destructor_decl()?;
@@ -249,10 +267,12 @@ impl super::Parser {
         let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
         let name = match &name_token.kind {
             TokenKind::Identifier(name) => name.clone(),
-            _ => return Err(ParserError::InvalidSyntax {
-                message: "Expected identifier".to_string(),
-                span: name_token.span,
-            }),
+            _ => {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected identifier".to_string(),
+                    span: name_token.span,
+                });
+            }
         };
 
         let params = if self.check(&TokenKind::LeftParen) {
@@ -305,10 +325,12 @@ impl super::Parser {
         let name_token = self.consume(TokenKind::Identifier(String::new()), "identifier")?;
         let name = match &name_token.kind {
             TokenKind::Identifier(name) => name.clone(),
-            _ => return Err(ParserError::InvalidSyntax {
-                message: "Expected identifier".to_string(),
-                span: name_token.span,
-            }),
+            _ => {
+                return Err(ParserError::InvalidSyntax {
+                    message: "Expected identifier".to_string(),
+                    span: name_token.span,
+                });
+            }
         };
 
         let params = if self.check(&TokenKind::LeftParen) {
@@ -369,7 +391,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -398,7 +420,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -427,7 +449,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -455,7 +477,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -488,7 +510,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -548,7 +570,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -583,7 +605,7 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(type_decl) = &block.type_decls[0] {
@@ -622,23 +644,22 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 // Find the meta-class type declaration
-                let meta_class_decl = block.type_decls.iter()
-                    .find(|td| {
-                        if let Node::TypeDecl(type_decl) = td {
-                            if let Node::ClassType(class_type) = type_decl.type_expr.as_ref() {
-                                class_type.is_meta_class
-                            } else {
-                                false
-                            }
+                let meta_class_decl = block.type_decls.iter().find(|td| {
+                    if let Node::TypeDecl(type_decl) = td {
+                        if let Node::ClassType(class_type) = type_decl.type_expr.as_ref() {
+                            class_type.is_meta_class
                         } else {
                             false
                         }
-                    });
-                
+                    } else {
+                        false
+                    }
+                });
+
                 if let Some(Node::TypeDecl(type_decl)) = meta_class_decl {
                     if let Node::ClassType(class_type) = type_decl.type_expr.as_ref() {
                         assert!(class_type.is_meta_class);
@@ -670,21 +691,26 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(outer_type) = &block.type_decls[0] {
                     if let Node::ClassType(outer_class) = outer_type.type_expr.as_ref() {
                         // Find the nested type declaration
-                        let nested_type = outer_class.members.iter()
+                        let nested_type = outer_class
+                            .members
+                            .iter()
                             .find(|(_, member)| matches!(member, ast::ClassMember::Type(_)));
-                        
-                        if let Some((_, ast::ClassMember::Type(Node::TypeDecl(inner_type)))) = nested_type {
+
+                        if let Some((_, ast::ClassMember::Type(Node::TypeDecl(inner_type)))) =
+                            nested_type
+                        {
                             assert_eq!(inner_type.name, "TInner");
                             if let Node::ClassType(inner_class) = inner_type.type_expr.as_ref() {
                                 // Check that inner class has a field
-                                let field = inner_class.members.iter()
-                                    .find(|(_, member)| matches!(member, ast::ClassMember::Field(_)));
+                                let field = inner_class.members.iter().find(|(_, member)| {
+                                    matches!(member, ast::ClassMember::Field(_))
+                                });
                                 assert!(field.is_some(), "Expected field in nested class");
                             } else {
                                 panic!("Expected ClassType for nested class");
@@ -720,13 +746,15 @@ mod tests {
         let mut parser = Parser::new(source).unwrap();
         let result = parser.parse();
         assert!(result.is_ok(), "Parse failed: {:?}", result);
-        
+
         if let Ok(Node::Program(program)) = result {
             if let Node::Block(block) = program.block.as_ref() {
                 if let Node::TypeDecl(outer_type) = &block.type_decls[0] {
                     if let Node::ClassType(outer_class) = outer_type.type_expr.as_ref() {
                         // Count nested type declarations
-                        let nested_types: Vec<_> = outer_class.members.iter()
+                        let nested_types: Vec<_> = outer_class
+                            .members
+                            .iter()
                             .filter_map(|(_, member)| {
                                 if let ast::ClassMember::Type(Node::TypeDecl(type_decl)) = member {
                                     Some(type_decl.name.clone())
@@ -735,7 +763,7 @@ mod tests {
                                 }
                             })
                             .collect();
-                        
+
                         assert_eq!(nested_types.len(), 2);
                         assert!(nested_types.contains(&"TInner1".to_string()));
                         assert!(nested_types.contains(&"TInner2".to_string()));

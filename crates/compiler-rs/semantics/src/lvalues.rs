@@ -1,9 +1,9 @@
 //! Lvalue analysis (left-hand side of assignments)
 
+use crate::SemanticAnalyzer;
+use ::types::Type;
 use ast::Node;
 use symbols::SymbolKind;
-use ::types::Type;
-use crate::SemanticAnalyzer;
 
 impl SemanticAnalyzer {
     /// Analyze lvalue (left-hand side of assignment)
@@ -14,17 +14,13 @@ impl SemanticAnalyzer {
                     if let SymbolKind::Variable { var_type, .. } = &symbol.kind {
                         var_type.clone()
                     } else {
-                        self.core.add_error(
-                            format!("'{}' is not a variable", i.name),
-                            i.span,
-                        );
+                        self.core
+                            .add_error(format!("'{}' is not a variable", i.name), i.span);
                         Type::Error
                     }
                 } else {
-                    self.core.add_error(
-                        format!("Variable '{}' not found", i.name),
-                        i.span,
-                    );
+                    self.core
+                        .add_error(format!("Variable '{}' not found", i.name), i.span);
                     Type::Error
                 }
             }

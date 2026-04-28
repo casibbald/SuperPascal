@@ -1,8 +1,8 @@
 //! Constant folding and evaluation
 
+use crate::SemanticAnalyzer;
 use ast::Node;
 use symbols::{ConstantValue, SymbolKind};
-use crate::SemanticAnalyzer;
 
 impl SemanticAnalyzer {
     /// Evaluate a constant expression, returning the constant value if the expression is constant.
@@ -18,7 +18,10 @@ impl SemanticAnalyzer {
             Node::IdentExpr(i) => {
                 // Check if identifier is a constant
                 if let Some(symbol) = self.core.symbol_table.lookup(&i.name) {
-                    if let SymbolKind::Constant { value: Some(cv), .. } = &symbol.kind {
+                    if let SymbolKind::Constant {
+                        value: Some(cv), ..
+                    } = &symbol.kind
+                    {
                         Some(cv.clone())
                     } else {
                         None // Not a constant or constant value not yet computed
@@ -79,7 +82,11 @@ impl SemanticAnalyzer {
     }
 
     // Helper functions for constant evaluation
-    pub(crate) fn eval_add(&self, left: &ConstantValue, right: &ConstantValue) -> Option<ConstantValue> {
+    pub(crate) fn eval_add(
+        &self,
+        left: &ConstantValue,
+        right: &ConstantValue,
+    ) -> Option<ConstantValue> {
         match (left, right) {
             (ConstantValue::Integer(l), ConstantValue::Integer(r)) => {
                 Some(ConstantValue::Integer(l.saturating_add(*r)))
@@ -94,7 +101,11 @@ impl SemanticAnalyzer {
         }
     }
 
-    pub(crate) fn eval_subtract(&self, left: &ConstantValue, right: &ConstantValue) -> Option<ConstantValue> {
+    pub(crate) fn eval_subtract(
+        &self,
+        left: &ConstantValue,
+        right: &ConstantValue,
+    ) -> Option<ConstantValue> {
         match (left, right) {
             (ConstantValue::Integer(l), ConstantValue::Integer(r)) => {
                 Some(ConstantValue::Integer(l.saturating_sub(*r)))
@@ -109,7 +120,11 @@ impl SemanticAnalyzer {
         }
     }
 
-    pub(crate) fn eval_multiply(&self, left: &ConstantValue, right: &ConstantValue) -> Option<ConstantValue> {
+    pub(crate) fn eval_multiply(
+        &self,
+        left: &ConstantValue,
+        right: &ConstantValue,
+    ) -> Option<ConstantValue> {
         match (left, right) {
             (ConstantValue::Integer(l), ConstantValue::Integer(r)) => {
                 Some(ConstantValue::Integer(l.saturating_mul(*r)))
@@ -124,7 +139,11 @@ impl SemanticAnalyzer {
         }
     }
 
-    pub(crate) fn eval_divide(&self, left: &ConstantValue, right: &ConstantValue) -> Option<ConstantValue> {
+    pub(crate) fn eval_divide(
+        &self,
+        left: &ConstantValue,
+        right: &ConstantValue,
+    ) -> Option<ConstantValue> {
         match (left, right) {
             (ConstantValue::Integer(l), ConstantValue::Integer(r)) => {
                 if *r == 0 {
@@ -144,7 +163,11 @@ impl SemanticAnalyzer {
         }
     }
 
-    pub(crate) fn eval_mod(&self, left: &ConstantValue, right: &ConstantValue) -> Option<ConstantValue> {
+    pub(crate) fn eval_mod(
+        &self,
+        left: &ConstantValue,
+        right: &ConstantValue,
+    ) -> Option<ConstantValue> {
         match (left, right) {
             (ConstantValue::Integer(l), ConstantValue::Integer(r)) => {
                 if *r == 0 {
@@ -164,43 +187,79 @@ impl SemanticAnalyzer {
         }
     }
 
-    pub(crate) fn eval_less(&self, left: &ConstantValue, right: &ConstantValue) -> Option<ConstantValue> {
+    pub(crate) fn eval_less(
+        &self,
+        left: &ConstantValue,
+        right: &ConstantValue,
+    ) -> Option<ConstantValue> {
         match (left, right) {
-            (ConstantValue::Integer(l), ConstantValue::Integer(r)) => Some(ConstantValue::Boolean(l < r)),
+            (ConstantValue::Integer(l), ConstantValue::Integer(r)) => {
+                Some(ConstantValue::Boolean(l < r))
+            }
             (ConstantValue::Byte(l), ConstantValue::Byte(r)) => Some(ConstantValue::Boolean(l < r)),
             (ConstantValue::Word(l), ConstantValue::Word(r)) => Some(ConstantValue::Boolean(l < r)),
             _ => None,
         }
     }
 
-    pub(crate) fn eval_less_equal(&self, left: &ConstantValue, right: &ConstantValue) -> Option<ConstantValue> {
+    pub(crate) fn eval_less_equal(
+        &self,
+        left: &ConstantValue,
+        right: &ConstantValue,
+    ) -> Option<ConstantValue> {
         match (left, right) {
-            (ConstantValue::Integer(l), ConstantValue::Integer(r)) => Some(ConstantValue::Boolean(l <= r)),
-            (ConstantValue::Byte(l), ConstantValue::Byte(r)) => Some(ConstantValue::Boolean(l <= r)),
-            (ConstantValue::Word(l), ConstantValue::Word(r)) => Some(ConstantValue::Boolean(l <= r)),
+            (ConstantValue::Integer(l), ConstantValue::Integer(r)) => {
+                Some(ConstantValue::Boolean(l <= r))
+            }
+            (ConstantValue::Byte(l), ConstantValue::Byte(r)) => {
+                Some(ConstantValue::Boolean(l <= r))
+            }
+            (ConstantValue::Word(l), ConstantValue::Word(r)) => {
+                Some(ConstantValue::Boolean(l <= r))
+            }
             _ => None,
         }
     }
 
-    pub(crate) fn eval_greater(&self, left: &ConstantValue, right: &ConstantValue) -> Option<ConstantValue> {
+    pub(crate) fn eval_greater(
+        &self,
+        left: &ConstantValue,
+        right: &ConstantValue,
+    ) -> Option<ConstantValue> {
         match (left, right) {
-            (ConstantValue::Integer(l), ConstantValue::Integer(r)) => Some(ConstantValue::Boolean(l > r)),
+            (ConstantValue::Integer(l), ConstantValue::Integer(r)) => {
+                Some(ConstantValue::Boolean(l > r))
+            }
             (ConstantValue::Byte(l), ConstantValue::Byte(r)) => Some(ConstantValue::Boolean(l > r)),
             (ConstantValue::Word(l), ConstantValue::Word(r)) => Some(ConstantValue::Boolean(l > r)),
             _ => None,
         }
     }
 
-    pub(crate) fn eval_greater_equal(&self, left: &ConstantValue, right: &ConstantValue) -> Option<ConstantValue> {
+    pub(crate) fn eval_greater_equal(
+        &self,
+        left: &ConstantValue,
+        right: &ConstantValue,
+    ) -> Option<ConstantValue> {
         match (left, right) {
-            (ConstantValue::Integer(l), ConstantValue::Integer(r)) => Some(ConstantValue::Boolean(l >= r)),
-            (ConstantValue::Byte(l), ConstantValue::Byte(r)) => Some(ConstantValue::Boolean(l >= r)),
-            (ConstantValue::Word(l), ConstantValue::Word(r)) => Some(ConstantValue::Boolean(l >= r)),
+            (ConstantValue::Integer(l), ConstantValue::Integer(r)) => {
+                Some(ConstantValue::Boolean(l >= r))
+            }
+            (ConstantValue::Byte(l), ConstantValue::Byte(r)) => {
+                Some(ConstantValue::Boolean(l >= r))
+            }
+            (ConstantValue::Word(l), ConstantValue::Word(r)) => {
+                Some(ConstantValue::Boolean(l >= r))
+            }
             _ => None,
         }
     }
 
-    pub(crate) fn eval_and(&self, left: &ConstantValue, right: &ConstantValue) -> Option<ConstantValue> {
+    pub(crate) fn eval_and(
+        &self,
+        left: &ConstantValue,
+        right: &ConstantValue,
+    ) -> Option<ConstantValue> {
         match (left, right) {
             (ConstantValue::Boolean(l), ConstantValue::Boolean(r)) => {
                 Some(ConstantValue::Boolean(*l && *r))
@@ -209,7 +268,11 @@ impl SemanticAnalyzer {
         }
     }
 
-    pub(crate) fn eval_or(&self, left: &ConstantValue, right: &ConstantValue) -> Option<ConstantValue> {
+    pub(crate) fn eval_or(
+        &self,
+        left: &ConstantValue,
+        right: &ConstantValue,
+    ) -> Option<ConstantValue> {
         match (left, right) {
             (ConstantValue::Boolean(l), ConstantValue::Boolean(r)) => {
                 Some(ConstantValue::Boolean(*l || *r))

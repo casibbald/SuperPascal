@@ -13,21 +13,26 @@ pub enum LexerError {
     /// Unterminated comment
     UnterminatedComment { line: usize, column: usize },
     /// Invalid character
-    InvalidCharacter { ch: char, line: usize, column: usize },
+    InvalidCharacter {
+        ch: char,
+        line: usize,
+        column: usize,
+    },
     /// Invalid escape sequence
-    InvalidEscape { seq: String, line: usize, column: usize },
+    InvalidEscape {
+        seq: String,
+        line: usize,
+        column: usize,
+    },
     /// Unterminated string interpolation: expected '}' before end of string
-    UnterminatedInterpolation { 
-        opening_brace_line: usize, 
+    UnterminatedInterpolation {
+        opening_brace_line: usize,
         opening_brace_column: usize,
-        line: usize, 
-        column: usize 
+        line: usize,
+        column: usize,
     },
     /// Unexpected '}' in string interpolation (extra closing brace)
-    UnexpectedInterpolationBrace { 
-        line: usize, 
-        column: usize 
-    },
+    UnexpectedInterpolationBrace { line: usize, column: usize },
 }
 
 impl std::fmt::Display for LexerError {
@@ -43,17 +48,30 @@ impl std::fmt::Display for LexerError {
                 write!(f, "Invalid character '{}' at {}:{}", ch, line, column)
             }
             LexerError::InvalidEscape { seq, line, column } => {
-                write!(f, "Invalid escape sequence '{}' at {}:{}", seq, line, column)
-            }
-            LexerError::UnterminatedInterpolation { opening_brace_line, opening_brace_column, line, column } => {
                 write!(
-                    f, 
-                    "Unterminated interpolation: expected '}}' before end of string (opening brace at {}:{}) at {}:{}", 
+                    f,
+                    "Invalid escape sequence '{}' at {}:{}",
+                    seq, line, column
+                )
+            }
+            LexerError::UnterminatedInterpolation {
+                opening_brace_line,
+                opening_brace_column,
+                line,
+                column,
+            } => {
+                write!(
+                    f,
+                    "Unterminated interpolation: expected '}}' before end of string (opening brace at {}:{}) at {}:{}",
                     opening_brace_line, opening_brace_column, line, column
                 )
             }
             LexerError::UnexpectedInterpolationBrace { line, column } => {
-                write!(f, "Unexpected '}}' in string interpolation at {}:{}", line, column)
+                write!(
+                    f,
+                    "Unexpected '}}' in string interpolation at {}:{}",
+                    line, column
+                )
             }
         }
     }
@@ -101,22 +119,34 @@ impl Lexer {
 
         // CRITICAL: Check if we're continuing an interpolated string BEFORE skipping whitespace
         // Whitespace inside strings is part of the string content and must be preserved
-        if let Some((quote_char, start_line, start_col, accumulated, brace_depth)) = self.string_continuation.take() {
+        if let Some((quote_char, start_line, start_col, accumulated, brace_depth)) =
+            self.string_continuation.take()
+        {
             if brace_depth == 0 {
                 // We've closed the interpolation - continue the string
                 // DO NOT skip whitespace here - it's part of the string!
-                return self.continue_interpolated_string(quote_char, start_line, start_col, accumulated);
+                return self.continue_interpolated_string(
+                    quote_char,
+                    start_line,
+                    start_col,
+                    accumulated,
+                );
             } else {
                 // Still in expression - restore state
-                self.string_continuation = Some((quote_char, start_line, start_col, accumulated, brace_depth));
+                self.string_continuation =
+                    Some((quote_char, start_line, start_col, accumulated, brace_depth));
             }
         }
 
         self.skip_whitespace();
-        
+
         // Check for directives before comments
-        let ch = if !self.is_at_end() { Some(self.current_char()) } else { None };
-        
+        let ch = if !self.is_at_end() {
+            Some(self.current_char())
+        } else {
+            None
+        };
+
         // Skip comments BEFORE checking string continuation
         // (Comments should not interfere with string interpolation)
         if ch == Some('{') && self.peek_char() == Some('$') {
@@ -129,7 +159,7 @@ impl Lexer {
                 return self.scan_directive_paren();
             }
         }
-        
+
         self.skip_comments()?;
 
         // Skip whitespace again after comments (comments might leave us at whitespace)
@@ -149,16 +179,23 @@ impl Lexer {
         // CRITICAL: Only process if string_continuation is actually set (we're in a string)
         // If string_continuation is None, we're NOT in a string, so skip this check entirely
         // and continue to normal tokenization.
-        let ch = if !self.is_at_end() { Some(self.current_char()) } else { None };
-        
+        let ch = if !self.is_at_end() {
+            Some(self.current_char())
+        } else {
+            None
+        };
+
         // Only check string_continuation if we're actually in a string context
         // This prevents interference with comments and other non-string contexts
-        if let Some((quote_char, start_line, start_col, accumulated, mut brace_depth)) = self.string_continuation.take() {
+        if let Some((quote_char, start_line, start_col, accumulated, mut brace_depth)) =
+            self.string_continuation.take()
+        {
             // Check if current character is { or }
             if ch == Some('{') {
                 // Nested brace in expression - increment depth
                 brace_depth += 1;
-                self.string_continuation = Some((quote_char, start_line, start_col, accumulated, brace_depth));
+                self.string_continuation =
+                    Some((quote_char, start_line, start_col, accumulated, brace_depth));
                 // Continue normal tokenization (will return LeftBrace)
             } else if ch == Some('}') {
                 // Closing brace - check if it closes the interpolation
@@ -172,16 +209,18 @@ impl Lexer {
                     let brace_span = Span::new(brace_pos, brace_pos + 1, brace_line, brace_col);
                     // Set brace_depth to 0 to signal interpolation is closed
                     // We'll continue the string on the next token call
-                    self.string_continuation = Some((quote_char, start_line, start_col, accumulated, 0));
+                    self.string_continuation =
+                        Some((quote_char, start_line, start_col, accumulated, 0));
                     return Ok(Token::new(TokenKind::RightBrace, brace_span));
                 } else if brace_depth > 0 {
                     // Nested brace in expression - decrement depth and continue
-                    self.string_continuation = Some((quote_char, start_line, start_col, accumulated, brace_depth));
+                    self.string_continuation =
+                        Some((quote_char, start_line, start_col, accumulated, brace_depth));
                     // Continue normal tokenization (will return RightBrace)
                 } else {
                     // ERROR: Extra closing brace (depth went negative, now 0 after saturating_sub)
                     // This means we had an extra '}' that doesn't match any opening '{'
-                    let brace_pos = self.position;
+                    let _brace_pos = self.position;
                     let brace_line = self.line;
                     let brace_col = self.column;
                     // Clear string_continuation since we're in an error state
@@ -193,7 +232,8 @@ impl Lexer {
                 }
             } else {
                 // Not a brace - restore continuation state and continue normally
-                self.string_continuation = Some((quote_char, start_line, start_col, accumulated, brace_depth));
+                self.string_continuation =
+                    Some((quote_char, start_line, start_col, accumulated, brace_depth));
             }
         }
 
@@ -344,7 +384,7 @@ impl Lexer {
 
         while !self.is_at_end() {
             let ch = self.current_char();
-            
+
             if ch == '}' {
                 // Found the closing brace - end of comment
                 self.advance(); // Skip '}'
@@ -542,7 +582,6 @@ impl Lexer {
             });
         }
 
-
         // Decimal number
         let start = self.position;
         while !self.is_at_end() {
@@ -694,18 +733,19 @@ impl Lexer {
                 let brace_col = self.column;
                 let end_pos = self.position;
                 let span = Span::new(start_pos, end_pos, start_line, start_col);
-                
+
                 // Store continuation state (we'll continue after the expression)
                 // brace_depth starts at 1 for the opening { we just encountered
-                self.string_continuation = Some(('"', start_line, start_col, string_part.clone(), 1));
-                
+                self.string_continuation =
+                    Some(('"', start_line, start_col, string_part.clone(), 1));
+
                 // Advance past the {
                 self.advance();
-                
+
                 // Store LeftBrace in lookahead and return the string part
                 let brace_span = Span::new(brace_pos, brace_pos + 1, brace_line, brace_col);
                 self.lookahead = Some(Token::new(TokenKind::LeftBrace, brace_span));
-                
+
                 // Return the string part
                 return Ok(Token::new(TokenKind::StringLiteral(string_part), span));
             } else if ch == '\\' {
@@ -727,7 +767,8 @@ impl Lexer {
         // Check for unterminated string
         if self.is_at_end() && self.source[self.position - 1] != '"' {
             // Check if we have an unterminated interpolation
-            if let Some((_, opening_line, opening_col, _, brace_depth)) = &self.string_continuation {
+            if let Some((_, opening_line, opening_col, _, brace_depth)) = &self.string_continuation
+            {
                 if *brace_depth > 0 {
                     // We have an unmatched opening brace in the interpolation
                     return Err(LexerError::UnterminatedInterpolation {
@@ -750,15 +791,14 @@ impl Lexer {
 
         let end_pos = self.position;
         let span = Span::new(start_pos, end_pos, start_line, start_col);
-        Ok(Token::new(TokenKind::StringLiteral(chars.iter().collect()), span))
+        Ok(Token::new(
+            TokenKind::StringLiteral(chars.iter().collect()),
+            span,
+        ))
     }
 
     /// Scan escape sequence
-    fn scan_escape_sequence(
-        &mut self,
-        line: usize,
-        column: usize,
-    ) -> Result<char, LexerError> {
+    fn scan_escape_sequence(&mut self, line: usize, column: usize) -> Result<char, LexerError> {
         if self.is_at_end() {
             return Err(LexerError::InvalidEscape {
                 seq: "\\".to_string(),
@@ -790,10 +830,16 @@ impl Lexer {
     /// Called when we encounter } and we're in string continuation mode
     /// NOTE: The } has already been consumed as a RightBrace token by the parser.
     /// This function scans the rest of the string after the }.
-    fn continue_interpolated_string(&mut self, quote_char: char, start_line: usize, start_col: usize, accumulated: String) -> Result<Token, LexerError> {
+    fn continue_interpolated_string(
+        &mut self,
+        quote_char: char,
+        start_line: usize,
+        start_col: usize,
+        accumulated: String,
+    ) -> Result<Token, LexerError> {
         let start_pos = self.position;
         let mut chars = Vec::new();
-        
+
         // The } has already been consumed, so we start scanning the rest of the string
 
         while !self.is_at_end() {
@@ -820,18 +866,23 @@ impl Lexer {
                 let combined = accumulated + &string_part;
                 let end_pos = self.position;
                 let span = Span::new(start_pos, end_pos, start_line, start_col);
-                
+
                 // Store continuation state (preserve brace_depth from current state)
-                let current_depth = self.string_continuation.as_ref().map(|(_, _, _, _, d)| *d).unwrap_or(1);
-                self.string_continuation = Some((quote_char, start_line, start_col, combined, current_depth));
-                
+                let current_depth = self
+                    .string_continuation
+                    .as_ref()
+                    .map(|(_, _, _, _, d)| *d)
+                    .unwrap_or(1);
+                self.string_continuation =
+                    Some((quote_char, start_line, start_col, combined, current_depth));
+
                 // Store LeftBrace in lookahead (same as scan_string_double does)
                 let brace_pos = self.position;
                 let brace_line = self.line;
                 let brace_col = self.column;
                 let brace_span = Span::new(brace_pos, brace_pos + 1, brace_line, brace_col);
                 self.lookahead = Some(Token::new(TokenKind::LeftBrace, brace_span));
-                
+
                 // Return the string part
                 return Ok(Token::new(TokenKind::StringLiteral(string_part), span));
             } else if ch == '\\' {
@@ -860,11 +911,11 @@ impl Lexer {
         // Return only the NEW part of the string (after the })
         // The accumulated part was already returned as the first StringLiteral
         let string_part: String = chars.iter().collect();
-        
+
         // IMPORTANT: Clear string_continuation when string ends (closing quote encountered)
         // This ensures state isolation - string_continuation is only set during active interpolation
         self.string_continuation = None;
-        
+
         let end_pos = self.position;
         let span = Span::new(start_pos, end_pos, start_line, start_col);
         Ok(Token::new(TokenKind::StringLiteral(string_part), span))
@@ -997,10 +1048,7 @@ mod tests {
     #[test]
     fn test_keywords_tier1() {
         let mut lexer = Lexer::new("program begin end var const type");
-        assert_eq!(
-            lexer.next_token().unwrap().kind,
-            TokenKind::KwProgram
-        );
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwProgram);
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwBegin);
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwEnd);
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwVar);
@@ -1051,12 +1099,16 @@ mod tests {
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwUnit);
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwUses);
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwInterface);
-        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwImplementation);
+        assert_eq!(
+            lexer.next_token().unwrap().kind,
+            TokenKind::KwImplementation
+        );
     }
 
     #[test]
     fn test_keywords_tier3_oop() {
-        let mut lexer = Lexer::new("class constructor destructor private protected public virtual override");
+        let mut lexer =
+            Lexer::new("class constructor destructor private protected public virtual override");
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwClass);
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwConstructor);
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwDestructor);
@@ -1087,10 +1139,7 @@ mod tests {
     #[test]
     fn test_keywords_case_insensitive() {
         let mut lexer = Lexer::new("PROGRAM Begin END");
-        assert_eq!(
-            lexer.next_token().unwrap().kind,
-            TokenKind::KwProgram
-        );
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwProgram);
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwBegin);
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwEnd);
     }
@@ -1391,28 +1440,19 @@ mod tests {
     #[test]
     fn test_comments_curly() {
         let mut lexer = Lexer::new("{ This is a comment } program");
-        assert_eq!(
-            lexer.next_token().unwrap().kind,
-            TokenKind::KwProgram
-        );
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwProgram);
     }
 
     #[test]
     fn test_comments_paren() {
         let mut lexer = Lexer::new("(* This is a comment *) program");
-        assert_eq!(
-            lexer.next_token().unwrap().kind,
-            TokenKind::KwProgram
-        );
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwProgram);
     }
 
     #[test]
     fn test_comments_multiline() {
         let mut lexer = Lexer::new("{ This is a\nmulti-line\ncomment } program");
-        assert_eq!(
-            lexer.next_token().unwrap().kind,
-            TokenKind::KwProgram
-        );
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwProgram);
     }
 
     #[test]
@@ -1443,19 +1483,13 @@ mod tests {
     #[test]
     fn test_comments_multiple() {
         let mut lexer = Lexer::new("{ First } { Second } (* Third *) program");
-        assert_eq!(
-            lexer.next_token().unwrap().kind,
-            TokenKind::KwProgram
-        );
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwProgram);
     }
 
     #[test]
     fn test_comments_empty() {
         let mut lexer = Lexer::new("{} (* *) program");
-        assert_eq!(
-            lexer.next_token().unwrap().kind,
-            TokenKind::KwProgram
-        );
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwProgram);
     }
 
     #[test]
@@ -1466,10 +1500,7 @@ begin
 end.";
         let mut lexer = Lexer::new(source);
 
-        assert_eq!(
-            lexer.next_token().unwrap().kind,
-            TokenKind::KwProgram
-        );
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwProgram);
         match lexer.next_token().unwrap().kind {
             TokenKind::Identifier(s) => assert_eq!(s, "HelloWorld"),
             _ => panic!("Expected identifier"),
@@ -1825,7 +1856,7 @@ end.";
         // Basic interpolation without comments
         let source = r#""Hello {name}""#;
         let mut lexer = Lexer::new(source);
-        
+
         // Debug: print all tokens
         let mut tokens = Vec::new();
         loop {
@@ -1839,16 +1870,16 @@ end.";
             }
         }
         eprintln!("Tokens: {:?}", tokens);
-        
+
         // Reset and test properly
         let mut lexer = Lexer::new(source);
-        
+
         // Should get the string literal part before {
         let token = lexer.next_token().unwrap();
         eprintln!("First token: {:?}", token.kind);
         // For now, just check it's a string literal (may be full string until we fix the bug)
         assert!(matches!(token.kind, TokenKind::StringLiteral(_)));
-        
+
         // If interpolation is working, next should be LeftBrace
         // But currently it's not working, so we'll adjust the test
         if let TokenKind::StringLiteral(s) = &token.kind {
@@ -1856,18 +1887,21 @@ end.";
                 // Interpolation is working
                 let token = lexer.next_token().unwrap();
                 assert_eq!(token.kind, TokenKind::LeftBrace);
-                
+
                 let token = lexer.next_token().unwrap();
                 assert_eq!(token.kind, TokenKind::Identifier("name".to_string()));
-                
+
                 let token = lexer.next_token().unwrap();
                 assert_eq!(token.kind, TokenKind::RightBrace);
-                
+
                 let token = lexer.next_token().unwrap();
                 assert_eq!(token.kind, TokenKind::StringLiteral("".to_string()));
             } else {
                 // Interpolation not working yet - this is the bug we need to fix
-                eprintln!("BUG: String interpolation not working - got full string: {:?}", s);
+                eprintln!(
+                    "BUG: String interpolation not working - got full string: {:?}",
+                    s
+                );
             }
         }
     }
@@ -1879,23 +1913,23 @@ end.";
         // Interpolation inside strings should be detected
         let source = r#"{ This is a comment } "Hello {name}""#;
         let mut lexer = Lexer::new(source);
-        
+
         // Comment should be skipped, we should get the string literal
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral("Hello ".to_string()));
-        
+
         // Next should be LeftBrace (from interpolation)
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::LeftBrace);
-        
+
         // Then the identifier
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::Identifier("name".to_string()));
-        
+
         // Then RightBrace (closing interpolation)
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::RightBrace);
-        
+
         // Then the rest of the string
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral("".to_string()));
@@ -1907,23 +1941,23 @@ end.";
         // Comment before interpolated string
         let source = r#"{ comment } "text {value} more""#;
         let mut lexer = Lexer::new(source);
-        
+
         // Comment skipped, get string part
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral("text ".to_string()));
-        
+
         // LeftBrace from interpolation
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::LeftBrace);
-        
+
         // Identifier
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::Identifier("value".to_string()));
-        
+
         // RightBrace
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::RightBrace);
-        
+
         // Rest of string
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral(" more".to_string()));
@@ -1935,27 +1969,27 @@ end.";
         // Comment after interpolated string
         let source = r#""text {value} more" { comment }"#;
         let mut lexer = Lexer::new(source);
-        
+
         // String part
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral("text ".to_string()));
-        
+
         // LeftBrace from interpolation
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::LeftBrace);
-        
+
         // Identifier
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::Identifier("value".to_string()));
-        
+
         // RightBrace
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::RightBrace);
-        
+
         // Rest of string
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral(" more".to_string()));
-        
+
         // Comment should be skipped, next is EOF
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::Eof);
@@ -1967,23 +2001,23 @@ end.";
         // (* *) style comments should not interfere with interpolation
         let source = r#"(* comment *) "Hello {name}""#;
         let mut lexer = Lexer::new(source);
-        
+
         // Comment skipped, get string part
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral("Hello ".to_string()));
-        
+
         // LeftBrace from interpolation
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::LeftBrace);
-        
+
         // Identifier
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::Identifier("name".to_string()));
-        
+
         // RightBrace
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::RightBrace);
-        
+
         // Rest of string
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral("".to_string()));
@@ -1996,14 +2030,14 @@ end.";
         // But we need to test that actual comment syntax doesn't break strings
         let source = r#""This is { not a comment, it's text }""#;
         let mut lexer = Lexer::new(source);
-        
+
         // The { inside the string should trigger interpolation detection
         // But since it's inside quotes, it's part of the string content
         // Actually wait - if { is inside a string, it SHOULD trigger interpolation
         // So this test should detect interpolation
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral("This is ".to_string()));
-        
+
         // LeftBrace
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::LeftBrace);
@@ -2014,26 +2048,38 @@ end.";
         // Multiple comments and interpolations mixed together
         let source = r#"{ comment 1 } "text1 {val1}" { comment 2 } "text2 {val2}""#;
         let mut lexer = Lexer::new(source);
-        
+
         // First comment skipped, first string part
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral("text1 ".to_string()));
-        
+
         // First interpolation
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::LeftBrace);
-        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Identifier("val1".to_string()));
+        assert_eq!(
+            lexer.next_token().unwrap().kind,
+            TokenKind::Identifier("val1".to_string())
+        );
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::RightBrace);
-        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::StringLiteral("".to_string()));
-        
+        assert_eq!(
+            lexer.next_token().unwrap().kind,
+            TokenKind::StringLiteral("".to_string())
+        );
+
         // Second comment skipped, second string part
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral("text2 ".to_string()));
-        
+
         // Second interpolation
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::LeftBrace);
-        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Identifier("val2".to_string()));
+        assert_eq!(
+            lexer.next_token().unwrap().kind,
+            TokenKind::Identifier("val2".to_string())
+        );
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::RightBrace);
-        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::StringLiteral("".to_string()));
+        assert_eq!(
+            lexer.next_token().unwrap().kind,
+            TokenKind::StringLiteral("".to_string())
+        );
     }
 
     #[test]
@@ -2044,11 +2090,15 @@ end.";
         // The comment should skip over the string literal completely
         let source = "{ This is a comment  \"Hello {name}\" }";
         let mut lexer = Lexer::new(source);
-        
+
         // The entire comment (including the string literal) should be skipped
         // Next token should be EOF
         let token = lexer.next_token().unwrap();
-        assert_eq!(token.kind, TokenKind::Eof, "Comment with string inside should be completely skipped");
+        assert_eq!(
+            token.kind,
+            TokenKind::Eof,
+            "Comment with string inside should be completely skipped"
+        );
     }
 
     #[test]
@@ -2056,7 +2106,7 @@ end.";
         // A string literal with interpolation syntax inside a (* *) comment should be completely ignored
         let source = r#"(* This is a comment  "Hello {name}" *)"#;
         let mut lexer = Lexer::new(source);
-        
+
         // The entire comment (including the string) should be skipped
         // Next token should be EOF
         let token = lexer.next_token().unwrap();
@@ -2070,24 +2120,24 @@ end.";
         // The comment should skip over the string literal completely
         let source = "{ Old code: \"Hello {old}\" } \"Hello {new}\"";
         let mut lexer = Lexer::new(source);
-        
+
         // Comment should be skipped completely (including the string literal inside it)
         // Then we should get the real interpolated string parts
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral("Hello ".to_string()));
-        
+
         // LeftBrace from interpolation
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::LeftBrace);
-        
+
         // Identifier
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::Identifier("new".to_string()));
-        
+
         // RightBrace
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::RightBrace);
-        
+
         // Rest of string
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::StringLiteral("".to_string()));
@@ -2103,13 +2153,13 @@ end.";
         // and find the } that closes the comment (the one after "Inner")
         let source = "{ Outer { Inner \"Hello {name}\" } }";
         let mut lexer = Lexer::new(source);
-        
+
         // The comment should skip over the string literal and end at the } after "Inner"
         // After the comment is skipped, we're at the space before the final }
         // After skipping whitespace, we should get the final RightBrace
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::RightBrace, "Final }} after comment");
-        
+
         // Then EOF
         let token = lexer.next_token().unwrap();
         assert_eq!(token.kind, TokenKind::Eof);
@@ -2120,14 +2170,14 @@ end.";
         let mut lexer = Lexer::new("program begin");
         let peeked = lexer.peek_token().unwrap();
         assert_eq!(peeked.kind, TokenKind::KwProgram);
-        
+
         // Peek again should return same token
         let peeked2 = lexer.peek_token().unwrap();
         assert_eq!(peeked2.kind, TokenKind::KwProgram);
-        
+
         // Now consume it
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwProgram);
-        
+
         // Next token should be begin
         assert_eq!(lexer.next_token().unwrap().kind, TokenKind::KwBegin);
     }
@@ -2136,17 +2186,17 @@ end.";
     fn test_line_column_tracking() {
         let source = "program Test;\nvar x: integer;\nbegin\n  x := 1;\nend.";
         let mut lexer = Lexer::new(source);
-        
+
         let token = lexer.next_token().unwrap();
         assert_eq!(token.span.line, 1);
         assert_eq!(token.span.column, 1);
-        
+
         let token = lexer.next_token().unwrap();
         assert_eq!(token.span.line, 1);
-        
+
         let token = lexer.next_token().unwrap();
         assert_eq!(token.span.line, 1);
-        
+
         // After semicolon and newline, should be on line 2
         let _ = lexer.next_token(); // semicolon
         let token = lexer.next_token().unwrap(); // var

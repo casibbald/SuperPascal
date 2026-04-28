@@ -3,17 +3,17 @@
 //! This crate implements a recursive descent parser for SuperPascal.
 //! It builds an AST from tokens produced by the lexer.
 
-mod core;
-mod statements;
-mod expressions;
-mod types;
-mod declarations;
 mod classes;
-mod units;
-mod properties;
+mod core;
+mod declarations;
 mod directives;
-pub mod query;
+mod expressions;
 pub mod incremental;
+mod properties;
+pub mod query;
+mod statements;
+mod types;
+mod units;
 
 use ast::Node;
 use errors::{CodeSnippet, Diagnostic, ParseErrors, ParserError, ParserResult};
@@ -101,31 +101,35 @@ impl Parser {
     /// Convert a ParserError to an enhanced Diagnostic
     pub fn error_to_diagnostic(&self, error: &ParserError) -> Diagnostic {
         let mut diag = error.to_diagnostic(self.filename.clone());
-        
+
         // Add enhanced context based on error type
         match error {
-            ParserError::UnexpectedToken { expected, found, span } => {
+            ParserError::UnexpectedToken {
+                expected,
+                found,
+                span,
+            } => {
                 // Add suggestion for common mistakes
                 if expected == "identifier" && found.contains("keyword") {
-                    diag = diag.with_suggestion(
-                        format!("Keywords cannot be used as identifiers. Use a different name.")
-                    );
+                    diag = diag.with_suggestion(format!(
+                        "Keywords cannot be used as identifiers. Use a different name."
+                    ));
                 } else if expected == ";" && found.contains("end") {
-                    diag = diag.with_suggestion(
-                        format!("Missing semicolon before 'end'. Add ';' after the previous statement.")
-                    );
+                    diag = diag.with_suggestion(format!(
+                        "Missing semicolon before 'end'. Add ';' after the previous statement."
+                    ));
                 } else if expected == ":" && found.contains("=") {
-                    diag = diag.with_suggestion(
-                        format!("Did you mean ':' instead of '='? Variable declarations use ':' for type.")
-                    );
+                    diag = diag.with_suggestion(format!(
+                        "Did you mean ':' instead of '='? Variable declarations use ':' for type."
+                    ));
                 } else if expected == "=" && found.contains(":") {
-                    diag = diag.with_suggestion(
-                        format!("Did you mean '=' instead of ':'? Assignments use '=' (or ':=' in Pascal).")
-                    );
+                    diag = diag.with_suggestion(format!(
+                        "Did you mean '=' instead of ':'? Assignments use '=' (or ':=' in Pascal)."
+                    ));
                 } else if expected == ":=" && found.contains("=") {
-                    diag = diag.with_suggestion(
-                        format!("Pascal uses ':=' for assignment, not '='. Change '=' to ':='.")
-                    );
+                    diag = diag.with_suggestion(format!(
+                        "Pascal uses ':=' for assignment, not '='. Change '=' to ':='."
+                    ));
                 } else if expected == "BEGIN" && found.contains("begin") {
                     diag = diag.with_suggestion(
                         format!("Pascal is case-sensitive for keywords. Use 'BEGIN' (uppercase) or ensure your lexer handles case correctly.")
@@ -135,23 +139,23 @@ impl Parser {
                         format!("Pascal is case-sensitive for keywords. Use 'END' (uppercase) or ensure your lexer handles case correctly.")
                     );
                 } else if expected == ")" && found.contains("]") {
-                    diag = diag.with_suggestion(
-                        format!("Mismatched bracket. Use ')' to close a function call or expression.")
-                    );
+                    diag = diag.with_suggestion(format!(
+                        "Mismatched bracket. Use ')' to close a function call or expression."
+                    ));
                 } else if expected == "]" && found.contains(")") {
-                    diag = diag.with_suggestion(
-                        format!("Mismatched bracket. Use ']' to close an array index.")
-                    );
+                    diag = diag.with_suggestion(format!(
+                        "Mismatched bracket. Use ']' to close an array index."
+                    ));
                 } else if expected == "THEN" && found.contains("then") {
-                    diag = diag.with_suggestion(
-                        format!("Pascal is case-sensitive. Use 'THEN' (uppercase) after IF condition.")
-                    );
+                    diag = diag.with_suggestion(format!(
+                        "Pascal is case-sensitive. Use 'THEN' (uppercase) after IF condition."
+                    ));
                 } else if expected == "DO" && found.contains("do") {
-                    diag = diag.with_suggestion(
-                        format!("Pascal is case-sensitive. Use 'DO' (uppercase) after FOR/WHILE condition.")
-                    );
+                    diag = diag.with_suggestion(format!(
+                        "Pascal is case-sensitive. Use 'DO' (uppercase) after FOR/WHILE condition."
+                    ));
                 }
-                
+
                 // Add code snippet if we have source available
                 if let Some(source) = self.get_source_snippet(*span) {
                     diag = diag.with_code_snippet(source);
@@ -170,7 +174,7 @@ impl Parser {
                     _ => &format!("Add '{}' before the end of file.", expected),
                 };
                 diag = diag.with_suggestion(suggestion.to_string());
-                
+
                 // Add explanation
                 diag = diag.with_explanation(
                     format!(
@@ -184,32 +188,34 @@ impl Parser {
                 // Try to provide helpful context
                 if message.contains("statement") {
                     diag = diag.with_suggestion(
-                        "Check that all statements are properly terminated with semicolons.".to_string()
+                        "Check that all statements are properly terminated with semicolons."
+                            .to_string(),
                     );
                 } else if message.contains("expression") {
                     diag = diag.with_suggestion(
-                        "Check that the expression is complete and all parentheses are balanced.".to_string()
+                        "Check that the expression is complete and all parentheses are balanced."
+                            .to_string(),
                     );
                 } else if message.contains("type") {
                     diag = diag.with_suggestion(
-                        "Check that the type name is correct and the type is declared.".to_string()
+                        "Check that the type name is correct and the type is declared.".to_string(),
                     );
                 } else if message.contains("Lexer error") {
                     diag = diag.with_suggestion(
-                        "Check for invalid characters or syntax in the source code.".to_string()
+                        "Check for invalid characters or syntax in the source code.".to_string(),
                     );
                 }
-                
+
                 // Add code snippet if available
                 if let Some(source) = self.get_source_snippet(*span) {
                     diag = diag.with_code_snippet(source);
                 }
             }
         }
-        
+
         diag
     }
-    
+
     /// Get a code snippet around the error location for display
     fn get_source_snippet(&self, span: Span) -> Option<CodeSnippet> {
         if self.source.is_empty() {
@@ -264,7 +270,7 @@ impl Parser {
             // Process directive but don't collect it here - let parse_program/parse_unit handle it
             let _ = self.parse_directive()?;
         }
-        
+
         // Skip tokens if we're in an inactive conditional branch
         while !self.directive_evaluator().is_active() {
             if self.check(&TokenKind::Directive(String::new())) {
@@ -283,7 +289,7 @@ impl Parser {
                 self.advance()?;
             }
         }
-        
+
         // Check what we're parsing: PROGRAM, UNIT, or LIBRARY
         if self.check(&TokenKind::KwProgram) {
             self.parse_program()
@@ -322,7 +328,7 @@ impl Parser {
     /// Parse a complete program, unit, or library, collecting all errors instead of failing on first
     pub fn parse_with_errors(&mut self) -> ParseErrors {
         let mut errors = ParseErrors::new();
-        
+
         // Handle directives
         let mut has_error = false;
         while self.check(&TokenKind::Directive(String::new())) {
@@ -331,7 +337,7 @@ impl Parser {
                 has_error = true;
             }
         }
-        
+
         // Skip tokens if we're in an inactive conditional branch
         while !self.directive_evaluator().is_active() {
             if self.check(&TokenKind::Directive(String::new())) {
@@ -354,7 +360,7 @@ impl Parser {
                 let _ = self.advance();
             }
         }
-        
+
         // Check what we're parsing: PROGRAM, UNIT, or LIBRARY
         if self.check(&TokenKind::KwProgram) {
             if let Err(e) = self.parse_program() {
@@ -382,15 +388,15 @@ impl Parser {
             });
             has_error = true;
         }
-        
+
         // If there were errors, try to recover by skipping to a sync point and continuing
         if has_error && !errors.is_empty() {
             self.skip_to_sync_point();
         }
-        
+
         errors
     }
-    
+
     /// Skip tokens until we find a sync point for error recovery
     /// Sync points are keywords that mark known safe places to restart parsing
     fn skip_to_sync_point(&mut self) {
@@ -409,7 +415,7 @@ impl Parser {
             TokenKind::KwImplementation,
             TokenKind::KwInterface,
         ];
-        
+
         while !self.check(&TokenKind::Eof) {
             if sync_keywords.iter().any(|k| self.check(k)) {
                 return; // Found sync point
@@ -441,7 +447,9 @@ mod tests {
 
         // Error on line 4, column 3 (X := 10)
         let span = Span::new(30, 35, 4, 3);
-        let snippet = parser.get_source_snippet(span).expect("should return snippet");
+        let snippet = parser
+            .get_source_snippet(span)
+            .expect("should return snippet");
 
         assert_eq!(snippet.lines.len(), 1);
         assert_eq!(snippet.lines[0].0, 4);
@@ -459,7 +467,9 @@ mod tests {
 
         // Error on line 4 (A := "hello")
         let span = Span::new(28, 37, 4, 3);
-        let snippet = parser.get_source_snippet(span).expect("should return snippet");
+        let snippet = parser
+            .get_source_snippet(span)
+            .expect("should return snippet");
 
         // Should include 1 line above + error line + 1 line below = 3 lines
         assert_eq!(snippet.lines.len(), 3);
@@ -480,7 +490,9 @@ mod tests {
 
         // Error on first line
         let span = Span::new(0, 6, 1, 1);
-        let snippet = parser.get_source_snippet(span).expect("should return snippet");
+        let snippet = parser
+            .get_source_snippet(span)
+            .expect("should return snippet");
 
         assert_eq!(snippet.lines.len(), 2); // program line + context line below
         assert_eq!(snippet.lines[0].0, 1);
@@ -510,7 +522,10 @@ mod tests {
             assert!(!snippet.lines.is_empty(), "Snippet should have lines");
             // Should include the error line with context
             assert!(
-                snippet.lines.iter().any(|(_, line)| line.contains("X := \"hello\"")),
+                snippet
+                    .lines
+                    .iter()
+                    .any(|(_, line)| line.contains("X := \"hello\"")),
                 "Snippet should include the error line"
             );
         }
@@ -535,14 +550,8 @@ mod tests {
             diag.suggestion.is_some(),
             "Should have a suggestion for unexpected token"
         );
-        assert!(
-            diag.code_snippet.is_some(),
-            "Should have a code snippet"
-        );
-        assert!(
-            !diag.message.is_empty(),
-            "Message should not be empty"
-        );
+        assert!(diag.code_snippet.is_some(), "Should have a code snippet");
+        assert!(!diag.message.is_empty(), "Message should not be empty");
     }
 
     #[test]
@@ -581,7 +590,10 @@ mod tests {
         let mut parser = Parser::new_with_file(source, None).unwrap();
         let errors = parser.parse_with_errors();
 
-        assert!(!errors.is_empty(), "Empty source should produce an error (expected PROGRAM)");
+        assert!(
+            !errors.is_empty(),
+            "Empty source should produce an error (expected PROGRAM)"
+        );
     }
 
     #[test]

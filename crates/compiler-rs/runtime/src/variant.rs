@@ -48,15 +48,15 @@ impl VariantType {
     pub fn value_size(&self) -> usize {
         match self {
             VariantType::Empty => 0,
-            VariantType::Integer => 2,  // 16-bit integer
+            VariantType::Integer => 2, // 16-bit integer
             VariantType::Boolean => 1,
             VariantType::Char => 1,
             VariantType::Byte => 1,
             VariantType::Word => 2,
-            VariantType::String => 2,   // Pointer to string
-            VariantType::Array => 2,    // Pointer to array
-            VariantType::Record => 2,   // Pointer to record
-            VariantType::Pointer => 2,  // Pointer value
+            VariantType::String => 2,  // Pointer to string
+            VariantType::Array => 2,   // Pointer to array
+            VariantType::Record => 2,  // Pointer to record
+            VariantType::Pointer => 2, // Pointer value
         }
     }
 }
@@ -80,10 +80,10 @@ pub enum VariantValue {
     Char(u8),
     Byte(u8),
     Word(u16),
-    String(String),      // Owned string
-    Array(Vec<u8>),      // Generic array storage (bytes)
-    Record(Vec<u8>),     // Generic record storage (bytes)
-    Pointer(usize),       // Pointer value (address)
+    String(String),  // Owned string
+    Array(Vec<u8>),  // Generic array storage (bytes)
+    Record(Vec<u8>), // Generic record storage (bytes)
+    Pointer(usize),  // Pointer value (address)
 }
 
 impl Variant {
@@ -321,7 +321,10 @@ mod tests {
 
     #[test]
     fn test_variant_conversion_invalid() {
-        let v = Variant::new(VariantType::String, VariantValue::String("Hello".to_string()));
+        let v = Variant::new(
+            VariantType::String,
+            VariantValue::String("Hello".to_string()),
+        );
         assert!(variant_to_integer(&v).is_err());
     }
 
@@ -352,4 +355,3 @@ mod tests {
         assert_eq!(VariantType::from_type(&variant_type), VariantType::Empty);
     }
 }
-

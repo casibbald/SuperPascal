@@ -21,11 +21,21 @@ use std::fmt;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Z80Register {
     /// 8-bit registers
-    A, B, C, D, E, H, L,
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
     /// 16-bit register pairs
-    AF, BC, DE, HL,
+    AF,
+    BC,
+    DE,
+    HL,
     /// Index registers
-    IX, IY,
+    IX,
+    IY,
     /// Stack pointer
     SP,
 }
@@ -59,9 +69,15 @@ pub enum Z80Instruction {
     /// Load register from register: `ld dst, src`
     LoadRegister { dst: Z80Register, src: Z80Register },
     /// Load register from memory: `ld reg, (addr)` or `ld reg, (ix+offset)`
-    LoadMemory { reg: Z80Register, addr: MemoryAddress },
+    LoadMemory {
+        reg: Z80Register,
+        addr: MemoryAddress,
+    },
     /// Store register to memory: `ld (addr), reg` or `ld (ix+offset), reg`
-    StoreMemory { addr: MemoryAddress, reg: Z80Register },
+    StoreMemory {
+        addr: MemoryAddress,
+        reg: Z80Register,
+    },
     /// Push register onto stack: `push reg`
     Push { reg: Z80Register },
     /// Pop register from stack: `pop reg`
@@ -75,7 +91,11 @@ pub enum Z80Instruction {
     /// Unconditional jump: `jp label` or `jr label`
     Jump { label: String, near: bool },
     /// Conditional jump: `jp cc, label` or `jr cc, label`
-    JumpConditional { condition: Condition, label: String, near: bool },
+    JumpConditional {
+        condition: Condition,
+        label: String,
+        near: bool,
+    },
     /// Call function: `call label`
     Call { label: String },
     /// Return: `ret`
@@ -166,7 +186,7 @@ impl CodeGenerator {
     /// Generate code for a function
     fn generate_function(&mut self, function: &Function) -> Vec<Z80Instruction> {
         let mut instructions = Vec::new();
-        
+
         self.current_function = Some(function.name.clone());
         self.local_offset = 0;
 
@@ -196,17 +216,19 @@ impl CodeGenerator {
 
         // Calculate local variable size
         let local_size = self.calculate_local_size(function);
-        
+
         if local_size > 0 {
             // Save frame pointer
-            instructions.push(Z80Instruction::Push { reg: Z80Register::IX });
-            
+            instructions.push(Z80Instruction::Push {
+                reg: Z80Register::IX,
+            });
+
             // Set IX to current SP
             instructions.push(Z80Instruction::LoadRegister {
                 dst: Z80Register::IX,
                 src: Z80Register::SP,
             });
-            
+
             // Allocate local variables: SP = SP - local_size
             instructions.push(Z80Instruction::LoadImmediate {
                 reg: Z80Register::HL,
@@ -218,7 +240,9 @@ impl CodeGenerator {
             });
         } else {
             // No locals, just save frame pointer
-            instructions.push(Z80Instruction::Push { reg: Z80Register::IX });
+            instructions.push(Z80Instruction::Push {
+                reg: Z80Register::IX,
+            });
             instructions.push(Z80Instruction::LoadRegister {
                 dst: Z80Register::IX,
                 src: Z80Register::SP,
@@ -239,7 +263,9 @@ impl CodeGenerator {
         });
 
         // Restore frame pointer
-        instructions.push(Z80Instruction::Pop { reg: Z80Register::IX });
+        instructions.push(Z80Instruction::Pop {
+            reg: Z80Register::IX,
+        });
 
         // Return
         instructions.push(Z80Instruction::Return);
@@ -340,7 +366,7 @@ impl CodeGenerator {
 
         // Load src1 into HL
         let mut instructions = self.load_value_into_hl(src1);
-        
+
         // Add src2 to HL
         match src2 {
             Value::Immediate(imm) => {
@@ -384,7 +410,7 @@ impl CodeGenerator {
 
         // Load src1 into HL
         let mut instructions = self.load_value_into_hl(src1);
-        
+
         // Subtract src2 from HL
         match src2 {
             Value::Immediate(imm) => {
@@ -427,7 +453,7 @@ impl CodeGenerator {
 
         // Load src1 into A
         let mut instructions = self.load_value_into_a(src1);
-        
+
         // Compare with src2
         match src2 {
             Value::Immediate(imm) => {
@@ -480,12 +506,12 @@ impl CodeGenerator {
         // CJUMP condition, label_true, label_false
         // The condition is set by a previous CMP instruction
         // For now, assume condition is in operands[0]
-        
+
         let label_true = match &inst.operands[1] {
             Value::Label(l) => l.clone(),
             _ => return vec![],
         };
-        
+
         let label_false = match &inst.operands[2] {
             Value::Label(l) => l.clone(),
             _ => return vec![],
@@ -714,14 +740,14 @@ impl CodeGenerator {
     }
 
     /// Optimize jumps: Convert JP (absolute, 3 bytes) to JR (relative, 2 bytes) when possible.
-    /// 
+    ///
     /// This implements Turbo Pascal's iterative jump optimization algorithm:
     /// 1. Calculate instruction offsets
     /// 2. For each jump, check if displacement fits in 8-bit signed range (-126 to +129)
     /// 3. Convert JP to JR if possible
     /// 4. Recalculate offsets (since JR is 1 byte shorter)
     /// 5. Repeat until no more changes
-    /// 
+    ///
     /// This is iterative because each optimization reduces code size, potentially
     /// enabling more jumps to be optimized.
     fn optimize_jumps(&self, instructions: &mut Vec<Z80Instruction>) {
@@ -735,7 +761,7 @@ impl CodeGenerator {
 
             // Calculate current instruction offsets
             let offsets = self.calculate_instruction_offsets(instructions);
-            
+
             // Build label-to-offset map
             let mut label_offsets = std::collections::HashMap::new();
             for (idx, inst) in instructions.iter().enumerate() {
@@ -757,8 +783,9 @@ impl CodeGenerator {
                                 // JR would be 2 bytes, so next instruction would be at jump_offset + 2
                                 // We calculate as if we're using JR (2 bytes)
                                 let next_instruction_offset = jump_offset + 2;
-                                let displacement = target_offset as i32 - next_instruction_offset as i32;
-                                
+                                let displacement =
+                                    target_offset as i32 - next_instruction_offset as i32;
+
                                 // Z80 JR range: -128 to +127 (8-bit signed)
                                 // Turbo Pascal uses -126 to +129 to account for instruction boundaries
                                 if displacement >= -126 && displacement <= 129 {
@@ -771,8 +798,9 @@ impl CodeGenerator {
                             if let Some(&target_offset) = label_offsets.get(label) {
                                 // Same calculation for conditional jumps
                                 let next_instruction_offset = jump_offset + 2;
-                                let displacement = target_offset as i32 - next_instruction_offset as i32;
-                                
+                                let displacement =
+                                    target_offset as i32 - next_instruction_offset as i32;
+
                                 if displacement >= -126 && displacement <= 129 {
                                     *near = true; // Convert to JR
                                     changed = true;
@@ -792,7 +820,10 @@ impl CodeGenerator {
 
     /// Calculate byte offsets for each instruction in the instruction list.
     /// Returns a map from instruction index to byte offset.
-    fn calculate_instruction_offsets(&self, instructions: &[Z80Instruction]) -> std::collections::HashMap<usize, usize> {
+    fn calculate_instruction_offsets(
+        &self,
+        instructions: &[Z80Instruction],
+    ) -> std::collections::HashMap<usize, usize> {
         let mut offsets = std::collections::HashMap::new();
         let mut current_offset = 0;
 
@@ -811,7 +842,7 @@ impl CodeGenerator {
             // 1-byte instructions
             Z80Instruction::Return => 1,
             Z80Instruction::Label { .. } => 0, // Labels don't generate code
-            
+
             // 2-byte instructions
             Z80Instruction::LoadImmediate { value, .. } => {
                 if *value <= 0xFF {
@@ -832,7 +863,7 @@ impl CodeGenerator {
                     1 // cp, register
                 }
             }
-            
+
             // Jump instructions (size depends on near flag)
             Z80Instruction::Jump { near, .. } => {
                 if *near {
@@ -848,22 +879,22 @@ impl CodeGenerator {
                     3 // jp cc (absolute, 3 bytes)
                 }
             }
-            
+
             // 3-byte instructions
             Z80Instruction::Call { .. } => 3,
-            
+
             // Memory operations (variable size)
             Z80Instruction::LoadMemory { addr, .. } => match addr {
-                MemoryAddress::Direct(_) => 3, // ld reg, (nn)
-                MemoryAddress::FrameRelative(_) => 3, // ld reg, (ix+d)
+                MemoryAddress::Direct(_) => 3,           // ld reg, (nn)
+                MemoryAddress::FrameRelative(_) => 3,    // ld reg, (ix+d)
                 MemoryAddress::RegisterIndirect(_) => 1, // ld reg, (hl)
             },
             Z80Instruction::StoreMemory { addr, .. } => match addr {
-                MemoryAddress::Direct(_) => 3, // ld (nn), reg
-                MemoryAddress::FrameRelative(_) => 3, // ld (ix+d), reg
+                MemoryAddress::Direct(_) => 3,           // ld (nn), reg
+                MemoryAddress::FrameRelative(_) => 3,    // ld (ix+d), reg
                 MemoryAddress::RegisterIndirect(_) => 1, // ld (hl), reg
             },
-            
+
             // Comments don't generate code
             Z80Instruction::Comment { .. } => 0,
         }
@@ -890,34 +921,18 @@ impl Z80Instruction {
     /// Labels and comments produce no bytes.
     pub fn encode(&self) -> Vec<u8> {
         match self {
-            Z80Instruction::LoadImmediate { reg, value } => {
-                self.encode_ldi(reg, *value)
-            }
-            Z80Instruction::LoadRegister { dst, src } => {
-                self.encode_ld_reg(dst, src)
-            }
-            Z80Instruction::LoadMemory { reg, addr } => {
-                self.encode_ld_mr(reg, addr)
-            }
-            Z80Instruction::StoreMemory { addr, reg } => {
-                self.encode_ld_rm(addr, reg)
-            }
-            Z80Instruction::Push { reg } => {
-                self.encode_push(reg)
-            }
-            Z80Instruction::Pop { reg } => {
-                self.encode_pop(reg)
-            }
-            Z80Instruction::Add { dst, src } => {
-                self.encode_add(dst, src)
-            }
+            Z80Instruction::LoadImmediate { reg, value } => self.encode_ldi(reg, *value),
+            Z80Instruction::LoadRegister { dst, src } => self.encode_ld_reg(dst, src),
+            Z80Instruction::LoadMemory { reg, addr } => self.encode_ld_mr(reg, addr),
+            Z80Instruction::StoreMemory { addr, reg } => self.encode_ld_rm(addr, reg),
+            Z80Instruction::Push { reg } => self.encode_push(reg),
+            Z80Instruction::Pop { reg } => self.encode_pop(reg),
+            Z80Instruction::Add { dst, src } => self.encode_add(dst, src),
             Z80Instruction::Subtract { dst, src } => {
                 // dst is HL, src is the register pair to subtract
                 self.encode_sub(dst, src)
             }
-            Z80Instruction::Compare { reg, value } => {
-                self.encode_cp(reg, value)
-            }
+            Z80Instruction::Compare { reg, value } => self.encode_cp(reg, value),
             Z80Instruction::Jump { label: _, near } => {
                 // Size is encoded by the caller with a placeholder
                 // The actual address is filled in by the linker/locator
@@ -928,13 +943,17 @@ impl Z80Instruction {
                     vec![0xC3, 0x00, 0x00] // JP $0000 (absolute placeholder)
                 }
             }
-            Z80Instruction::JumpConditional { condition, label: _, near } => {
+            Z80Instruction::JumpConditional {
+                condition,
+                label: _,
+                near,
+            } => {
                 let cc = match condition {
-                    Condition::Zero => 0x28,  // JR Z, offset
-                    Condition::NonZero => 0x20, // JR NZ, offset
-                    Condition::Carry => 0x38,  // JR C, offset
-                    Condition::NoCarry => 0x30, // JR NC, offset
-                    Condition::Sign => 0x30,   // JR M (same as NC on Z80)
+                    Condition::Zero => 0x28,     // JR Z, offset
+                    Condition::NonZero => 0x20,  // JR NZ, offset
+                    Condition::Carry => 0x38,    // JR C, offset
+                    Condition::NoCarry => 0x30,  // JR NC, offset
+                    Condition::Sign => 0x30,     // JR M (same as NC on Z80)
                     Condition::Positive => 0x28, // JR P (same as NZ on Z80)
                 };
                 if *near {
@@ -977,13 +996,13 @@ impl Z80Instruction {
         // For 16-bit registers, encode LD reg, imm16
         let imm8 = (value & 0xFF) as u8;
         match reg {
-            Z80Register::A => vec![0x3E, imm8],        // LD A, imm8
-            Z80Register::B => vec![0x06, imm8],        // LD B, imm8
-            Z80Register::C => vec![0x0E, imm8],        // LD C, imm8
-            Z80Register::D => vec![0x16, imm8],        // LD D, imm8
-            Z80Register::E => vec![0x1E, imm8],        // LD E, imm8
-            Z80Register::H => vec![0x26, imm8],        // LD H, imm8
-            Z80Register::L => vec![0x2E, imm8],        // LD L, imm8
+            Z80Register::A => vec![0x3E, imm8], // LD A, imm8
+            Z80Register::B => vec![0x06, imm8], // LD B, imm8
+            Z80Register::C => vec![0x0E, imm8], // LD C, imm8
+            Z80Register::D => vec![0x16, imm8], // LD D, imm8
+            Z80Register::E => vec![0x1E, imm8], // LD E, imm8
+            Z80Register::H => vec![0x26, imm8], // LD H, imm8
+            Z80Register::L => vec![0x2E, imm8], // LD L, imm8
             // 16-bit loads
             Z80Register::BC => vec![0x01, (value & 0xFF) as u8, ((value >> 8) & 0xFF) as u8],
             Z80Register::DE => vec![0x11, (value & 0xFF) as u8, ((value >> 8) & 0xFF) as u8],
@@ -995,8 +1014,18 @@ impl Z80Instruction {
                     vec![0x21, (value & 0xFF) as u8, ((value >> 8) & 0xFF) as u8]
                 }
             }
-            Z80Register::IX => vec![0xDD, 0x21, (value & 0xFF) as u8, ((value >> 8) & 0xFF) as u8],
-            Z80Register::IY => vec![0xFD, 0x21, (value & 0xFF) as u8, ((value >> 8) & 0xFF) as u8],
+            Z80Register::IX => vec![
+                0xDD,
+                0x21,
+                (value & 0xFF) as u8,
+                ((value >> 8) & 0xFF) as u8,
+            ],
+            Z80Register::IY => vec![
+                0xFD,
+                0x21,
+                (value & 0xFF) as u8,
+                ((value >> 8) & 0xFF) as u8,
+            ],
             Z80Register::SP => vec![0x31, (value & 0xFF) as u8, ((value >> 8) & 0xFF) as u8],
             // AF pair - no direct LD AFR instruction, use push/pop or individual
             Z80Register::AF => {
@@ -1081,8 +1110,8 @@ impl Z80Instruction {
         match addr {
             MemoryAddress::RegisterIndirect(Z80Register::HL) => {
                 match reg {
-                    Z80Register::A => vec![0x46],        // LD A, (HL)
-                    Z80Register::B => vec![0x46],        // Placeholder
+                    Z80Register::A => vec![0x46], // LD A, (HL)
+                    Z80Register::B => vec![0x46], // Placeholder
                     Z80Register::C => vec![0x4E],
                     Z80Register::D => vec![0x56],
                     Z80Register::E => vec![0x5E],
@@ -1250,7 +1279,7 @@ impl Z80Instruction {
     /// CP A, imm8 or CP A, reg
     fn encode_cp(&self, reg: &Z80Register, value: &Option<u8>) -> Vec<u8> {
         match (reg, value) {
-            (Z80Register::A, Some(v)) => vec![0xFE, *v],     // CP A, imm8
+            (Z80Register::A, Some(v)) => vec![0xFE, *v], // CP A, imm8
             (Z80Register::A, None) => {
                 // CP A, reg
                 match reg {
@@ -1279,36 +1308,32 @@ impl fmt::Display for Z80Instruction {
             Z80Instruction::LoadRegister { dst, src } => {
                 write!(f, "    ld {}, {}", dst, src)
             }
-            Z80Instruction::LoadMemory { reg, addr } => {
-                match addr {
-                    MemoryAddress::Direct(addr) => write!(f, "    ld {}, ({})", reg, addr),
-                    MemoryAddress::FrameRelative(offset) => {
-                        if *offset >= 0 {
-                            write!(f, "    ld {}, (ix+{})", reg, offset)
-                        } else {
-                            write!(f, "    ld {}, (ix{})", reg, offset)
-                        }
-                    }
-                    MemoryAddress::RegisterIndirect(reg_ind) => {
-                        write!(f, "    ld {}, ({})", reg, reg_ind)
+            Z80Instruction::LoadMemory { reg, addr } => match addr {
+                MemoryAddress::Direct(addr) => write!(f, "    ld {}, ({})", reg, addr),
+                MemoryAddress::FrameRelative(offset) => {
+                    if *offset >= 0 {
+                        write!(f, "    ld {}, (ix+{})", reg, offset)
+                    } else {
+                        write!(f, "    ld {}, (ix{})", reg, offset)
                     }
                 }
-            }
-            Z80Instruction::StoreMemory { addr, reg } => {
-                match addr {
-                    MemoryAddress::Direct(addr) => write!(f, "    ld ({}), {}", addr, reg),
-                    MemoryAddress::FrameRelative(offset) => {
-                        if *offset >= 0 {
-                            write!(f, "    ld (ix+{}), {}", offset, reg)
-                        } else {
-                            write!(f, "    ld (ix{}), {}", offset, reg)
-                        }
-                    }
-                    MemoryAddress::RegisterIndirect(reg_ind) => {
-                        write!(f, "    ld ({}), {}", reg_ind, reg)
+                MemoryAddress::RegisterIndirect(reg_ind) => {
+                    write!(f, "    ld {}, ({})", reg, reg_ind)
+                }
+            },
+            Z80Instruction::StoreMemory { addr, reg } => match addr {
+                MemoryAddress::Direct(addr) => write!(f, "    ld ({}), {}", addr, reg),
+                MemoryAddress::FrameRelative(offset) => {
+                    if *offset >= 0 {
+                        write!(f, "    ld (ix+{}), {}", offset, reg)
+                    } else {
+                        write!(f, "    ld (ix{}), {}", offset, reg)
                     }
                 }
-            }
+                MemoryAddress::RegisterIndirect(reg_ind) => {
+                    write!(f, "    ld ({}), {}", reg_ind, reg)
+                }
+            },
             Z80Instruction::Push { reg } => {
                 write!(f, "    push {}", reg)
             }
@@ -1335,7 +1360,11 @@ impl fmt::Display for Z80Instruction {
                     write!(f, "    jp {}", label)
                 }
             }
-            Z80Instruction::JumpConditional { condition, label, near } => {
+            Z80Instruction::JumpConditional {
+                condition,
+                label,
+                near,
+            } => {
                 if *near {
                     write!(f, "    jr {}, {}", condition, label)
                 } else {
@@ -1390,7 +1419,7 @@ mod tests {
             globals: vec![],
         };
         let instructions = codegen.generate(&program);
-        
+
         // Should have prologue, epilogue, and label
         assert!(instructions.len() > 0);
     }
@@ -1401,11 +1430,24 @@ mod tests {
     fn test_jump_optimization_convert_jp_to_jr() {
         let codegen = CodeGenerator::new();
         let mut instructions = vec![
-            Z80Instruction::Label { name: "start".to_string() },
-            Z80Instruction::LoadImmediate { reg: Z80Register::A, value: 42 },
-            Z80Instruction::Jump { label: "end".to_string(), near: false }, // JP (3 bytes)
-            Z80Instruction::LoadImmediate { reg: Z80Register::B, value: 0 },
-            Z80Instruction::Label { name: "end".to_string() },
+            Z80Instruction::Label {
+                name: "start".to_string(),
+            },
+            Z80Instruction::LoadImmediate {
+                reg: Z80Register::A,
+                value: 42,
+            },
+            Z80Instruction::Jump {
+                label: "end".to_string(),
+                near: false,
+            }, // JP (3 bytes)
+            Z80Instruction::LoadImmediate {
+                reg: Z80Register::B,
+                value: 0,
+            },
+            Z80Instruction::Label {
+                name: "end".to_string(),
+            },
             Z80Instruction::Return,
         ];
 
@@ -1427,9 +1469,9 @@ mod tests {
     #[test]
     fn test_jump_optimization_keep_jp_for_large_displacement() {
         let codegen = CodeGenerator::new();
-        let mut instructions = vec![
-            Z80Instruction::Label { name: "start".to_string() },
-        ];
+        let mut instructions = vec![Z80Instruction::Label {
+            name: "start".to_string(),
+        }];
 
         // Add many instructions to create large displacement (> 129 bytes)
         // Each LoadImmediate is 2 bytes, so we need > 65 instructions
@@ -1444,7 +1486,7 @@ mod tests {
             label: "end".to_string(),
             near: false, // JP (3 bytes)
         });
-        
+
         // Add more instructions to push the target label far away
         for i in 0..100 {
             instructions.push(Z80Instruction::LoadImmediate {
@@ -1452,8 +1494,10 @@ mod tests {
                 value: i as u16,
             });
         }
-        
-        instructions.push(Z80Instruction::Label { name: "end".to_string() });
+
+        instructions.push(Z80Instruction::Label {
+            name: "end".to_string(),
+        });
         instructions.push(Z80Instruction::Return);
 
         let jump_idx = 101; // Jump is after 101 instructions (start label + 100 LoadImmediate)
@@ -1471,7 +1515,9 @@ mod tests {
     fn test_jump_optimization_conditional_jump() {
         let codegen = CodeGenerator::new();
         let mut instructions = vec![
-            Z80Instruction::Label { name: "start".to_string() },
+            Z80Instruction::Label {
+                name: "start".to_string(),
+            },
             Z80Instruction::Compare {
                 reg: Z80Register::A,
                 value: Some(0),
@@ -1481,8 +1527,13 @@ mod tests {
                 label: "end".to_string(),
                 near: false, // JP cc (3 bytes)
             },
-            Z80Instruction::LoadImmediate { reg: Z80Register::A, value: 1 },
-            Z80Instruction::Label { name: "end".to_string() },
+            Z80Instruction::LoadImmediate {
+                reg: Z80Register::A,
+                value: 1,
+            },
+            Z80Instruction::Label {
+                name: "end".to_string(),
+            },
             Z80Instruction::Return,
         ];
 
@@ -1500,21 +1551,36 @@ mod tests {
         let codegen = CodeGenerator::new();
         // Create a scenario where multiple optimizations are needed
         let mut instructions = vec![
-            Z80Instruction::Label { name: "start".to_string() },
+            Z80Instruction::Label {
+                name: "start".to_string(),
+            },
             Z80Instruction::Jump {
                 label: "mid".to_string(),
                 near: false, // JP
             },
             // Add some instructions
-            Z80Instruction::LoadImmediate { reg: Z80Register::A, value: 1 },
-            Z80Instruction::LoadImmediate { reg: Z80Register::B, value: 2 },
-            Z80Instruction::Label { name: "mid".to_string() },
+            Z80Instruction::LoadImmediate {
+                reg: Z80Register::A,
+                value: 1,
+            },
+            Z80Instruction::LoadImmediate {
+                reg: Z80Register::B,
+                value: 2,
+            },
+            Z80Instruction::Label {
+                name: "mid".to_string(),
+            },
             Z80Instruction::Jump {
                 label: "end".to_string(),
                 near: false, // JP
             },
-            Z80Instruction::LoadImmediate { reg: Z80Register::C, value: 3 },
-            Z80Instruction::Label { name: "end".to_string() },
+            Z80Instruction::LoadImmediate {
+                reg: Z80Register::C,
+                value: 3,
+            },
+            Z80Instruction::Label {
+                name: "end".to_string(),
+            },
             Z80Instruction::Return,
         ];
 
