@@ -11,14 +11,29 @@
 //! - **Return Values**: RAX (integer), XMM0 (float)
 //! - **Frame Pointer**: RBP (callee-saved)
 
-use ir::{BasicBlock, Function, Instruction, Program};
 use ir::Value;
+use ir::{BasicBlock, Function, Instruction, Program};
 use std::fmt;
 
 /// x86_64 register names
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum X86Register {
-    RAX, RCX, RDX, RBX, RSP, RBP, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15,
+    RAX,
+    RCX,
+    RDX,
+    RBX,
+    RSP,
+    RBP,
+    RSI,
+    RDI,
+    R8,
+    R9,
+    R10,
+    R11,
+    R12,
+    R13,
+    R14,
+    R15,
 }
 
 impl fmt::Display for X86Register {
@@ -58,38 +73,120 @@ pub enum MemoryAddress {
 /// x86_64 assembly instruction
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum X86Instruction {
-    Label { name: String },
-    Comment { text: String },
-    Section { name: String },
-    Export { name: String },
-    External { name: String },
-    GlobalVar { name: String, bytes: Vec<u8> },
-    BSSVar { name: String, size: u64 },
-    MovImm { dst: X86Register, imm: i64 },
-    MovReg { dst: X86Register, src: X86Register },
-    Lea { dst: X86Register, addr: MemoryAddress },
-    Load { dst: X86Register, addr: MemoryAddress, size: u8 },
-    Store { addr: MemoryAddress, src: X86Register, size: u8 },
-    Add { dst: X86Register, src: X86Register },
-    Sub { dst: X86Register, src: X86Register },
-    IMul { dst: X86Register, src: X86Register },
-    IDiv { src: X86Register },
-    Inc { reg: X86Register },
-    Dec { reg: X86Register },
-    Neg { reg: X86Register },
-    And { dst: X86Register, src: X86Register },
-    Or { dst: X86Register, src: X86Register },
-    Xor { dst: X86Register, src: X86Register },
-    Cmp { reg1: X86Register, reg2: X86Register },
-    CmpImm { reg: X86Register, imm: i32 },
-    SetCC { dst: X86Register, condition: Condition },
-    Jump { label: String },
-    JumpCond { condition: Condition, label: String },
-    Call { target: String },
+    Label {
+        name: String,
+    },
+    Comment {
+        text: String,
+    },
+    Section {
+        name: String,
+    },
+    Export {
+        name: String,
+    },
+    External {
+        name: String,
+    },
+    GlobalVar {
+        name: String,
+        bytes: Vec<u8>,
+    },
+    BSSVar {
+        name: String,
+        size: u64,
+    },
+    MovImm {
+        dst: X86Register,
+        imm: i64,
+    },
+    MovReg {
+        dst: X86Register,
+        src: X86Register,
+    },
+    Lea {
+        dst: X86Register,
+        addr: MemoryAddress,
+    },
+    Load {
+        dst: X86Register,
+        addr: MemoryAddress,
+        size: u8,
+    },
+    Store {
+        addr: MemoryAddress,
+        src: X86Register,
+        size: u8,
+    },
+    Add {
+        dst: X86Register,
+        src: X86Register,
+    },
+    Sub {
+        dst: X86Register,
+        src: X86Register,
+    },
+    IMul {
+        dst: X86Register,
+        src: X86Register,
+    },
+    IDiv {
+        src: X86Register,
+    },
+    Inc {
+        reg: X86Register,
+    },
+    Dec {
+        reg: X86Register,
+    },
+    Neg {
+        reg: X86Register,
+    },
+    And {
+        dst: X86Register,
+        src: X86Register,
+    },
+    Or {
+        dst: X86Register,
+        src: X86Register,
+    },
+    Xor {
+        dst: X86Register,
+        src: X86Register,
+    },
+    Cmp {
+        reg1: X86Register,
+        reg2: X86Register,
+    },
+    CmpImm {
+        reg: X86Register,
+        imm: i32,
+    },
+    SetCC {
+        dst: X86Register,
+        condition: Condition,
+    },
+    Jump {
+        label: String,
+    },
+    JumpCond {
+        condition: Condition,
+        label: String,
+    },
+    Call {
+        target: String,
+    },
     Ret,
-    Push { reg: X86Register },
-    Pop { reg: X86Register },
-    Xchg { reg1: X86Register, reg2: X86Register },
+    Push {
+        reg: X86Register,
+    },
+    Pop {
+        reg: X86Register,
+    },
+    Xchg {
+        reg1: X86Register,
+        reg2: X86Register,
+    },
 }
 
 /// Condition codes for conditional jumps
@@ -146,6 +243,7 @@ impl CodeGenerator {
     pub fn new() -> Self {
         Self {
             current_function: None,
+            temp_counter: 0,
         }
     }
 
@@ -170,7 +268,9 @@ impl CodeGenerator {
         });
 
         // Prologue
-        instructions.push(X86Instruction::Push { reg: X86Register::RBP });
+        instructions.push(X86Instruction::Push {
+            reg: X86Register::RBP,
+        });
         instructions.push(X86Instruction::MovReg {
             dst: X86Register::RBP,
             src: X86Register::RSP,
@@ -185,7 +285,9 @@ impl CodeGenerator {
             dst: X86Register::RSP,
             src: X86Register::RBP,
         });
-        instructions.push(X86Instruction::Pop { reg: X86Register::RBP });
+        instructions.push(X86Instruction::Pop {
+            reg: X86Register::RBP,
+        });
         instructions.push(X86Instruction::Ret);
 
         self.current_function = None;
@@ -210,6 +312,7 @@ impl CodeGenerator {
             ir::Opcode::Sub => self.generate_binop(inst, BinOp::Sub),
             ir::Opcode::Mul => self.generate_binop(inst, BinOp::Mul),
             ir::Opcode::Div => self.generate_binop(inst, BinOp::Div),
+            ir::Opcode::Mod => self.generate_binop(inst, BinOp::Mod),
             ir::Opcode::Cmp => self.generate_cmp(inst),
             ir::Opcode::Jump => self.generate_jump(inst),
             ir::Opcode::CJump => self.generate_cjump(inst),
@@ -226,7 +329,9 @@ impl CodeGenerator {
     }
 
     fn generate_mov(&mut self, inst: &Instruction) -> Vec<X86Instruction> {
-        if inst.operands.len() < 2 { return vec![]; }
+        if inst.operands.len() < 2 {
+            return vec![];
+        }
         let dst = &inst.operands[0];
         let src = &inst.operands[1];
         match (dst, src) {
@@ -244,18 +349,16 @@ impl CodeGenerator {
             }
             (Value::Register(_), Value::Memory { base, offset }) => {
                 let base_reg = self.parse_register(&Value::Register(base.clone()));
-                vec![
-                    X86Instruction::Load {
-                        dst: X86Register::RAX,
-                        addr: MemoryAddress::BaseIndex {
-                            base: Some(base_reg),
-                            index: None,
-                            scale: 1,
-                            disp: *offset as i64,
-                        },
-                        size: 8,
+                vec![X86Instruction::Load {
+                    dst: X86Register::RAX,
+                    addr: MemoryAddress::BaseIndex {
+                        base: Some(base_reg),
+                        index: None,
+                        scale: 1,
+                        disp: *offset as i64,
                     },
-                ]
+                    size: 8,
+                }]
             }
             _ => vec![X86Instruction::Comment {
                 text: format!("TODO: MOV {:?} <- {:?}", dst, src),
@@ -264,18 +367,22 @@ impl CodeGenerator {
     }
 
     fn generate_cmp(&mut self, inst: &Instruction) -> Vec<X86Instruction> {
-        if inst.operands.len() < 2 { return vec![]; }
+        if inst.operands.len() < 2 {
+            return vec![];
+        }
         let src1 = &inst.operands[0];
         let src2 = &inst.operands[1];
         let mut instructions = Vec::new();
         match src1 {
             Value::Immediate(imm) => {
                 instructions.push(X86Instruction::MovImm {
-                    dst: X86Register::RAX, imm: *imm as i64,
+                    dst: X86Register::RAX,
+                    imm: *imm as i64,
                 });
                 if let Value::Immediate(imm2) = src2 {
                     instructions.push(X86Instruction::CmpImm {
-                        reg: X86Register::RAX, imm: *imm2,
+                        reg: X86Register::RAX,
+                        imm: *imm2,
                     });
                 } else {
                     instructions.push(X86Instruction::Comment {
@@ -291,10 +398,12 @@ impl CodeGenerator {
                 match src2 {
                     Value::Immediate(imm) => {
                         instructions.push(X86Instruction::MovImm {
-                            dst: X86Register::RCX, imm: *imm as i64,
+                            dst: X86Register::RCX,
+                            imm: *imm as i64,
                         });
                         instructions.push(X86Instruction::Cmp {
-                            reg1: X86Register::RAX, reg2: X86Register::RCX,
+                            reg1: X86Register::RAX,
+                            reg2: X86Register::RCX,
                         });
                     }
                     Value::Register(_) => {
@@ -320,23 +429,30 @@ impl CodeGenerator {
     }
 
     fn generate_not(&mut self, inst: &Instruction) -> Vec<X86Instruction> {
-        if inst.operands.len() < 2 { return vec![]; }
+        if inst.operands.len() < 2 {
+            return vec![];
+        }
         let dst = &inst.operands[0];
         let src = &inst.operands[1];
         let mut instructions = Vec::new();
         match src {
             Value::Immediate(imm) => {
                 instructions.push(X86Instruction::MovImm {
-                    dst: X86Register::RAX, imm: *imm as i64,
+                    dst: X86Register::RAX,
+                    imm: *imm as i64,
                 });
-                instructions.push(X86Instruction::Neg { reg: X86Register::RAX });
+                instructions.push(X86Instruction::Neg {
+                    reg: X86Register::RAX,
+                });
             }
             Value::Register(_) => {
                 instructions.push(X86Instruction::MovReg {
                     dst: X86Register::RAX,
                     src: self.parse_register(src),
                 });
-                instructions.push(X86Instruction::Neg { reg: X86Register::RAX });
+                instructions.push(X86Instruction::Neg {
+                    reg: X86Register::RAX,
+                });
             }
             _ => {
                 instructions.push(X86Instruction::Comment {
@@ -350,9 +466,13 @@ impl CodeGenerator {
     }
 
     fn generate_jump(&mut self, inst: &Instruction) -> Vec<X86Instruction> {
-        if inst.operands.is_empty() { return vec![]; }
+        if inst.operands.is_empty() {
+            return vec![];
+        }
         if let Value::Label(label) = &inst.operands[0] {
-            vec![X86Instruction::Jump { label: label.clone() }]
+            vec![X86Instruction::Jump {
+                label: label.clone(),
+            }]
         } else {
             vec![X86Instruction::Comment {
                 text: format!("TODO: JUMP {:?}", inst.operands),
@@ -361,7 +481,9 @@ impl CodeGenerator {
     }
 
     fn generate_cjump(&mut self, inst: &Instruction) -> Vec<X86Instruction> {
-        if inst.operands.len() < 3 { return vec![]; }
+        if inst.operands.len() < 3 {
+            return vec![];
+        }
         let label_true = match &inst.operands[1] {
             Value::Label(l) => l.clone(),
             _ => return vec![],
@@ -380,9 +502,13 @@ impl CodeGenerator {
     }
 
     fn generate_call(&mut self, inst: &Instruction) -> Vec<X86Instruction> {
-        if inst.operands.is_empty() { return vec![]; }
+        if inst.operands.is_empty() {
+            return vec![];
+        }
         if let Value::Label(label) = &inst.operands[0] {
-            vec![X86Instruction::Call { target: label.clone() }]
+            vec![X86Instruction::Call {
+                target: label.clone(),
+            }]
         } else {
             vec![X86Instruction::Comment {
                 text: format!("TODO: CALL {:?}", inst.operands),
@@ -395,7 +521,9 @@ impl CodeGenerator {
     }
 
     fn generate_load(&mut self, inst: &Instruction) -> Vec<X86Instruction> {
-        if inst.operands.len() < 2 { return vec![]; }
+        if inst.operands.len() < 2 {
+            return vec![];
+        }
         let dst = &inst.operands[0];
         let src = &inst.operands[1];
         let mut instructions = Vec::new();
@@ -445,7 +573,9 @@ impl CodeGenerator {
     }
 
     fn generate_store(&mut self, inst: &Instruction) -> Vec<X86Instruction> {
-        if inst.operands.len() < 2 { return vec![]; }
+        if inst.operands.len() < 2 {
+            return vec![];
+        }
         let dst = &inst.operands[0];
         let src = &inst.operands[1];
         let mut instructions = Vec::new();
@@ -455,7 +585,8 @@ impl CodeGenerator {
                 match src {
                     Value::Immediate(imm) => {
                         instructions.push(X86Instruction::MovImm {
-                            dst: X86Register::RAX, imm: *imm as i64,
+                            dst: X86Register::RAX,
+                            imm: *imm as i64,
                         });
                         instructions.push(X86Instruction::Store {
                             addr: MemoryAddress::BaseIndex {
@@ -497,15 +628,24 @@ impl CodeGenerator {
     }
 
     fn generate_push(&mut self, inst: &Instruction) -> Vec<X86Instruction> {
-        if inst.operands.is_empty() { return vec![]; }
+        if inst.operands.is_empty() {
+            return vec![];
+        }
         match &inst.operands[0] {
             Value::Register(_) => {
-                vec![X86Instruction::Push { reg: self.parse_register(&inst.operands[0]) }]
+                vec![X86Instruction::Push {
+                    reg: self.parse_register(&inst.operands[0]),
+                }]
             }
             Value::Immediate(imm) => {
                 vec![
-                    X86Instruction::MovImm { dst: X86Register::RAX, imm: *imm as i64 },
-                    X86Instruction::Push { reg: X86Register::RAX },
+                    X86Instruction::MovImm {
+                        dst: X86Register::RAX,
+                        imm: *imm as i64,
+                    },
+                    X86Instruction::Push {
+                        reg: X86Register::RAX,
+                    },
                 ]
             }
             _ => vec![X86Instruction::Comment {
@@ -515,10 +655,14 @@ impl CodeGenerator {
     }
 
     fn generate_pop(&mut self, inst: &Instruction) -> Vec<X86Instruction> {
-        if inst.operands.is_empty() { return vec![]; }
+        if inst.operands.is_empty() {
+            return vec![];
+        }
         match &inst.operands[0] {
             Value::Register(_) => {
-                vec![X86Instruction::Pop { reg: self.parse_register(&inst.operands[0]) }]
+                vec![X86Instruction::Pop {
+                    reg: self.parse_register(&inst.operands[0]),
+                }]
             }
             _ => vec![X86Instruction::Comment {
                 text: format!("TODO: POP {:?}", inst.operands),
@@ -526,9 +670,24 @@ impl CodeGenerator {
         }
     }
 
+    /// Generate INC or DEC instruction
+    fn generate_inc_or_dec(&mut self, inst: &Instruction, is_inc: bool) -> Vec<X86Instruction> {
+        if inst.operands.is_empty() {
+            return vec![];
+        }
+        let reg = self.parse_register(&inst.operands[0]);
+        if is_inc {
+            vec![X86Instruction::Inc { reg }]
+        } else {
+            vec![X86Instruction::Dec { reg }]
+        }
+    }
+
     /// Generate a binary operation (add, sub, mul, div, and, or, xor)
     fn generate_binop(&mut self, inst: &Instruction, op: BinOp) -> Vec<X86Instruction> {
-        if inst.operands.len() < 3 { return vec![]; }
+        if inst.operands.len() < 3 {
+            return vec![];
+        }
         let dst = &inst.operands[0];
         let src1 = &inst.operands[1];
         let src2 = &inst.operands[2];
@@ -538,7 +697,8 @@ impl CodeGenerator {
         match src1 {
             Value::Immediate(imm) => {
                 instructions.push(X86Instruction::MovImm {
-                    dst: X86Register::RAX, imm: *imm as i64,
+                    dst: X86Register::RAX,
+                    imm: *imm as i64,
                 });
             }
             Value::Register(_) => {
@@ -559,7 +719,8 @@ impl CodeGenerator {
         match src2 {
             Value::Immediate(imm) => {
                 instructions.push(X86Instruction::MovImm {
-                    dst: X86Register::RCX, imm: *imm as i64,
+                    dst: X86Register::RCX,
+                    imm: *imm as i64,
                 });
                 instructions.extend(op.encode_r1_r2(X86Register::RAX, X86Register::RCX));
             }
@@ -661,6 +822,7 @@ enum BinOp {
     Sub,
     Mul,
     Div,
+    Mod,
     And,
     Or,
     Xor,
@@ -673,6 +835,7 @@ impl BinOp {
             BinOp::Sub => vec![X86Instruction::Sub { dst: r1, src: r2 }],
             BinOp::Mul => vec![X86Instruction::IMul { dst: r1, src: r2 }],
             BinOp::Div => vec![X86Instruction::IDiv { src: r2 }],
+            BinOp::Mod => vec![X86Instruction::IDiv { src: r2 }],
             BinOp::And => vec![X86Instruction::And { dst: r1, src: r2 }],
             BinOp::Or => vec![X86Instruction::Or { dst: r1, src: r2 }],
             BinOp::Xor => vec![X86Instruction::Xor { dst: r1, src: r2 }],
@@ -756,7 +919,7 @@ pub fn encode_instructions(instructions: &[X86Instruction]) -> Vec<u8> {
             X86Instruction::IDiv { src } => {
                 let s = register_code(*src);
                 bytes.push(0xF7);
-                bytes.push(0xD0 | s);
+                bytes.push(0xD8 | s);
             }
             X86Instruction::Inc { reg } => {
                 bytes.push(0x40 + register_code(*reg));
@@ -858,95 +1021,90 @@ fn register_code(reg: X86Register) -> u8 {
 mod tests {
     use super::*;
 
+    /// Helper: build a Program containing one function with the given entry instructions.
+    fn make_program(entry_name: &str, entry_insts: Vec<Instruction>) -> Program {
+        let mut func = ir::Function::new(entry_name.to_string(), None);
+        let entry_label = func.entry_block.clone();
+        if let Some(entry) = func.get_block_mut(&entry_label) {
+            for inst in entry_insts {
+                entry.add_instruction(inst);
+            }
+        }
+        let mut program = Program::new();
+        program.add_function(func);
+        program
+    }
+
     #[test]
     fn test_parse_register() {
-        let mut codegen = CodeGenerator::new();
-        assert_eq!(codegen.parse_register(&Value::Register("rax".to_string())), X86Register::RAX);
-        assert_eq!(codegen.parse_register(&Value::Register("rcx".to_string())), X86Register::RCX);
-        assert_eq!(codegen.parse_register(&Value::Register("RDX".to_string())), X86Register::RDX);
-        assert_eq!(codegen.parse_register(&Value::Register("R12".to_string())), X86Register::R12);
-        assert_eq!(codegen.parse_register(&Value::Register("unknown".to_string())), X86Register::RAX);
+        let codegen = CodeGenerator::new();
+        assert_eq!(
+            codegen.parse_register(&Value::Register("rax".to_string())),
+            X86Register::RAX
+        );
+        assert_eq!(
+            codegen.parse_register(&Value::Register("rcx".to_string())),
+            X86Register::RCX
+        );
+        assert_eq!(
+            codegen.parse_register(&Value::Register("RDX".to_string())),
+            X86Register::RDX
+        );
+        assert_eq!(
+            codegen.parse_register(&Value::Register("R12".to_string())),
+            X86Register::R12
+        );
+        assert_eq!(
+            codegen.parse_register(&Value::Register("unknown".to_string())),
+            X86Register::RAX
+        );
     }
 
     #[test]
     fn test_generate_simple_function() {
         let mut codegen = CodeGenerator::new();
-        let program = Program {
-            functions: vec![
-                Function {
-                    name: "main".to_string(),
-                    blocks: vec![
-                        BasicBlock {
-                            label: "entry".to_string(),
-                            instructions: vec![
-                                Instruction {
-                                    opcode: ir::Opcode::Mov,
-                                    operands: vec![
-                                        Value::Register("rax".to_string()),
-                                        Value::Immediate(42),
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
-                },
-            ],
-        };
-        let instructions = codegen.generate(&program);
+        let prog = make_program(
+            "main",
+            vec![Instruction::new(
+                ir::Opcode::Mov,
+                vec![Value::Register("rax".to_string()), Value::Immediate(42)],
+            )],
+        );
+        let instructions = codegen.generate(&prog);
         assert!(!instructions.is_empty());
     }
 
     #[test]
-    fn test_generate_with_jump() {
+    fn test_generate_with_ret() {
         let mut codegen = CodeGenerator::new();
-        let program = Program {
-            functions: vec![
-                Function {
-                    name: "main".to_string(),
-                    blocks: vec![
-                        BasicBlock {
-                            label: "entry".to_string(),
-                            instructions: vec![],
-                        },
-                        BasicBlock {
-                            label: "exit".to_string(),
-                            instructions: vec![
-                                Instruction {
-                                    opcode: ir::Opcode::Ret,
-                                    operands: vec![],
-                                },
-                            ],
-                        },
-                    ],
-                },
-            ],
-        };
-        let instructions = codegen.generate(&program);
-        assert!(instructions.iter().any(|i| matches!(i, X86Instruction::Ret)));
+        let prog =
+            make_program("main", vec![Instruction::new(ir::Opcode::Ret, vec![])]);
+        let instructions = codegen.generate(&prog);
+        assert!(instructions
+            .iter()
+            .any(|i| matches!(i, X86Instruction::Ret)));
     }
 
     #[test]
     fn test_encode_mov_rax_imm() {
-        let instructions = vec![
-            X86Instruction::MovImm {
-                dst: X86Register::RAX,
-                imm: 42,
-            },
-        ];
+        let instructions = vec![X86Instruction::MovImm {
+            dst: X86Register::RAX,
+            imm: 42,
+        }];
         let bytes = encode_instructions(&instructions);
         assert_eq!(bytes, vec![0xB8, 0x2A, 0x00, 0x00, 0x00]);
     }
 
     #[test]
     fn test_encode_mov_rax_rcx() {
-        let instructions = vec![
-            X86Instruction::MovReg {
-                dst: X86Register::RAX,
-                src: X86Register::RCX,
-            },
-        ];
+        // MOV dst(src), src → first arg=r/m(0=RAX), second arg=reg(1=RCX)
+        // MODRM = 11_000_001 = 0xC8
+        let instructions = vec![X86Instruction::MovReg {
+            dst: X86Register::RAX,
+            src: X86Register::RCX,
+        }];
         let bytes = encode_instructions(&instructions);
-        assert_eq!(bytes, vec![0x89, 0xC1]);
+        assert_eq!(bytes, vec![0x89, 0xC8]);
     }
 
     #[test]
@@ -959,12 +1117,16 @@ mod tests {
     #[test]
     fn test_encode_prologue_epilogue() {
         let instructions = vec![
-            X86Instruction::Push { reg: X86Register::RBP },
+            X86Instruction::Push {
+                reg: X86Register::RBP,
+            },
             X86Instruction::MovReg {
                 dst: X86Register::RBP,
                 src: X86Register::RSP,
             },
-            X86Instruction::Pop { reg: X86Register::RBP },
+            X86Instruction::Pop {
+                reg: X86Register::RBP,
+            },
         ];
         let bytes = encode_instructions(&instructions);
         assert_eq!(bytes, vec![0x55, 0x89, 0xE5, 0x5D]);
@@ -972,105 +1134,100 @@ mod tests {
 
     #[test]
     fn test_encode_add() {
-        let instructions = vec![
-            X86Instruction::Add {
-                dst: X86Register::RAX,
-                src: X86Register::RCX,
-            },
-        ];
+        // ADD dst(RAX=0), src(RCX=1) → MODRM = 11_000_001 = 0xC8
+        let instructions = vec![X86Instruction::Add {
+            dst: X86Register::RAX,
+            src: X86Register::RCX,
+        }];
         let bytes = encode_instructions(&instructions);
-        assert_eq!(bytes, vec![0x01, 0xC1]);
+        assert_eq!(bytes, vec![0x01, 0xC8]);
     }
 
     #[test]
     fn test_encode_sub() {
-        let instructions = vec![
-            X86Instruction::Sub {
-                dst: X86Register::RAX,
-                src: X86Register::RCX,
-            },
-        ];
+        // SUB dst(RAX=0), src(RCX=1) → MODRM = 0xC8
+        let instructions = vec![X86Instruction::Sub {
+            dst: X86Register::RAX,
+            src: X86Register::RCX,
+        }];
         let bytes = encode_instructions(&instructions);
-        assert_eq!(bytes, vec![0x29, 0xC1]);
+        assert_eq!(bytes, vec![0x29, 0xC8]);
     }
 
     #[test]
     fn test_encode_xor_zero() {
-        let instructions = vec![
-            X86Instruction::Xor {
-                dst: X86Register::RAX,
-                src: X86Register::RAX,
-            },
-        ];
+        // XOR dst(RAX=0), src(RAX=0) → MODRM = 0xC0
+        let instructions = vec![X86Instruction::Xor {
+            dst: X86Register::RAX,
+            src: X86Register::RAX,
+        }];
         let bytes = encode_instructions(&instructions);
         assert_eq!(bytes, vec![0x31, 0xC0]);
     }
 
     #[test]
     fn test_encode_and() {
-        let instructions = vec![
-            X86Instruction::And {
-                dst: X86Register::RAX,
-                src: X86Register::RCX,
-            },
-        ];
+        // AND dst(RAX=0), src(RCX=1) → MODRM = 0xC8
+        let instructions = vec![X86Instruction::And {
+            dst: X86Register::RAX,
+            src: X86Register::RCX,
+        }];
         let bytes = encode_instructions(&instructions);
-        assert_eq!(bytes, vec![0x21, 0xC1]);
+        assert_eq!(bytes, vec![0x21, 0xC8]);
     }
 
     #[test]
     fn test_encode_or() {
-        let instructions = vec![
-            X86Instruction::Or {
-                dst: X86Register::RAX,
-                src: X86Register::RCX,
-            },
-        ];
+        // OR dst(RAX=0), src(RCX=1) → MODRM = 0xC8
+        let instructions = vec![X86Instruction::Or {
+            dst: X86Register::RAX,
+            src: X86Register::RCX,
+        }];
         let bytes = encode_instructions(&instructions);
-        assert_eq!(bytes, vec![0x09, 0xC1]);
+        assert_eq!(bytes, vec![0x09, 0xC8]);
     }
 
     #[test]
     fn test_encode_imul() {
-        let instructions = vec![
-            X86Instruction::IMul {
-                dst: X86Register::RAX,
-                src: X86Register::RCX,
-            },
-        ];
+        // IMUL dst(RAX=0), src(RCX=1) → MODRM = 0xC8
+        let instructions = vec![X86Instruction::IMul {
+            dst: X86Register::RAX,
+            src: X86Register::RCX,
+        }];
         let bytes = encode_instructions(&instructions);
-        assert_eq!(bytes, vec![0x0F, 0xAF, 0xC1]);
+        assert_eq!(bytes, vec![0x0F, 0xAF, 0xC8]);
     }
 
     #[test]
     fn test_encode_cmp_reg_imm() {
-        let instructions = vec![
-            X86Instruction::CmpImm {
-                reg: X86Register::RAX,
-                imm: 42,
-            },
-        ];
+        let instructions = vec![X86Instruction::CmpImm {
+            reg: X86Register::RAX,
+            imm: 42,
+        }];
         let bytes = encode_instructions(&instructions);
         assert_eq!(bytes, vec![0x83, 0xF8, 0x2A, 0x00, 0x00, 0x00]);
     }
 
     #[test]
     fn test_encode_cmp_two_regs() {
-        let instructions = vec![
-            X86Instruction::Cmp {
-                reg1: X86Register::RAX,
-                reg2: X86Register::RCX,
-            },
-        ];
+        // CMP reg1(RAX=0), reg2(RCX=1) → MODRM = 0xC8
+        let instructions = vec![X86Instruction::Cmp {
+            reg1: X86Register::RAX,
+            reg2: X86Register::RCX,
+        }];
         let bytes = encode_instructions(&instructions);
-        assert_eq!(bytes, vec![0x39, 0xC1]);
+        assert_eq!(bytes, vec![0x39, 0xC8]);
     }
 
     #[test]
     fn test_encode_push_pop() {
         let instructions = vec![
-            X86Instruction::Push { reg: X86Register::RAX },
-            X86Instruction::Pop { reg: X86Register::RAX },
+            X86Instruction::Push {
+                reg: X86Register::RAX,
+            },
+            X86Instruction::Pop {
+                reg: X86Register::RAX,
+            },
         ];
         let bytes = encode_instructions(&instructions);
         assert_eq!(bytes, vec![0x50, 0x58]);
@@ -1078,38 +1235,71 @@ mod tests {
 
     #[test]
     fn test_encode_inc_dec() {
+        // INC RAX = 0x40, DEC RAX = 0x48
         let instructions = vec![
-            X86Instruction::Inc { reg: X86Register::RAX },
-            X86Instruction::Dec { reg: X86Register::RAX },
+            X86Instruction::Inc {
+                reg: X86Register::RAX,
+            },
+            X86Instruction::Dec {
+                reg: X86Register::RAX,
+            },
         ];
         let bytes = encode_instructions(&instructions);
-        assert_eq!(bytes, vec![0x48, 0x48]);
+        assert_eq!(bytes, vec![0x40, 0x48]);
     }
 
     #[test]
     fn test_encode_neg() {
-        let instructions = vec![
-            X86Instruction::Neg { reg: X86Register::RAX },
-        ];
+        let instructions = vec![X86Instruction::Neg {
+            reg: X86Register::RAX,
+        }];
         let bytes = encode_instructions(&instructions);
         assert_eq!(bytes, vec![0xF7, 0xD0]);
     }
 
     #[test]
     fn test_encode_idiv() {
-        let instructions = vec![
-            X86Instruction::IDiv { src: X86Register::RCX },
-        ];
+        // IDIV RCX → F7 /6 with MODRM = 11_110_001 = 0xD9
+        let instructions = vec![X86Instruction::IDiv {
+            src: X86Register::RCX,
+        }];
         let bytes = encode_instructions(&instructions);
-        assert_eq!(bytes, vec![0xF7, 0xD8]);
+        assert_eq!(bytes, vec![0xF7, 0xD9]);
     }
 
     #[test]
     fn test_encode_xchg() {
-        let instructions = vec![
-            X86Instruction::Xchg { reg1: X86Register::RAX, reg2: X86Register::RCX },
-        ];
+        // XCHG RAX(0), RCX(1) → MODRM = 11_000_001 = 0xC8
+        let instructions = vec![X86Instruction::Xchg {
+            reg1: X86Register::RAX,
+            reg2: X86Register::RCX,
+        }];
         let bytes = encode_instructions(&instructions);
-        assert_eq!(bytes, vec![0x87, 0xD0]);
+        assert_eq!(bytes, vec![0x87, 0xC8]);
+    }
+
+    #[test]
+    fn test_binary_gen_mov_and_add() {
+        let mut codegen = CodeGenerator::new();
+        let prog = make_program(
+            "main",
+            vec![
+                Instruction::new(
+                    ir::Opcode::Mov,
+                    vec![Value::Register("rax".to_string()), Value::Immediate(10)],
+                ),
+                Instruction::new(
+                    ir::Opcode::Add,
+                    vec![
+                        Value::Register("rax".to_string()),
+                        Value::Register("rax".to_string()),
+                        Value::Immediate(5),
+                    ],
+                ),
+            ],
+        );
+        let x86_ine = codegen.generate(&prog);
+        let bytes = encode_instructions(&x86_ine);
+        assert!(!bytes.is_empty());
     }
 }

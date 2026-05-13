@@ -1,0 +1,8 @@
+[package]
+name = "backend-x86_64"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+ir = { path = "../../ir" }
+ast = { path = "../../ast" }

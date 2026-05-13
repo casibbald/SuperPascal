@@ -12,6 +12,7 @@ members = [
     "runtime-spec",
     "runtime",
     "backends/backend-zealz80",
+    "backends/backend-x86_64",
     "objects/object-zealz80",
     "driver",
     # "diagnostics",  # Will be added in Phase 5
