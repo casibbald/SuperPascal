@@ -4,7 +4,7 @@ SuperPascal compiler iteration — runs tests and reports pass/fail counts
 with a summary of what was last committed. Useful as data-collection context
 for the LLM agent loop.
 """
-import subprocess, datetime, os
+import subprocess, datetime, os, re
 
 CR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                   '..', '..')
@@ -16,24 +16,13 @@ r = subprocess.run(['cargo', 'test', '--workspace'],
                    cwd=CR)
 total = failed = passed = 0
 for line in r.stdout.splitlines():
-    line = line.strip()
-    if line.startswith('test result:'):
-        # e.g. "test result: ok. 24 passed; 0 failed; ..."
-        parts = line.split()
-        for i, p in enumerate(parts):
-            if p == 'passed' and i + 1 < len(parts):
-                try:
-                    passed += int(parts[i - 1])
-                except ValueError:
-                    pass
-            if p == 'failed' and i + 1 < len(parts):
-                try:
-                    failed += int(parts[i - 1])
-                except ValueError:
-                    pass
-    if line.startswith('test result:'):
-        total += passed + failed
-        passed = failed = 0  # reset for each crate
+    m = re.search(r'test result:\s+(\w+)\.\s+(\d+)\s+passed;\s+(\d+)\s+failed', line)
+    if m:
+        status = m.group(1)
+        passed += int(m.group(2))
+        failed += int(m.group(3))
+
+total = passed + failed
 
 # 2) Last commit
 gc = subprocess.run(['git', 'log', '-1', '--oneline'],
@@ -45,8 +34,5 @@ print(f'Last commit: {gc.stdout.strip()}')
 print(f'Tests: {passed} passed, {failed} failed (total {total})')
 if failed > 0:
     print('**FAILURES DETECTED — must fix before proceeding.**')
-    for line in r.stderr.splitlines():
-        if 'error[' in line.lower() or 'failed' in line.lower():
-            print(f'  {line}')
 else:
     print('All tests passing. Ready to proceed.')
