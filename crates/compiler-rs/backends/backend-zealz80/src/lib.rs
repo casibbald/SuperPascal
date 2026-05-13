@@ -296,6 +296,9 @@ impl CodeGenerator {
             Opcode::Mov => self.generate_mov(inst),
             Opcode::Add => self.generate_add(inst),
             Opcode::Sub => self.generate_sub(inst),
+            Opcode::Mul => self.generate_mul(inst),
+            Opcode::Div => self.generate_div(inst),
+            Opcode::Mod => self.generate_mod(inst),
             Opcode::Cmp => self.generate_cmp(inst),
             Opcode::Jump => self.generate_jump(inst),
             Opcode::CJump => self.generate_cjump(inst),
@@ -439,6 +442,223 @@ impl CodeGenerator {
         // Store HL to dst
         instructions.extend(self.store_hl_to_value(dst));
 
+        instructions
+    }
+
+    /// Generate MUL instruction
+    fn generate_mul(&mut self, inst: &Instruction) -> Vec<Z80Instruction> {
+        // IR pattern: dst = src1 * src2 (3 operands)
+        // Z80 has no native MUL — use shift-and-add algorithm
+        // Result: HL = src1 * src2 (8-bit, low byte)
+        if inst.operands.len() < 3 {
+            return vec![];
+        }
+        let dst = &inst.operands[0];
+        let src1 = &inst.operands[1];
+        let src2 = &inst.operands[2];
+
+        let mut instructions = Vec::new();
+
+        // Prepare operands: load src1 into HL, src2 into DE
+        instructions.extend(self.load_value_into_hl(src1)); // HL = src1
+        match src2 {
+            Value::Immediate(imm) => {
+                instructions.push(Z80Instruction::LoadImmediate {
+                    reg: Z80Register::DE,
+                    value: *imm as u16,
+                });
+            }
+            Value::Register(reg) => {
+                instructions.push(Z80Instruction::LoadRegister {
+                    dst: Z80Register::DE,
+                    src: self.parse_register(reg),
+                });
+            }
+            _ => {
+                instructions.push(Z80Instruction::Comment {
+                    text: format!("TODO: MUL src2 {:?}", src2),
+                });
+                instructions.extend(self.store_hl_to_value(dst));
+                return instructions;
+            }
+        }
+
+        // Clear accumulator (BC) — BC = result
+        instructions.push(Z80Instruction::LoadImmediate {
+            reg: Z80Register::BC,
+            value: 0,
+        });
+
+        // Shift-and-add loop (8 iterations for 8-bit operands)
+        let loop_entry = "mul_entry".to_string();
+        let loop_body = "mul_body".to_string();
+        let loop_exit = "mul_exit".to_string();
+
+        // Counter = 8
+        instructions.push(Z80Instruction::LoadImmediate {
+            reg: Z80Register::B,
+            value: 8,
+        });
+        instructions.push(Z80Instruction::Label {
+            name: loop_entry.clone(),
+        });
+
+        // Check if counter is zero
+        instructions.push(Z80Instruction::Comment {
+            text: "Check counter and branch".to_string(),
+        });
+
+        // Loop body: shift-and-add
+        instructions.push(Z80Instruction::Label {
+            name: loop_body.clone(),
+        });
+
+        // Check DE LSB (odd?): OR A,A would need A loaded from E
+        // Z80 doesn't have test-register; use AND E then check Z flag
+        // For now, use a simple approach: call a helper routine
+        instructions.push(Z80Instruction::Comment {
+            text: "TODO: complete shift-and-add loop body".to_string(),
+        });
+
+        // Decrement counter and loop
+        instructions.push(Z80Instruction::Comment {
+            text: "TODO: decrement counter and jump back".to_string(),
+        });
+
+        // Exit
+        instructions.push(Z80Instruction::Label {
+            name: loop_exit.clone(),
+        });
+
+        // Result is in BC; low byte (B) goes to HL
+        instructions.push(Z80Instruction::LoadRegister {
+            dst: Z80Register::HL,
+            src: Z80Register::B,
+        });
+
+        instructions.extend(self.store_hl_to_value(dst));
+        instructions
+    }
+
+    /// Generate DIV instruction
+    fn generate_div(&mut self, inst: &Instruction) -> Vec<Z80Instruction> {
+        // IR pattern: dst = src1 / src2 (3 operands)
+        // Z80 has no native DIV — use shift-and-subtract
+        // Result: A = quotient (low byte)
+        if inst.operands.len() < 3 {
+            return vec![];
+        }
+        let dst = &inst.operands[0];
+        let src1 = &inst.operands[1];
+        let src2 = &inst.operands[2];
+
+        let mut instructions = Vec::new();
+
+        // Load src1 into A, src2 into B
+        instructions.extend(self.load_value_into_a(src1));
+        match src2 {
+            Value::Immediate(imm) => {
+                instructions.push(Z80Instruction::LoadImmediate {
+                    reg: Z80Register::B,
+                    value: *imm as u16,
+                });
+            }
+            Value::Register(reg) => {
+                instructions.push(Z80Instruction::LoadRegister {
+                    dst: Z80Register::B,
+                    src: self.parse_register(reg),
+                });
+            }
+            _ => {
+                instructions.push(Z80Instruction::Comment {
+                    text: format!("TODO: DIV src2 {:?}", src2),
+                });
+                instructions.extend(self.store_hl_to_value(dst));
+                return instructions;
+            }
+        }
+
+        // Quotient accumulator in C
+        instructions.push(Z80Instruction::LoadImmediate {
+            reg: Z80Register::C,
+            value: 0,
+        });
+
+        // Shift-and-subtract loop
+        instructions.push(Z80Instruction::Comment {
+            text: "TODO: shift-and-subtract division loop".to_string(),
+        });
+
+        // Result quotient is in A
+        instructions.push(Z80Instruction::LoadRegister {
+            dst: Z80Register::HL,
+            src: Z80Register::A,
+        });
+
+        instructions.extend(self.store_hl_to_value(dst));
+        instructions
+    }
+
+    /// Generate MOD instruction
+    fn generate_mod(&mut self, inst: &Instruction) -> Vec<Z80Instruction> {
+        // IR pattern: dst = src1 % src2 (3 operands)
+        // MOD = src1 - (src1 / src2) * src2
+        // We compute quotient using division routine, then multiply and subtract
+        if inst.operands.len() < 3 {
+            return vec![];
+        }
+        let dst = &inst.operands[0];
+        let src1 = &inst.operands[1];
+        let src2 = &inst.operands[2];
+
+        let mut instructions = Vec::new();
+
+        // Save src1 into HL, then onto stack
+        instructions.extend(self.load_value_into_hl(src1)); // HL = src1
+        instructions.push(Z80Instruction::Push {
+            reg: Z80Register::HL,
+        });
+
+        // Compute quotient: A = src1 / src2
+        instructions.extend(self.load_value_into_a(src1));
+        match src2 {
+            Value::Immediate(imm) => {
+                instructions.push(Z80Instruction::LoadImmediate {
+                    reg: Z80Register::B,
+                    value: *imm as u16,
+                });
+            }
+            Value::Register(reg) => {
+                instructions.push(Z80Instruction::LoadRegister {
+                    dst: Z80Register::B,
+                    src: self.parse_register(reg),
+                });
+            }
+            _ => {
+                instructions.push(Z80Instruction::Comment {
+                    text: format!("TODO: MOD src2 {:?}", src2),
+                });
+                instructions.extend(self.store_hl_to_value(dst));
+                return instructions;
+            }
+        }
+
+        // Quotient result goes to A
+        instructions.push(Z80Instruction::Comment {
+            text: "TODO: remainder in A after division".to_string(),
+        });
+
+        // Pop original src1 from stack into HL
+        instructions.push(Z80Instruction::Pop {
+            reg: Z80Register::HL,
+        });
+
+        // Compute quotient * src2, then subtract from original src1
+        instructions.push(Z80Instruction::Comment {
+            text: "TODO: multiply quotient by src2 and subtract".to_string(),
+        });
+
+        instructions.extend(self.store_hl_to_value(dst));
         instructions
     }
 
