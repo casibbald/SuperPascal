@@ -88,6 +88,10 @@ pub enum Z80Instruction {
     Subtract { dst: Z80Register, src: Z80Register },
     /// Compare: `cp value` or `cp reg`
     Compare { reg: Z80Register, value: Option<u8> },
+    /// Rotate register right through carry: `rr r`
+    RotateRight { reg: Z80Register },
+    /// Bit test: `bit n, r` — sets Z flag if bit n of r is 0
+    BitTest { bit: u8, reg: Z80Register },
     /// Unconditional jump: `jp label` or `jr label`
     Jump { label: String, near: bool },
     /// Conditional jump: `jp cc, label` or `jr cc, label`
@@ -100,6 +104,8 @@ pub enum Z80Instruction {
     Call { label: String },
     /// Return: `ret`
     Return,
+    /// Decrement register pair B, jump if NZ: `djnz label`
+    DecrementJumpNZ { label: String },
     /// Label definition: `label:`
     Label { name: String },
     /// Comment: `; comment`
@@ -483,57 +489,91 @@ impl CodeGenerator {
             }
         }
 
-        // Clear accumulator (BC) — BC = result
-        instructions.push(Z80Instruction::LoadImmediate {
-            reg: Z80Register::BC,
-            value: 0,
-        });
+        // Shift-and-add multiplication algorithm:
+        //   HL = multiplicand (src1)
+        //   DE = multiplier (src2)
+        //   BC = product accumulator (starts at 0)
+        //   B = counter (8 iterations)
+        //
+        // For each bit of the multiplier (DE):
+        //   If LSB of DE is set: BC += HL
+        //   HL <<= 1 (shift multiplicand left)
+        //   DE >>= 1 (shift multiplier right)
+        //   Decrement counter
+        //   If counter != 0: repeat
+        // Result = low byte of BC (register C)
 
-        // Shift-and-add loop (8 iterations for 8-bit operands)
-        let loop_entry = "mul_entry".to_string();
-        let loop_body = "mul_body".to_string();
-        let loop_exit = "mul_exit".to_string();
+        let mul_entry = "mul_entry".to_string();
+        let mul_body = "mul_body".to_string();
+        let mul_exit = "mul_exit".to_string();
 
         // Counter = 8
         instructions.push(Z80Instruction::LoadImmediate {
             reg: Z80Register::B,
             value: 8,
         });
+
+        // Entry: check counter
         instructions.push(Z80Instruction::Label {
-            name: loop_entry.clone(),
+            name: mul_entry.clone(),
         });
 
-        // Check if counter is zero
-        instructions.push(Z80Instruction::Comment {
-            text: "Check counter and branch".to_string(),
+        // Loop body:
+        // 1. Check LSB of DE (multiplier bit 0)
+        instructions.push(Z80Instruction::BitTest {
+            bit: 0,
+            reg: Z80Register::E,
         });
 
-        // Loop body: shift-and-add
+        // 2. If DE LSB is set, add HL to BC (accumulator)
+        instructions.push(Z80Instruction::JumpConditional {
+            condition: Condition::NonZero, // if bit 0 of E is set
+            label: "mul_skip_add".to_string(),
+            near: false,
+        });
+
+        instructions.push(Z80Instruction::Add {
+            dst: Z80Register::BC,
+            src: Z80Register::HL,
+        });
+
         instructions.push(Z80Instruction::Label {
-            name: loop_body.clone(),
+            name: "mul_skip_add".to_string(),
         });
 
-        // Check DE LSB (odd?): OR A,A would need A loaded from E
-        // Z80 doesn't have test-register; use AND E then check Z flag
-        // For now, use a simple approach: call a helper routine
-        instructions.push(Z80Instruction::Comment {
-            text: "TODO: complete shift-and-add loop body".to_string(),
+        // 3. Shift HL left by 1 (HL = HL * 2)
+        instructions.push(Z80Instruction::Add {
+            dst: Z80Register::HL,
+            src: Z80Register::HL,
         });
 
-        // Decrement counter and loop
-        instructions.push(Z80Instruction::Comment {
-            text: "TODO: decrement counter and jump back".to_string(),
+        // 4. Shift DE right by 1: RR E, then RR D
+        // Clear carry first with XOR A,A (encodes as ADD A,A)
+        instructions.push(Z80Instruction::Add {
+            dst: Z80Register::A,
+            src: Z80Register::A,
+        });
+        // Rotate right through carry
+        instructions.push(Z80Instruction::RotateRight {
+            reg: Z80Register::E,
+        });
+        instructions.push(Z80Instruction::RotateRight {
+            reg: Z80Register::D,
         });
 
-        // Exit
+        // 5. Decrement counter and loop
+        instructions.push(Z80Instruction::DecrementJumpNZ {
+            label: mul_entry.clone(),
+        });
+
         instructions.push(Z80Instruction::Label {
-            name: loop_exit.clone(),
+            name: mul_exit.clone(),
         });
 
-        // Result is in BC; low byte (B) goes to HL
+        // Result: low byte of BC is in C register
         instructions.push(Z80Instruction::LoadRegister {
             dst: Z80Register::HL,
-            src: Z80Register::B,
+            src: Z80Register::C,
         });
 
         instructions.extend(self.store_hl_to_value(dst));
@@ -1083,6 +1123,9 @@ impl CodeGenerator {
                     1 // cp, register
                 }
             }
+            Z80Instruction::RotateRight { .. } => 2, // rr r — CB opcode + 1 byte
+            Z80Instruction::BitTest { .. } => 2,     // bit n, r — CB opcode + 1 byte
+            Z80Instruction::DecrementJumpNZ { .. } => 2, // djnz label — 2 bytes
 
             // Jump instructions (size depends on near flag)
             Z80Instruction::Jump { near, .. } => {
@@ -1205,6 +1248,54 @@ impl Z80Instruction {
                 // Comments don't emit bytes
                 vec![]
             }
+            Z80Instruction::RotateRight { reg } => self.encode_rr(reg),
+            Z80Instruction::BitTest { bit, reg } => self.encode_bit(*bit, reg),
+            Z80Instruction::DecrementJumpNZ { label } => self.encode_djnz(label),
+        }
+    }
+
+    // ── RR / BIT / DJNZ ──
+
+    fn encode_rr(&self, reg: &Z80Register) -> Vec<u8> {
+        // RR r — opcode 0xCB 0x30 + reg_code
+        // A=0x3B, B=0x30, C=0x31, D=0x32, E=0x33, H=0x36, L=0x37
+        let rr_op = match reg {
+            Z80Register::A => 0x3B,
+            Z80Register::B => 0x30,
+            Z80Register::C => 0x31,
+            Z80Register::D => 0x32,
+            Z80Register::E => 0x33,
+            Z80Register::H => 0x36,
+            Z80Register::L => 0x37,
+            _ => return vec![0x00],
+        };
+        vec![0xCB, rr_op]
+    }
+
+    fn encode_bit(&self, bit: u8, reg: &Z80Register) -> Vec<u8> {
+        // BIT n, r — opcode 0xCB 0x40 + bit*8 + reg_code
+        let reg_code = match reg {
+            Z80Register::A => 7,
+            Z80Register::B => 0,
+            Z80Register::C => 1,
+            Z80Register::D => 2,
+            Z80Register::E => 3,
+            Z80Register::H => 4,
+            Z80Register::L => 5,
+            Z80Register::H | Z80Register::L => 6, // (HL) = 6
+            _ => return vec![0x00],
+        };
+        let opcode = 0xC0 + (bit * 8) + reg_code;
+        vec![0xCB, opcode as u8]
+    }
+
+    fn encode_djnz(&self, label: &str) -> Vec<u8> {
+        // DJNZ label — 0x10, rel8 placeholder
+        // Address filled by locator
+        if label.is_empty() {
+            vec![0x10, 0x00]
+        } else {
+            vec![0x10, 0x00] // Placeholder; locator fills offset
         }
     }
 
@@ -1572,6 +1663,15 @@ impl fmt::Display for Z80Instruction {
                 } else {
                     write!(f, "    cp {}", reg)
                 }
+            }
+            Z80Instruction::RotateRight { reg } => {
+                write!(f, "    rr {}", reg)
+            }
+            Z80Instruction::BitTest { bit, reg } => {
+                write!(f, "    bit {}, {}", bit, reg)
+            }
+            Z80Instruction::DecrementJumpNZ { label } => {
+                write!(f, "    djnz {}", label)
             }
             Z80Instruction::Jump { label, near } => {
                 if *near {
